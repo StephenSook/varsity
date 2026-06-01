@@ -10,9 +10,9 @@ class FakeGranite:
 
 
 class FakeGuardian:
-    def check(self, explanation):
+    def check(self, explanation, *, law_context=""):
         cited = cites_law_clause(explanation)
-        return GuardianVerdict(safe=cited, cites_law=cited, model_answer="yes")
+        return GuardianVerdict(safe=cited, cites_law=cited, grounded=True, model_answer="No")
 
 
 def _frame(att_x, def2_x, keeper_x=119.0):

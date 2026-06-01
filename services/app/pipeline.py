@@ -27,6 +27,7 @@ class PipelineResult:
     explanation: str
     safe: bool
     cites_law: bool
+    grounded: bool = True
 
 
 def explanation_stages(
@@ -58,11 +59,12 @@ def explanation_stages(
     model = getattr(getattr(granite, "config", None), "model_id", "granite")
     yield {"stage": "granite", "model": model}
 
-    verdict = guardian.check(explanation)
+    verdict = guardian.check(explanation, law_context=law.text)
     yield {
         "stage": "guardian",
         "safe": verdict.safe,
         "cites_law": verdict.cites_law,
+        "grounded": verdict.grounded,
         "answer": verdict.model_answer,
     }
 
@@ -92,4 +94,5 @@ def explain_offside_decision(frame: list[FreezeFramePlayer], **kwargs) -> Pipeli
         explanation=verdict["text"],
         safe=guard["safe"],
         cites_law=guard["cites_law"],
+        grounded=guard["grounded"],
     )
