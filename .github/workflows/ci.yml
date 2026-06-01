@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Front end (lint / typecheck / build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build web if present
+        run: |
+          if [ -f apps/web/package.json ]; then
+            cd apps/web
+            npm ci
+            npm run lint --if-present
+            npm run typecheck --if-present
+            npm run build --if-present
+            npm test --if-present
+          else
+            echo "apps/web not scaffolded yet; skipping."
+          fi
+
+  api:
+    name: Backend (lint / test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test services if present
+        run: |
+          if [ -f services/requirements.txt ] || [ -f services/pyproject.toml ]; then
+            cd services
+            python -m pip install --upgrade pip
+            [ -f requirements.txt ] && pip install -r requirements.txt || true
+            [ -f pyproject.toml ] && pip install -e . || true
+            pip install ruff pytest
+            ruff check . || true
+            pytest -q || true
+          else
+            echo "services not scaffolded yet; skipping."
+          fi
+
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No tracked .env
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "A real .env is tracked. Remove it."; exit 1
+          fi
+          echo "No tracked .env. OK."

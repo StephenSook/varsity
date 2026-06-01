@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Builds / output
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+coverage/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+
+# Env / secrets (NEVER commit real values)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service-account*.json
+infra/secrets/
+
+# Model weights / large artifacts (host externally or via LFS)
+*.onnx
+*.gguf
+*.safetensors
+models/
+
+# OS / IDE
+.DS_Store
+.AppleDouble
+._*
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Keep these tracked
+!.env.example
