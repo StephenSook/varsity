@@ -10,6 +10,17 @@ from app.llm import _watsonx
 DEFAULT_MODEL = "ibm/granite-4-h-small"
 
 
+def _fallback_explanation(*, margin_meters: float, is_offside: bool) -> str:
+    """Deterministic Law-11-grounded floor when watsonx returns no usable text."""
+    verdict = "offside" if is_offside else "onside"
+    relation = "ahead of" if is_offside else "level with or behind"
+    return (
+        f"Under Law 11, the most advanced attacker was {relation} the second-to-last "
+        f"defender by {abs(margin_meters):.2f} meters when the ball was played, so the "
+        f"player was correctly judged {verdict}."
+    )
+
+
 @dataclass
 class GraniteConfig:
     model_id: str
@@ -25,9 +36,20 @@ class GraniteClient:
     def __init__(self, config: GraniteConfig | None = None) -> None:
         self.config = config or GraniteConfig.from_env()
 
-    def generate(self, prompt: str, *, max_new_tokens: int = 200, decoding: str = "greedy") -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        max_new_tokens: int = 200,
+        min_new_tokens: int | None = None,
+        decoding: str = "greedy",
+    ) -> str:
         return _watsonx.generate(
-            self.config.model_id, prompt, max_new_tokens=max_new_tokens, decoding=decoding
+            self.config.model_id,
+            prompt,
+            max_new_tokens=max_new_tokens,
+            min_new_tokens=min_new_tokens,
+            decoding=decoding,
         )
 
     def explain_offside(
@@ -51,4 +73,10 @@ class GraniteClient:
             f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
             f"the ball was played. Verdict: {verdict}.\n\nExplanation:"
         )
-        return self.generate(prompt, max_new_tokens=180)
+        # watsonx greedy occasionally returns empty text; retry, then fall back to a
+        # deterministic Law-grounded floor so the demo never produces no explanation.
+        for _ in range(3):
+            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            if len(text) >= 20:
+                return text
+        return _fallback_explanation(margin_meters=margin_meters, is_offside=is_offside)

@@ -50,8 +50,19 @@ def _auth() -> dict[str, str]:
 
 
 def generate(
-    model_id: str, prompt: str, *, max_new_tokens: int = 200, decoding: str = "greedy"
+    model_id: str,
+    prompt: str,
+    *,
+    max_new_tokens: int = 200,
+    min_new_tokens: int | None = None,
+    decoding: str = "greedy",
 ) -> str:
+    parameters: dict[str, object] = {
+        "max_new_tokens": max_new_tokens,
+        "decoding_method": decoding,
+    }
+    if min_new_tokens is not None:
+        parameters["min_new_tokens"] = min_new_tokens
     resp = httpx.post(
         f"{_base_url()}/ml/v1/text/generation",
         params={"version": API_VERSION},
@@ -60,7 +71,7 @@ def generate(
             "model_id": model_id,
             "input": prompt,
             "project_id": os.environ["WATSONX_PROJECT_ID"],
-            "parameters": {"max_new_tokens": max_new_tokens, "decoding_method": decoding},
+            "parameters": parameters,
         },
         timeout=60,
     )
