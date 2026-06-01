@@ -1,0 +1,28 @@
+# IBM Context Forge MCP gateway for VARSITY.
+# Pinned to 1.0.2 (latest stable, released 2026-05-26: Admin UI Rewrite, DB
+# Migrations, Security). The upstream README examples still show 1.0.0-RC-3;
+# confirm the 1.0.2 image tag with `docker pull` when the daemon is up.
+# Fallback pin: 1.0.1 (2026-05-13).
+services:
+  gateway:
+    image: ghcr.io/ibm/mcp-context-forge:1.0.2
+    container_name: varsity-context-forge
+    restart: unless-stopped
+    ports:
+      - "4444:4444"
+    environment:
+      HOST: 0.0.0.0
+      MCPGATEWAY_UI_ENABLED: "true"
+      MCPGATEWAY_ADMIN_API_ENABLED: "true"
+      AUTH_REQUIRED: "true"
+      SECURE_COOKIES: "false"
+      JWT_SECRET_KEY: ${CONTEXT_FORGE_JWT_SECRET:-change-me-to-a-secret-longer-than-32-bytes}
+      PLATFORM_ADMIN_EMAIL: ${CONTEXT_FORGE_ADMIN_EMAIL:-admin@example.com}
+      PLATFORM_ADMIN_PASSWORD: ${CONTEXT_FORGE_ADMIN_PASSWORD:-changeme}
+      PLATFORM_ADMIN_FULL_NAME: "VARSITY Admin"
+      DATABASE_URL: sqlite:////data/mcp.db
+    volumes:
+      - context_forge_data:/data
+
+volumes:
+  context_forge_data:
