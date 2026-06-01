@@ -1,0 +1,129 @@
+{
+  "source": "StatsBomb 360 open data, FIFA World Cup 2022",
+  "match_id": 3857276,
+  "event_id": "1f1b0ef8-1a1d-45b3-bf9c-4299ea836377",
+  "event_type": "Pass",
+  "players": [
+    {
+      "x": 30.899999618530273,
+      "y": 59.0,
+      "teammate": true,
+      "actor": true,
+      "keeper": false
+    },
+    {
+      "x": 37.46639120532339,
+      "y": 73.91402928073599,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 41.45123722353267,
+      "y": 56.80494804799917,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 45.33643375862434,
+      "y": 14.74444966706426,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 48.16564295644335,
+      "y": 48.43074354568433,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 48.9151115988557,
+      "y": 50.52513192403057,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 49.16331789672658,
+      "y": 67.79980375694578,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 51.92928932910786,
+      "y": 27.022681937924943,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 52.383590423018376,
+      "y": 33.662764238326666,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 55.71261442992393,
+      "y": 46.80031356518653,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 56.444021201833266,
+      "y": 62.39691174391112,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 57.44987137769539,
+      "y": 63.073987556072474,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 62.71186507534707,
+      "y": 23.38376570934534,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 65.97724027948908,
+      "y": 29.706353410744583,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 70.86434514989153,
+      "y": 74.85657333516818,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 71.12581052285867,
+      "y": 52.74926108742018,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 72.20090061915599,
+      "y": 77.93262174580961,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    }
+  ],
+  "expected_is_offside": true,
+  "expected_margin_meters": 5.45
+}
