@@ -1,12 +1,14 @@
 # Pinned versions observed at build start (2026-06-01). Re-verify before relying on any.
 
-context-forge:    1.0.2     # github.com/IBM/mcp-context-forge, latest stable 2026-05-26.
-                            # Fallback: 1.0.1 (2026-05-13). An earlier note that v1.0.2
-                            # "does not exist" was WRONG; confirmed via gh api releases.
+context-forge:    1.0.2     # GitHub release latest stable 2026-05-26 (Admin UI Rewrite).
+                            # IMPORTANT: the ghcr DOCKER image versioned tags lag (max 0.5.0);
+                            # there is NO 1.0.2 image tag. GA 1.0.x ships via the `latest`
+                            # image and PyPI `mcp-contextforge-gateway==1.0.2`. Compose uses
+                            # `latest` locally; pin via a pip Dockerfile for Render deploy.
 mcp-python-sdk:   1.27.2
 fastmcp:          3.3.1     # stable. The "70% of MCP servers" claim is maintainer self-reported.
-granite-reasoning: TBD      # pin exact id at the Granite benchmark (e.g. ibm/granite-4-0-h-small)
-granite-guardian:  TBD      # pin exact id (e.g. ibm/granite-guardian-4); enable BYOC rule
+granite-reasoning: ibm/granite-4-h-small      # verified in watsonx catalog 2026-06-01; fallback ibm/granite-3-8b-instruct
+granite-guardian:  ibm/granite-guardian-3-8b  # only Guardian on watsonx (not v4); apply BYOC criteria via prompt
 a2a-method:       message/send   # not legacy task/send; Agent Card at /.well-known/agent-card.json
 
 # Front end (re-verify via context7 at build start; the §2 table is a snapshot)
