@@ -42,7 +42,12 @@ def parse_var_events(fixture_id: int, events: list[dict]) -> list[VarEvent]:
             name = (e.get("type") or {}).get("name") or e.get("type_name") or "VAR"
             detail = e.get("info") or e.get("addition") or e.get("result")
             out.append(
-                VarEvent(fixture_id=fixture_id, minute=e.get("minute"), type_name=name, detail=detail)
+                VarEvent(
+                    fixture_id=fixture_id,
+                    minute=e.get("minute"),
+                    type_name=name,
+                    detail=detail,
+                )
             )
     return out
 

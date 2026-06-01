@@ -24,7 +24,10 @@ def main() -> int:
     fixture = json.loads(fixture_path.read_text())
     frame = [FreezeFramePlayer(**p) for p in fixture["players"]]
     res = explain_offside_decision(frame)
-    print(f"is_offside={res.is_offside} margin={res.margin_meters}m law={res.law} ({res.law_title})")
+    print(
+        f"is_offside={res.is_offside} margin={res.margin_meters}m "
+        f"law={res.law} ({res.law_title})"
+    )
     print(f"guardian: safe={res.safe} cites_law={res.cites_law}")
     print(f"explanation:\n{res.explanation}")
     return 0
