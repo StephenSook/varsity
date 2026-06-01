@@ -1,0 +1,19 @@
+# Pinned versions observed at build start (2026-06-01). Re-verify before relying on any.
+
+context-forge:    1.0.2     # github.com/IBM/mcp-context-forge, latest stable 2026-05-26.
+                            # Fallback: 1.0.1 (2026-05-13). An earlier note that v1.0.2
+                            # "does not exist" was WRONG; confirmed via gh api releases.
+mcp-python-sdk:   1.27.2
+fastmcp:          3.3.1     # stable. The "70% of MCP servers" claim is maintainer self-reported.
+granite-reasoning: TBD      # pin exact id at the Granite benchmark (e.g. ibm/granite-4-0-h-small)
+granite-guardian:  TBD      # pin exact id (e.g. ibm/granite-guardian-4); enable BYOC rule
+a2a-method:       message/send   # not legacy task/send; Agent Card at /.well-known/agent-card.json
+
+# Front end (re-verify via context7 at build start; the §2 table is a snapshot)
+node:             22
+vite:             6.x
+react:            19.x
+tailwindcss:      4.x
+three:            r183       # @react-three/fiber 9 | drei 10 (skip v11 alpha)
+transformers-js:  4.x        # npm package name: @huggingface/transformers
+anime-js:         4.x        # ESM only: import { animate, createTimeline } from 'animejs'
