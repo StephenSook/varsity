@@ -44,8 +44,8 @@ jobs:
             [ -f requirements.txt ] && pip install -r requirements.txt || true
             [ -f pyproject.toml ] && pip install -e . || true
             pip install ruff pytest
-            ruff check . || true
-            pytest -q || true
+            ruff check .
+            pytest -q
           else
             echo "services not scaffolded yet; skipping."
           fi
