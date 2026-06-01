@@ -1,11 +1,13 @@
 # IBM Context Forge MCP gateway for VARSITY.
-# Pinned to 1.0.2 (latest stable, released 2026-05-26: Admin UI Rewrite, DB
-# Migrations, Security). The upstream README examples still show 1.0.0-RC-3;
-# confirm the 1.0.2 image tag with `docker pull` when the daemon is up.
-# Fallback pin: 1.0.1 (2026-05-13).
+# NOTE (verified 2026-06-01): the ghcr DOCKER image versioned tags lag the GitHub
+# releases (max 0.5.0 published as an image), so there is no 1.0.2 image tag. The
+# GA 1.0.x is delivered via the `latest` image and the PyPI package
+# `mcp-contextforge-gateway` (1.0.2). We use `latest` (the GA build) locally; for a
+# reproducible Render deploy, pin via a Dockerfile that pip-installs
+# mcp-contextforge-gateway==1.0.2.
 services:
   gateway:
-    image: ghcr.io/ibm/mcp-context-forge:1.0.2
+    image: ghcr.io/ibm/mcp-context-forge:latest
     container_name: varsity-context-forge
     restart: unless-stopped
     ports:
