@@ -37,8 +37,9 @@ def test_pipeline_offside_end_to_end() -> None:
 
 
 def test_stages_order() -> None:
+    frame = _frame(100.0, 98.0)
     stages = [
         s["stage"]
-        for s in explanation_stages(_frame(100.0, 98.0), granite=FakeGranite(), guardian=FakeGuardian())
+        for s in explanation_stages(frame, granite=FakeGranite(), guardian=FakeGuardian())
     ]
     assert stages == ["trigger", "geometry", "law", "granite", "guardian", "verdict"]
