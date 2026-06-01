@@ -38,6 +38,11 @@ infra/secrets/
 *.gguf
 *.safetensors
 models/
+*.pdf
+
+# RAG build artifacts (built once at build time)
+services/app/rag/index/
+services/app/rag/corpus/
 
 # OS / IDE
 .DS_Store
