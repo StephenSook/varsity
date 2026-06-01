@@ -1,0 +1,5 @@
+# Build-time / local only (NOT installed in CI). Used by the data-pull and RAG-ingest scripts.
+statsbombpy>=1.14
+faiss-cpu>=1.9
+# docling is added when the IFAB ingest step runs (large; pulls model weights).
+# docling>=2.0

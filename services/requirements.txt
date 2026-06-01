@@ -1,0 +1,6 @@
+# Runtime + test deps (CI installs these). Heavy build-time data libs are in requirements-data.txt.
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+sse-starlette>=2.1
+pytest>=8.3
