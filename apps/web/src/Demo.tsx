@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
+import { usePrefersReducedMotion } from './useReducedMotion'
+
+// The 3D pitch is heavy + decorative, so it is code-split and only mounted when motion
+// is allowed; the SVG is the reduced-motion fallback (and the Suspense fallback while
+// the chunk loads).
+const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
 import { playOffsideChord } from './sonify'
 import { StageScrubber } from './StageScrubber'
@@ -181,6 +187,7 @@ export function Demo() {
     })
   }
   const startRef = useRef(0)
+  const reducedMotion = usePrefersReducedMotion()
 
   function explainTheCall(language: Lang) {
     if (soundOn) {
@@ -544,7 +551,13 @@ export function Demo() {
 
       {geo && (
         <figure aria-hidden="true" className="w-full max-w-2xl">
-          <OffsidePitch geo={geo} />
+          {reducedMotion ? (
+            <OffsidePitch geo={geo} />
+          ) : (
+            <Suspense fallback={<OffsidePitch geo={geo} />}>
+              <OffsidePitch3D geo={geo} />
+            </Suspense>
+          )}
           <figcaption className="mt-2 text-sm text-slate-400" lang={t.bcp47}>
             {t.caption(geo.margin_meters.toFixed(2), geo.is_offside)}
           </figcaption>
