@@ -6,4 +6,5 @@ sse-starlette>=2.1
 httpx>=0.27
 python-dotenv>=1.0
 mcp>=1.12
+a2a-sdk>=1.0.3
 pytest>=8.3
