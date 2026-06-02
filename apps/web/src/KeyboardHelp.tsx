@@ -5,6 +5,7 @@ export const SHORTCUTS: [string, string][] = [
   ['C', 'Share clip'],
   ['S', 'Toggle spatial sound'],
   ['D', 'Toggle detail / plain'],
+  ['L', 'Live feed / replay'],
   ['1-5', 'Language (EN / ES / FR / PT / DE)'],
   ['?', 'Toggle this shortcut list'],
 ]

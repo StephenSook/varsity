@@ -121,6 +121,12 @@ export function Demo() {
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
+  const [live, setLive] = useState(false)
+  const [reviewing, setReviewing] = useState<{
+    source: string
+    detail: string
+    minute: number
+  } | null>(null)
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -138,11 +144,24 @@ export function Demo() {
     setLawText('')
     setOfflineSource(null)
     setLatencyMs(null)
+    setReviewing(null)
     startRef.current = performance.now()
     setStreaming(true)
-    const url = `${BACKEND}/stream/canned?language=${encodeURIComponent(language)}`
+    // Live mode hits /stream/live, which first emits the transitional "VAR is
+    // reviewing" announcement (from Sportmonks / API-Football, or the replay buffer
+    // when there is no live match), then the same explanation pipeline.
+    const endpoint = live ? 'live' : 'canned'
+    const url = `${BACKEND}/stream/${endpoint}?language=${encodeURIComponent(language)}`
     const source = new EventSource(url)
     sourceRef.current = source
+    source.addEventListener('reviewing', (event) => {
+      const data = JSON.parse((event as MessageEvent).data) as {
+        source: string
+        detail: string
+        minute: number
+      }
+      setReviewing(data)
+    })
     for (const name of STAGES) {
       source.addEventListener(name, (event) => {
         const data = JSON.parse((event as MessageEvent).data) as Stage
@@ -259,6 +278,8 @@ export function Demo() {
         setSoundOn((s) => !s)
       } else if (k === 'd') {
         setDetail((d) => !d)
+      } else if (k === 'l') {
+        setLive((v) => !v)
       } else if (e.key === '?') {
         setShowHelp((h) => !h)
       } else if (k >= '1' && k <= '5') {
@@ -270,7 +291,7 @@ export function Demo() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lang, streaming, explanation])
+  }, [lang, streaming, explanation, live])
 
   const t = UI[lang]
   const segBtn = (active: boolean) =>
@@ -313,6 +334,17 @@ export function Demo() {
         >
           {detail ? 'Detailed' : 'Plain'}
         </button>
+        <button
+          type="button"
+          aria-pressed={live}
+          aria-label="Live World Cup feed"
+          onClick={() => setLive((v) => !v)}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            live ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
+          }`}
+        >
+          {live ? 'Live feed' : 'Replay'}
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -345,6 +377,21 @@ export function Demo() {
           Share clip
         </button>
       </div>
+
+      {reviewing && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="glass w-full max-w-md rounded-xl p-3 text-left"
+        >
+          <p className="text-sm font-medium text-emerald-200">
+            Minute {reviewing.minute}: VAR is reviewing. {reviewing.detail}.
+          </p>
+          <p className="mt-0.5 font-mono text-xs text-slate-400">
+            trigger source: {reviewing.source}
+          </p>
+        </div>
+      )}
 
       {shareStatus && (
         <p role="status" aria-live="polite" className="text-xs text-slate-400">
