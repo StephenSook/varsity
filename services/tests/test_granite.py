@@ -27,3 +27,12 @@ def test_explain_offside_falls_back_when_always_empty(monkeypatch) -> None:
     assert out.strip() != ""
     assert "Law 11" in out  # deterministic fallback cites the Law
     assert "5.45" in out  # and states the margin
+
+
+def test_explain_offside_spanish_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(granite_mod._watsonx, "generate", lambda *a, **k: "")
+    out = GraniteClient().explain_offside(
+        margin_meters=5.45, is_offside=True, law_text="Law 11", language="Spanish"
+    )
+    assert "Ley 11" in out  # Spanish fallback cites the Law (Ley)
+    assert "5.45" in out

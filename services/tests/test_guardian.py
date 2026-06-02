@@ -12,6 +12,11 @@ def test_cites_law_clause_false() -> None:
     assert cites_law_clause("") is False
 
 
+def test_cites_law_clause_multilingual() -> None:
+    assert cites_law_clause("Según la Ley 11, el jugador estaba fuera de juego.") is True
+    assert cites_law_clause("Selon la Loi 11, le joueur etait hors-jeu.") is True
+
+
 def _patch_generate(monkeypatch, answer):
     monkeypatch.setattr(guardian_mod._watsonx, "generate", lambda *a, **k: answer)
 
