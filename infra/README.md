@@ -77,10 +77,14 @@ contention or a corrupt DB: it still hangs with `GUNICORN_WORKERS=1` and a fresh
 volume (`docker compose down -v`). `GUNICORN_WORKERS=1` is kept anyway (correct
 for the local SQLite engine and removes one failure class).
 
-The live `/admin` observability Gantt trace is therefore **deferred**, not
-abandoned: the federation itself is fully built and proven by `app/federation.py`
-+ `scripts/register_federation.py` (`--dry-run` lists all backends), the running
-MCP/A2A backends, and the sequence diagram in `docs/federation.md`. To capture
-the live trace later, options: (a) run the gateway from PyPI
-(`pip install mcp-contextforge-gateway==1.0.2`) outside Docker, (b) pin an older
-image tag that starts cleanly, or (c) the OTel -> Jaeger/Tempo rollback above.
+**RESOLVED 2026-06-02 via option (a):** the PyPI gateway
+(`pip install mcp-contextforge-gateway==1.0.2`) run on the host with a single
+uvicorn worker (`mcpgateway mcpgateway.main:app --workers 1`) starts cleanly where
+the Docker image hangs, so the hang is image-specific. All 4 backends register and
+are reachable, the 3 tools route through the gateway with correct results
+(`retrieve_law` -> Law 11, `compute_offside_margin` -> 1.75 m), and observability
+recorded 10 tool executions at 100% success (~27 ms avg). Full working steps,
+schemas (note: A2A registers nested under `{"agent": {...}}`, and SSRF blocks
+localhost/private hosts unless `SSRF_ALLOW_LOCALHOST` / `SSRF_ALLOW_PRIVATE_NETWORKS`
+are set), and the live evidence are in `docs/federation.md` ("Verified live"). The
+Docker image stays pinned for reproducibility; use the PyPI path locally on arm64.
