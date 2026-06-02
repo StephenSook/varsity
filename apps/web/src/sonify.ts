@@ -110,3 +110,92 @@ export async function playOffsideChord(
   await new Promise((resolve) => setTimeout(resolve, durationMs + 600))
   return plan
 }
+
+export type BuildUpStep = { t: number; gapMeters: number; x: number }
+
+// The "gasp moment": sonify the seconds BEFORE the call, not just the verdict. We only
+// have the single freeze-frame, so this RECONSTRUCTS a plausible approach: the attacker
+// runs from ~6m behind the offside line to their real freeze-frame position, while the
+// second-to-last defender holds the line. It is illustrative, grounded in the real final
+// margin (the end point is the measured value), not measured tracking data.
+export function buildUpTrajectory(geo: Geometry, steps = 24): BuildUpStep[] {
+  const finalGap = (geo.attacker_x - geo.offside_line_x) * METERS_PER_UNIT
+  const startGap = Math.min(-6, finalGap - 6) // at least a 6 m run-up to the line
+  const out: BuildUpStep[] = []
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps
+    const eased = t * t // ease-in: the run accelerates toward the line
+    const gapMeters = startGap + (finalGap - startGap) * eased
+    out.push({ t, gapMeters, x: clampX(gapMeters * ARC) })
+  }
+  return out
+}
+
+// Play the build-up: a Geiger-counter click track that accelerates as the attacker
+// nears the offside line, a rising attacker tone that pans from behind the line toward
+// (and across, if offside) it, over a faint centred defender-line reference. ~3.5s, then
+// hand off to playOffsideChord for the spatial chord + verdict earcon.
+export async function playBuildUp(
+  ctx: AudioContext,
+  geo: Geometry,
+  opts: { durationMs?: number; gain?: number } = {},
+): Promise<BuildUpStep[]> {
+  const durationMs = opts.durationMs ?? 3500
+  const peak = opts.gain ?? 0.1
+  const traj = buildUpTrajectory(geo)
+  const now = ctx.currentTime
+  const dur = durationMs / 1000
+
+  // Faint, steady defender-line reference (low, centred).
+  const ref = ctx.createOscillator()
+  ref.type = 'sine'
+  ref.frequency.value = 98 // G2
+  const refGain = ctx.createGain()
+  refGain.gain.setValueAtTime(0, now)
+  refGain.gain.linearRampToValueAtTime(peak * 0.4, now + 0.3)
+  refGain.gain.setValueAtTime(peak * 0.4, now + dur - 0.3)
+  refGain.gain.linearRampToValueAtTime(0, now + dur)
+  ref.connect(refGain).connect(ctx.destination)
+  ref.start(now)
+  ref.stop(now + dur + 0.02)
+
+  // Rising attacker tone, panned along the reconstructed approach.
+  const att = ctx.createOscillator()
+  att.type = 'sawtooth'
+  att.frequency.setValueAtTime(300, now)
+  att.frequency.linearRampToValueAtTime(680, now + dur)
+  const attPan = ctx.createPanner()
+  attPan.panningModel = 'HRTF'
+  attPan.positionZ.value = -2
+  attPan.positionX.setValueAtTime(traj[0].x, now)
+  for (const s of traj) attPan.positionX.linearRampToValueAtTime(s.x, now + s.t * dur)
+  const attGain = ctx.createGain()
+  attGain.gain.setValueAtTime(0, now)
+  attGain.gain.linearRampToValueAtTime(peak * 0.5, now + dur * 0.6)
+  attGain.gain.linearRampToValueAtTime(peak * 0.75, now + dur)
+  att.connect(attGain).connect(attPan).connect(ctx.destination)
+  att.start(now)
+  att.stop(now + dur + 0.02)
+
+  // Accelerating click track (tempo rises toward the line). Intervals shrink toward a
+  // floor (~16 Hz) and are capped, so the loop always terminates.
+  let click = 0
+  let interval = 0.34
+  for (let i = 0; i < 48 && click < dur - 0.05; i++) {
+    const osc = ctx.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = 440 + 440 * (click / dur) // pitch rises with tension
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, now + click)
+    g.gain.linearRampToValueAtTime(peak * 0.6, now + click + 0.006)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + click + 0.05)
+    osc.connect(g).connect(ctx.destination)
+    osc.start(now + click)
+    osc.stop(now + click + 0.06)
+    click += interval
+    interval = Math.max(0.065, interval * 0.9) // accelerate to a ~16 Hz floor
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, durationMs))
+  return traj
+}

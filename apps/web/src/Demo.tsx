@@ -10,7 +10,7 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 // the chunk loads).
 const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
-import { playOffsideChord } from './sonify'
+import { playBuildUp, playOffsideChord } from './sonify'
 import { StageScrubber } from './StageScrubber'
 import { readAloud, synthesizeClip } from './tts'
 
@@ -144,6 +144,7 @@ export function Demo() {
   const [streaming, setStreaming] = useState(false)
   const [lang, setLang] = useState<Lang>('English')
   const [soundOn, setSoundOn] = useState(true)
+  const [buildUp, setBuildUp] = useState(false)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
   const [offlineRetrieval, setOfflineRetrieval] = useState<'orama-bm25' | 'bundled' | null>(null)
   const [offlineStatus, setOfflineStatus] = useState('')
@@ -189,6 +190,25 @@ export function Demo() {
   const startRef = useRef(0)
   const reducedMotion = usePrefersReducedMotion()
 
+  // Sonify the geometry: optionally the "gasp moment" build-up (the approach to the
+  // line) first, then the spatial chord + verdict earcon.
+  function sonifyGeometry(ctx: AudioContext, g: Geometry) {
+    const w = window as unknown as { __varsitySonification?: unknown }
+    const chord = () =>
+      playOffsideChord(ctx, g)
+        .then((plan) => {
+          w.__varsitySonification = plan
+        })
+        .catch(() => {})
+    if (buildUp) {
+      void playBuildUp(ctx, g)
+        .then(chord)
+        .catch(() => {})
+    } else {
+      void chord()
+    }
+  }
+
   function explainTheCall(language: Lang) {
     if (soundOn) {
       audioCtxRef.current ??= new AudioContext()
@@ -227,14 +247,7 @@ export function Demo() {
           const g = data as unknown as Geometry
           setGeo(g)
           const ctx = audioCtxRef.current
-          if (ctx) {
-            void playOffsideChord(ctx, g)
-              .then((plan) => {
-                const w = window as unknown as { __varsitySonification?: unknown }
-                w.__varsitySonification = plan
-              })
-              .catch(() => {})
-          }
+          if (ctx) sonifyGeometry(ctx, g)
         }
         if (name === 'law') {
           setLawText(String(data.text ?? ''))
@@ -284,14 +297,7 @@ export function Demo() {
     const res = await generateOffline({ onStatus: setOfflineStatus })
     setGeo(res.geo)
     const ctx = audioCtxRef.current
-    if (ctx) {
-      void playOffsideChord(ctx, res.geo)
-        .then((plan) => {
-          const w = window as unknown as { __varsitySonification?: unknown }
-          w.__varsitySonification = plan
-        })
-        .catch(() => {})
-    }
+    if (ctx) sonifyGeometry(ctx, res.geo)
     setExplanation(res.text)
     announce(
       announceText(verbosity, {
@@ -351,6 +357,8 @@ export function Demo() {
         if (explanation && !streaming) void shareCurrent()
       } else if (k === 's') {
         setSoundOn((s) => !s)
+      } else if (k === 'b') {
+        setBuildUp((b) => !b)
       } else if (k === 'd') {
         setDetail((d) => !d)
       } else if (k === 'l') {
@@ -414,6 +422,17 @@ export function Demo() {
           }`}
         >
           {soundOn ? 'Sound on' : 'Sound off'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={buildUp}
+          aria-label="Build-up sonification (illustrative approach to the line)"
+          onClick={() => setBuildUp((b) => !b)}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            buildUp ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
+          }`}
+        >
+          {buildUp ? 'Build-up on' : 'Build-up'}
         </button>
         <button
           type="button"
