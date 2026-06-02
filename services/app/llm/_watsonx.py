@@ -79,6 +79,26 @@ def generate(
     return resp.json()["results"][0]["generated_text"].strip()
 
 
+def chat(model_id: str, messages: list[dict], *, max_tokens: int = 8) -> str:
+    """Chat-completions call. Granite Guardian needs the chat template applied (the
+    raw text/generation endpoint does not trigger its risk-classification head), so
+    the Guardian path uses this rather than ``generate``."""
+    resp = httpx.post(
+        f"{_base_url()}/ml/v1/text/chat",
+        params={"version": API_VERSION},
+        headers=_auth(),
+        json={
+            "model_id": model_id,
+            "messages": messages,
+            "project_id": os.environ["WATSONX_PROJECT_ID"],
+            "max_tokens": max_tokens,
+        },
+        timeout=60,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"].strip()
+
+
 def embed(model_id: str, texts: list[str]) -> list[list[float]]:
     resp = httpx.post(
         f"{_base_url()}/ml/v1/text/embeddings",

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 from app.llm import _watsonx
@@ -27,14 +28,22 @@ _LAW_CITATION = re.compile(
     r"\b(?:law|ley|loi|lei|gesetz|regel|regra)\b.{0,12}?\d{1,2}\b", re.IGNORECASE
 )
 
-# Granite Guardian's native output tokens (model card): "Yes" = risk present, "No" = safe.
-_SAFE_TOKEN = "no"
+# Granite Guardian's native output tokens: "Yes" = risk present, "No" = safe.
 _UNSAFE_TOKEN = "yes"
 
-# The ``groundedness`` RAG risk, worded per the IBM model card.
+# Bring-Your-Own-Criteria definitions, evaluated by Granite Guardian via the chat
+# endpoint (the raw text/generation endpoint does not trigger the model's
+# risk-classification head; chat applies the Guardian template, verified live).
 GROUNDEDNESS_RISK = (
-    "The assistant's response includes claims or facts that are not supported by, "
-    "or are contradicted by, the provided context."
+    "The response includes claims or facts that are not supported by, or are "
+    "contradicted by, the provided context."
+)
+# A custom, accessibility-specific criterion: the explanation is delivered to a blind
+# fan through a screen reader, so formatting that does not read aloud cleanly is a risk.
+SCREEN_READER_RISK = (
+    "The response contains markdown syntax, tables, bullet-point lists, code, or "
+    "parenthetical asides that are confusing or unsuitable when read aloud by a "
+    "screen reader."
 )
 
 
@@ -43,29 +52,12 @@ def cites_law_clause(text: str) -> bool:
     return bool(_LAW_CITATION.search(text))
 
 
-def _groundedness_prompt(explanation: str, context: str) -> str:
-    """Free-form Granite Guardian groundedness template (model-card structure)."""
-    return (
-        "You are a safety agent trying to help determine whether the assistant "
-        "message to the user is harmful according to the safety risk definition below.\n\n"
-        "<start_of_turn>\n"
-        f"Context: {context}\n"
-        f"Assistant Message: {explanation}\n"
-        "<end_of_turn>\n\n"
-        "Our safety risk definition is defined below:\n\n"
-        "<start_of_risk_definition>\n"
-        f"* {GROUNDEDNESS_RISK}\n"
-        "<end_of_risk_definition>\n\n"
-        "Is the assistant message harmful based on the risk definition? "
-        "Your answer must be either 'Yes' or 'No'."
-    )
-
-
 @dataclass
 class GuardianVerdict:
     safe: bool
     cites_law: bool
     grounded: bool = True
+    screen_reader_ok: bool = True
     risk_label: str = "No"
     model_answer: str = ""
 
@@ -74,26 +66,50 @@ class GuardianClient:
     def __init__(self, model_id: str | None = None) -> None:
         self.model_id = model_id or os.environ.get("GRANITE_GUARDIAN_MODEL_ID", DEFAULT_GUARDIAN)
 
+    def _risk_present(self, criterion: str, content: str) -> bool | None:
+        """Ask Guardian whether the criterion's risk is present. None on infra error.
+
+        Tries the configured model, then the known-good default, so a mis-set
+        GRANITE_GUARDIAN_MODEL_ID (e.g. a non-existent version) degrades to a working
+        Guardian rather than silently disabling the check.
+        """
+        messages = [
+            {"role": "system", "content": criterion},
+            {"role": "user", "content": content},
+        ]
+        for model in dict.fromkeys([self.model_id, DEFAULT_GUARDIAN]):
+            try:
+                answer = _watsonx.chat(model, messages, max_tokens=5)
+                return answer.lower().startswith(_UNSAFE_TOKEN)
+            except Exception:
+                continue
+        return None
+
     def check(self, explanation: str, *, law_context: str = "") -> GuardianVerdict:
         cites = cites_law_clause(explanation)
-        prompt = _groundedness_prompt(explanation, law_context)
-        try:
-            raw = _watsonx.generate(self.model_id, prompt, max_new_tokens=5).strip()
-        except Exception:
-            raw = ""
-        answer = raw.lower()
-        if answer.startswith(_SAFE_TOKEN):
-            grounded, label = True, "No"
-        elif answer.startswith(_UNSAFE_TOKEN):
-            grounded, label = False, "Yes"
-        else:
-            # Ambiguous / infra error: do not let flakiness fail a Law-cited answer;
-            # the deterministic cites-law guard still gates safety.
-            grounded, label = True, "Failed"
+
+        # Two BYOC criteria, evaluated concurrently to keep latency near a single call.
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            grounded_risk = pool.submit(
+                self._risk_present,
+                GROUNDEDNESS_RISK,
+                f"Context: {law_context}\n\nResponse to evaluate: {explanation}",
+            )
+            sr_risk = pool.submit(
+                self._risk_present, SCREEN_READER_RISK, f"Response to evaluate: {explanation}"
+            )
+            gr, sr = grounded_risk.result(), sr_risk.result()
+
+        # A None result is an infra error: do not let flakiness fail a Law-cited answer;
+        # the deterministic cites-law guard still gates safety.
+        grounded = gr is not True
+        screen_reader_ok = sr is not True
+        label = "Yes" if gr is True else ("Failed" if gr is None else "No")
         return GuardianVerdict(
-            safe=cites and grounded,
+            safe=cites and grounded and screen_reader_ok,
             cites_law=cites,
             grounded=grounded,
+            screen_reader_ok=screen_reader_ok,
             risk_label=label,
-            model_answer=raw,
+            model_answer="" if gr is None else ("Yes" if gr else "No"),
         )
