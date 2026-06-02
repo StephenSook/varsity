@@ -13,6 +13,12 @@ out/
 coverage/
 .vite/
 
+# Playwright (e2e / a11y)
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Python
 __pycache__/
 *.py[cod]

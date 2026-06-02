@@ -180,15 +180,19 @@ export default function App() {
             The live gateway recorded those tool calls at 100% success.
           </p>
         </Reveal>
-        <ol className="mt-12 grid gap-4 sm:grid-cols-3">
+        <ol className="mt-12 grid list-none gap-4 sm:grid-cols-3">
           {PIPELINE.map((s, i) => (
-            <Reveal key={s.k} className="glass rounded-2xl p-5 text-left">
-              <div className="flex items-baseline gap-3">
-                <span className="font-mono text-sm text-emerald-400">{String(i + 1).padStart(2, '0')}</span>
-                <h3 className="font-semibold text-slate-100">{s.k}</h3>
-              </div>
-              <p className="mt-2 text-sm text-slate-300">{s.d}</p>
-            </Reveal>
+            <li key={s.k}>
+              <Reveal className="glass h-full rounded-2xl p-5 text-left">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-sm text-emerald-400">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="font-semibold text-slate-100">{s.k}</h3>
+                </div>
+                <p className="mt-2 text-sm text-slate-300">{s.d}</p>
+              </Reveal>
+            </li>
           ))}
         </ol>
       </Section>
@@ -205,17 +209,19 @@ export default function App() {
             file that proves it. Built on IBM Granite, Granite Guardian, Context Forge, and Docling.
           </p>
         </Reveal>
-        <ul className="mt-12 grid gap-4 sm:grid-cols-2">
+        <ul className="mt-12 grid list-none gap-4 sm:grid-cols-2">
           {CLAIMS.map((c) => (
-            <Reveal key={c.t} className="glass flex items-start gap-3 rounded-2xl p-5 text-left">
-              <span aria-hidden="true" className="mt-1 text-emerald-400">
-                ✓
-              </span>
-              <div>
-                <p className="font-medium text-slate-100">{c.t}</p>
-                <p className="mt-1 font-mono text-xs text-slate-400">{c.w}</p>
-              </div>
-            </Reveal>
+            <li key={c.t}>
+              <Reveal className="glass flex h-full items-start gap-3 rounded-2xl p-5 text-left">
+                <span aria-hidden="true" className="mt-1 text-emerald-400">
+                  ✓
+                </span>
+                <div>
+                  <p className="font-medium text-slate-100">{c.t}</p>
+                  <p className="mt-1 font-mono text-xs text-slate-400">{c.w}</p>
+                </div>
+              </Reveal>
+            </li>
           ))}
         </ul>
         <Reveal className="mt-10">
@@ -238,7 +244,7 @@ export default function App() {
             VARSITY turns officials-only decision data into the first rule-grounded, accessible why.
             It complements the commentary you love, it does not replace it.
           </p>
-          <p className="mt-8 font-mono text-xs uppercase tracking-[0.3em] text-slate-500">
+          <p className="mt-8 font-mono text-xs uppercase tracking-[0.3em] text-slate-400">
             IBM Granite · Granite Guardian · Context Forge · World Cup 2026
           </p>
         </Reveal>
