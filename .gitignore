@@ -12,6 +12,7 @@ out/
 *.tsbuildinfo
 coverage/
 .vite/
+dev-dist/
 
 # Playwright (e2e / a11y)
 test-results/
