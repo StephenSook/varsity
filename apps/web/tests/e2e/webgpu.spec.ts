@@ -21,6 +21,8 @@ test('on-device offline mode degrades gracefully (no WebGPU, no backend)', async
   const provenance = page.getByTestId('offline-source')
   await expect(provenance).toBeVisible()
   await expect(provenance).toContainText('on-device')
+  // and the governing Law was retrieved in-browser (Orama BM25 over the static IFAB index).
+  await expect(provenance).toContainText('Orama BM25')
 })
 
 test('WebGPU capability probe (skips honestly when WebGPU is unavailable)', async ({ page }) => {

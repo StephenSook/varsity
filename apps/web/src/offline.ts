@@ -1,4 +1,10 @@
+import { retrieveLawOffline } from './inBrowserRag'
 import type { Geometry, Player } from './OffsidePitch'
+
+// The offside scenario the offline path explains; used to retrieve the governing Law
+// from the in-browser IFAB index (mirrors the backend's offside query).
+const OFFSIDE_QUERY =
+  'offside attacker nearer the goal line than the second-last defender and the ball'
 
 // Airplane mode: generate a Law-grounded offside explanation FULLY in-browser, with
 // the network cut. Geometry and the Law text are bundled here, and the explanation
@@ -115,12 +121,15 @@ export type OfflineResult = {
   source: 'granite-nano-webgpu' | 'deterministic'
   geo: Geometry
   lawText: string
+  retrieval: 'orama-bm25' | 'bundled'
 }
 
 /**
- * Produce a Law-grounded explanation entirely on-device. Tries Granite Nano on
- * WebGPU, then falls back to the deterministic floor. Never touches the network
- * except to lazily download the model weights on first WebGPU run.
+ * Produce a Law-grounded explanation entirely on-device. First retrieves the governing
+ * Law from the in-browser IFAB index (Orama BM25), then tries Granite Nano on WebGPU,
+ * falling back to the deterministic floor. The only network is the one-time fetch of
+ * the static index and (on first WebGPU run) the model weights, both service-worker
+ * cached for true airplane-mode use.
  */
 export async function generateOffline(
   opts: { frame?: Player[]; onStatus?: (s: string) => void } = {},
@@ -128,9 +137,15 @@ export async function generateOffline(
   const geo = computeOffsideLocal(opts.frame)
   const floor = deterministicExplanation(geo)
 
+  // Retrieve the Law on-device; fall back to the bundled Law 11 text if the index
+  // is not reachable (e.g. cold airplane mode before the service worker cached it).
+  const chunk = await retrieveLawOffline(OFFSIDE_QUERY).catch(() => null)
+  const lawText = chunk?.text ?? LAW_11_TEXT
+  const retrieval: OfflineResult['retrieval'] = chunk ? 'orama-bm25' : 'bundled'
+
   if (!(await webgpuReady())) {
     opts.onStatus?.('WebGPU unavailable; explained on-device (deterministic).')
-    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
+    return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   }
 
   try {
@@ -152,7 +167,7 @@ export async function generateOffline(
       {
         role: 'user',
         content:
-          `Law text: ${LAW_11_TEXT}\n\nDecision: the most advanced attacker was ` +
+          `Law text: ${lawText.slice(0, 1200)}\n\nDecision: the most advanced attacker was ` +
           `${Math.abs(geo.margin_meters).toFixed(2)} meters ` +
           `${geo.is_offside ? 'ahead of' : 'behind'} the second-to-last defender when ` +
           `the ball was played. Verdict: ${geo.is_offside ? 'offside' : 'onside'}. Explain why.`,
@@ -162,11 +177,11 @@ export async function generateOffline(
     const text = out?.[0]?.generated_text?.at(-1)?.content?.trim()
     if (text && text.length >= 20 && /law/i.test(text)) {
       opts.onStatus?.('Generated on-device with Granite Nano (WebGPU).')
-      return { text, source: 'granite-nano-webgpu', geo, lawText: LAW_11_TEXT }
+      return { text, source: 'granite-nano-webgpu', geo, lawText, retrieval }
     }
-    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
+    return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   } catch {
     opts.onStatus?.('On-device model unavailable; explained on-device (deterministic).')
-    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
+    return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   }
 }
