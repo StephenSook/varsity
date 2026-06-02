@@ -29,19 +29,23 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 | Capability | Tier | Where / how to verify |
 |---|---|---|
 | Offside-margin geometry from StatsBomb 360 freeze-frames | Wired-live | `services/app/geometry.py` + `services/tests/test_geometry.py` (real 2022 World Cup frame, 5.45 m) |
-| IFAB-Laws retrieval (keyword + IBM Granite embeddings) | Wired-live | `services/app/rag/` over `laws.json` (exact Law 11 wording) |
-| IBM Granite reasoning via watsonx (rule-grounded explanation citing the Law) | Wired-live | `services/app/llm/granite.py`; live run this session |
+| IFAB-Laws RAG: Docling to FAISS, IBM Granite embeddings online + BM25 offline | Wired-live | `services/app/rag/` over the real **IFAB Laws of the Game 2025/26** (18 Docling-ingested chunks incl. the VAR protocol); evaluated in `docs/benchmarks/rag-eval.md` |
+| RAG retrieval evaluation (Hit-Rate@k + MRR over a golden IFAB set) | Wired-live | `services/evals/` + `docs/benchmarks/rag-eval.md`; CI-gated (Hit@5 = 1.00, every offside query routes to Law 11) |
+| IBM Granite reasoning via watsonx (rule-grounded explanation citing the Law) | Wired-live | `services/app/llm/granite.py` (5 languages, prompt-leak guard); live run this session |
 | Granite Guardian groundedness + Law-citation safety | Wired-live | `services/app/llm/guardian.py` + tests |
-| SSE pipeline to a screen-reader `aria-live` region | Wired-live | `services/app/main.py`, `apps/web/src/App.tsx` |
+| OpenTelemetry per-request span tree (geometry to law to granite to guardian) | Wired-live | `services/app/observability.py`, `services/app/pipeline.py`; spans printed per `GET /stream` request |
+| Context Forge MCP gateway + A2A narrator round-trip | Wired-live | `services/app/mcp_servers/`, `app/a2a_agent/` (real `message/send` round-trip in `client.py` + test), `app/federation.py`, `docs/federation.md` |
+| Live-trigger resilience + "VAR is reviewing" announcement | Wired-live | `services/app/triggers/`, `GET /stream/live` emits the transitional review event; front-end Live / Replay toggle |
+| SSE pipeline to a screen-reader `aria-live` region | Wired-live | `services/app/main.py`, `apps/web/src/Demo.tsx` (pre-registered region, verbosity-gated, re-announce-safe) |
+| 5-language narration (EN / ES / FR / PT / DE) | Wired-live | `apps/web/src/Demo.tsx`; the same call re-narrated, the `lang` attribute flips the spoken voice |
+| Spatial audio: listener-centred HRTF + animated offside crossing + semantic verdict earcon | Wired-live | `apps/web/src/sonify.ts`; the attacker tone moves past the centred offside line, then a major (onside) / minor+tritone (offside) earcon |
 | SVG offside-line visualization synced to the computed margin | Wired-live | `apps/web/src/OffsidePitch.tsx` (margin on screen equals the geometry value) |
-| English / Spanish multilingual toggle | Wired-live | `apps/web/src/App.tsx`; the same call re-narrated in Spanish |
-| Context Forge MCP + A2A federation | Wired-live | `services/app/mcp_servers/`, `app/a2a_agent/`, `app/federation.py`; tools routed through the gateway, `docs/federation.md` |
-| Live-trigger resilience (Sportmonks to API-Football to cached replay buffer) | Wired-live | `services/app/triggers/`, `GET /stream/live` emits the transitional review event |
-| Docling to FAISS IFAB-Laws ingestion | Integration | `services/app/rag/ingest.py` (build-time; the demo uses the curated `laws.json`) |
+| Broadcast-delay ticker (Phenix-cited offset, live-measured delta) | Wired-live | `apps/web/src/BroadcastTicker.tsx`; lead = the OTA broadcast offset minus VARSITY's measured latency |
+| Keyboard power-mode + stage scrubber + verbosity modes | Wired-live | `apps/web/src/Demo.tsx`, `StageScrubber.tsx`, `KeyboardHelp.tsx`; every action by one keypress, any step re-narrated |
+| Shareable on-device audio clip | Wired-live | `apps/web/src/share.ts`, `tts.ts`; Kokoro WAV via the Web Share API with download / clipboard fallback |
+| On-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano) | Wired-live | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent |
+| Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | Wired-live | `apps/web/src/tts.ts`; the accessibility path stays the user's own screen reader |
 | 3D / GSAP cinematic hero | Wired-live | `apps/web/src/Hero3D.tsx` (React Three Fiber pitch, lazy-loaded, `aria-hidden`, motion-gated) + a GSAP intro |
-| Spatial-audio HRTF sonification of the three key players | Wired-live | `apps/web/src/sonify.ts`; the attacker tone is panned right of the centred offside line by the margin |
-| On-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano) | Wired-live | `apps/web/src/offline.ts`; generates a Law-grounded explanation fully in-browser, no backend (verified: 0 backend calls), with a deterministic floor when WebGPU is unavailable |
-| Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | Wired-live | `apps/web/src/tts.ts`; Web Speech API floor (verified) plus Kokoro-82M (`onnx-community/Kokoro-82M-v1.0-ONNX`) on WebGPU. The accessibility path stays the user's own screen reader |
 
 ## Architecture
 
@@ -81,13 +85,26 @@ flowchart LR
 
 The canned StatsBomb path is the deterministic floor; the live trigger is a resilient flourish that falls back to a cached replay buffer. The screen-reader layer is always parallel to (and independent of) the decorative visual and audio layers.
 
+See [docs/IBM_STACK.md](docs/IBM_STACK.md) for every IBM component mapped to its file path and how to verify it is running, and [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) for the WCAG conformance target, the `aria-live` design decision, and the screen-reader test matrix.
+
+## Evaluation
+
+The IFAB retrieval is measured, not asserted. A golden set of 20 VAR/offside questions mapped to the governing Law is run against the real retriever, scored directly (no inflated harness). Full report: [docs/benchmarks/rag-eval.md](docs/benchmarks/rag-eval.md).
+
+| Path | Hit@1 | Hit@3 | Hit@5 | MRR |
+|---|---|---|---|---|
+| BM25 (offline / CI, deterministic) | 0.90 | 1.00 | 1.00 | 0.942 |
+| Granite embeddings + FAISS (online) | 0.95 | 0.95 | 1.00 | 0.963 |
+
+Every offside question routes to **Law 11 at rank 1**, and the two offline near-misses (goal-line to goal-kick, referee to VAR) recover by rank 2-3. CI fails if Hit@5 drops below 1.0.
+
 ## Tech
 
 Only what is built and running is listed here. Roadmap technologies are in the table above.
 
-- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, a React Three Fiber + GSAP cinematic hero (lazy-loaded, motion-gated), an SVG offside-line visualization, a Web Audio HRTF spatial-audio cue, an on-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano, lazy-loaded), a sighted-track read-aloud (Web Speech API + Kokoro-82M on-device), ARIA live regions.
-- **Backend:** FastAPI, IBM Context Forge (MCP gateway), IBM Granite + Granite Guardian via watsonx (raw ML REST), the official `mcp` and `a2a-sdk` SDKs (IFAB-RAG and geometry MCP servers, an A2A narrator agent), Sportmonks / API-Football triggers with a cached replay buffer, pure-Python offside geometry over StatsBomb 360 data.
-- **Accessibility:** WCAG 2.2 AA, ARIA live regions (`assertive` for the verdict), screen-reader-native delivery, a `lang` attribute that switches the spoken voice, full keyboard support, decorative motion gated behind `prefers-reduced-motion`.
+- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, a multi-section cinematic site (React Three Fiber + GSAP hero, Lenis smooth scroll, scroll-reveals, liquid-glass), an SVG offside-line visualization, a listener-centred Web Audio HRTF spatial-audio engine with a semantic verdict earcon, a broadcast-delay ticker, keyboard power-mode + a stage scrubber + verbosity modes, a shareable on-device audio clip, an on-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano), a sighted-track read-aloud (Web Speech API + Kokoro-82M), 5-language narration (EN/ES/FR/PT/DE), ARIA live regions.
+- **Backend:** FastAPI + SSE, IBM Context Forge (MCP gateway), IBM Granite + Granite Guardian via watsonx (raw ML REST), Docling to FAISS IFAB-Laws RAG, OpenTelemetry tracing, the official `mcp` and `a2a-sdk` SDKs (IFAB-RAG and geometry MCP servers, an A2A narrator agent with a real `message/send` round-trip), Sportmonks / API-Football triggers with a cached replay buffer, pure-Python offside geometry over StatsBomb 360 data.
+- **Accessibility:** WCAG 2.2 AA, a pre-registered ARIA live region (`assertive` for the explicitly-requested verdict) with a re-announce-safe fix and verbosity control, screen-reader-native delivery, a `lang` attribute that switches the spoken voice, full keyboard support, decorative motion gated behind `prefers-reduced-motion`, axe-core + Playwright accessibility CI.
 
 ## Accessibility validation
 
