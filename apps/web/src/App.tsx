@@ -1,6 +1,12 @@
-import { useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import gsap from 'gsap'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { playOffsideChord } from './sonify'
+import { usePrefersReducedMotion } from './useReducedMotion'
+
+// The 3D hero is heavy and purely decorative, so it is code-split and only loaded
+// when motion is allowed (keeps the core fast and accessible).
+const Hero3D = lazy(() => import('./Hero3D'))
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
@@ -71,6 +77,26 @@ export default function App() {
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const reducedMotion = usePrefersReducedMotion()
+
+  // GSAP intro: a staggered rise of the hero content on load. The text is already
+  // in the DOM (the screen reader reads it immediately); GSAP only animates
+  // opacity/transform, and only when motion is allowed.
+  useEffect(() => {
+    if (reducedMotion || !heroRef.current) return
+    const items = heroRef.current.querySelectorAll('[data-hero-item]')
+    const anim = gsap.from(items, {
+      y: 24,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power3.out',
+      stagger: 0.12,
+    })
+    return () => {
+      anim.kill()
+    }
+  }, [reducedMotion])
 
   // The button is the deliberate user gesture that opens the stream AND unlocks
   // audio for the spatial-audio cue. Language is passed explicitly so re-narrating
@@ -131,13 +157,29 @@ export default function App() {
   const t = UI[lang]
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8 px-6 py-16 text-center">
-      <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight">VARSITY</h1>
-      <p className="max-w-xl text-balance text-slate-300" lang={t.bcp47}>
-        {t.sub}
-      </p>
+    <>
+      {/* Decorative 3D broadcast pitch behind the hero. aria-hidden, non-interactive,
+          and only mounted when motion is allowed. */}
+      {!reducedMotion && (
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0">
+          <Suspense fallback={null}>
+            <Hero3D />
+          </Suspense>
+        </div>
+      )}
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
+      <main
+        ref={heroRef}
+        className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-8 px-6 py-16 text-center"
+      >
+        <h1 data-hero-item className="text-4xl sm:text-6xl font-semibold tracking-tight">
+          VARSITY
+        </h1>
+        <p data-hero-item className="max-w-xl text-balance text-slate-300" lang={t.bcp47}>
+          {t.sub}
+        </p>
+
+        <div data-hero-item className="flex flex-wrap items-center justify-center gap-3">
         {/* Language toggle: real buttons with aria-pressed; switching re-narrates the call. */}
         <div role="group" aria-label={t.langLabel} className="inline-flex rounded-full bg-slate-800/60 p-1">
           {(['English', 'Spanish'] as const).map((l) => (
@@ -170,6 +212,7 @@ export default function App() {
       </div>
 
       <button
+        data-hero-item
         onClick={() => explainTheCall(lang)}
         disabled={streaming}
         className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
@@ -217,6 +260,7 @@ export default function App() {
           {explanation}
         </p>
       )}
-    </main>
+      </main>
+    </>
   )
 }
