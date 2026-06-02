@@ -27,6 +27,12 @@ class VarEvent:
     type_name: str
     detail: str | None
 
+    @property
+    def transitional(self) -> bool:
+        """True for the in-progress 'Goal Under Review' announcement (Sportmonks-only)."""
+        blob = f"{self.type_name} {self.detail or ''}".lower()
+        return "under review" in blob or "reviewing" in blob
+
 
 def _blob(event: dict) -> str:
     name = ((event.get("type") or {}).get("name") or event.get("type_name") or "").lower()
