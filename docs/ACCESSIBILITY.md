@@ -8,16 +8,16 @@ output, not an afterthought. Accessibility is enforced in CI, not just claimed.
 **WCAG 2.2 AA** (the current W3C Recommendation; 2.1 is superseded, 3.0 is still a
 draft). The criteria the experience leans on most:
 
-- **4.1.3 Status Messages** — the verdict is delivered through a pre-registered
+- **4.1.3 Status Messages**: the verdict is delivered through a pre-registered
   `aria-live` region that mutates in place, so it is announced without moving focus.
-- **1.3.1 Info & Relationships** — a single `h1`, semantic sections, and real `<ol>`/
+- **1.3.1 Info & Relationships**: a single `h1`, semantic sections, and real `<ol>`/
   `<li>` lists for the pipeline and verify panels.
-- **2.1.1 Keyboard** — every action is reachable by keyboard, plus a one-keypress
+- **2.1.1 Keyboard**: every action is reachable by keyboard, plus a one-keypress
   power mode and a keyboard-operable stage scrubber.
-- **2.2.2 Pause, Stop, Hide** — the broadcast-delay ticker animation has a pause
+- **2.2.2 Pause, Stop, Hide**: the broadcast-delay ticker animation has a pause
   control; all decorative motion is gated behind `prefers-reduced-motion`.
-- **1.4.3 Contrast** — AA contrast, enforced by axe-core in CI (zero serious/critical).
-- **1.2.x Captions / audio description** — the demo video ships open + closed captions
+- **1.4.3 Contrast**: AA contrast, enforced by axe-core in CI (zero serious/critical).
+- **1.2.x Captions / audio description**: the demo video ships open + closed captions
   and an audio-description track (submission deliverable).
 
 ## The `aria-live` decision (assertive vs polite)
@@ -25,7 +25,7 @@ draft). The criteria the experience leans on most:
 The verdict region is **`aria-live="assertive"`**, deliberately. The common guidance is
 "prefer polite," and the **"VAR is reviewing" heads-up is polite** (it is unsolicited
 context). But the verdict itself is the result the fan **explicitly requested** and the
-product's whole thesis is that it arrives *before the broadcast catches up* — delaying it
+product's whole thesis is that it arrives *before the broadcast catches up*, delaying it
 in a polite queue until the screen reader finishes an unrelated utterance would defeat the
 point. Assertive is the correct choice for an explicitly-requested, time-critical result;
 it is not unsolicited chatter. Two supporting details:
