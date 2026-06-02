@@ -68,10 +68,26 @@ function describe(s: Stage): string {
   }
 }
 
+// Haptic cue (Vibration API): a third sensory channel for the offside moment, in
+// direct response to a blind fan's feedback about tactile match feedback. Offside is
+// a longer buzz scaled by how far past the line; onside is a short tap. Mobile/Android
+// only; a graceful no-op on desktop. Gesture-gated by the Explain click.
+function triggerHaptic(g: { is_offside: boolean; margin_meters: number }) {
+  const nav = navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }
+  if (typeof nav.vibrate !== 'function') return
+  const pattern: number[] = g.is_offside
+    ? [Math.round(Math.min(450, 120 + Math.abs(g.margin_meters) * 60))]
+    : [90]
+  nav.vibrate(pattern)
+  ;(window as unknown as { __varsityHaptic?: number[] }).__varsityHaptic = pattern
+}
+
 export default function App() {
   const [explanation, setExplanation] = useState('')
   const [stages, setStages] = useState<Stage[]>([])
   const [geo, setGeo] = useState<Geometry | null>(null)
+  const [lawText, setLawText] = useState('')
+  const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [lang, setLang] = useState<Lang>('English')
   const [soundOn, setSoundOn] = useState(true)
@@ -113,6 +129,7 @@ export default function App() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setLawText('')
     setOfflineSource(null)
     setStreaming(true)
     const url = `${BACKEND}/stream/canned?language=${encodeURIComponent(language)}`
@@ -137,8 +154,13 @@ export default function App() {
               .catch(() => {})
           }
         }
+        if (name === 'law') {
+          setLawText(String(data.text ?? ''))
+        }
         if (name === 'verdict') {
           setExplanation(String(data.text ?? ''))
+          if (data.law_text) setLawText(String(data.law_text))
+          triggerHaptic(data as unknown as Geometry)
           setStreaming(false)
           source.close()
         }
@@ -158,6 +180,7 @@ export default function App() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setLawText('')
     setOfflineSource(null)
     setOfflineStatus('')
     setStreaming(true)
@@ -178,6 +201,8 @@ export default function App() {
         .catch(() => {})
     }
     setExplanation(res.text)
+    setLawText(res.lawText)
+    triggerHaptic(res.geo)
     setOfflineSource(res.source)
     setStreaming(false)
   }
@@ -245,6 +270,19 @@ export default function App() {
         >
           {soundOn ? 'Sound on' : 'Sound off'}
         </button>
+
+        {/* Detail / Plain toggle. Detailed surfaces the full Law text + the geometry
+            breakdown, in direct response to a blind fan asking for rule information. */}
+        <button
+          type="button"
+          aria-pressed={detail}
+          onClick={() => setDetail((d) => !d)}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            detail ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
+          }`}
+        >
+          {detail ? 'Detailed' : 'Plain'}
+        </button>
       </div>
 
       <div data-hero-item className="flex flex-wrap items-center justify-center gap-3">
@@ -297,6 +335,34 @@ export default function App() {
       >
         {explanation}
       </div>
+
+      {/* Detail panel: the full Law text + geometry breakdown + how clear-cut the call
+          is. Accessible (real headings), so a screen-reader user gets the rule detail a
+          blind fan asked for. Shown on demand via the Detailed toggle. */}
+      {detail && geo && (
+        <section
+          aria-label="Decision detail"
+          className="w-full max-w-2xl rounded-lg bg-slate-900/60 p-4 text-left ring-1 ring-slate-700/50"
+        >
+          <h2 className="text-sm font-semibold text-emerald-300">How this was decided</h2>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm text-slate-300">
+            <dt className="text-slate-400">Verdict</dt>
+            <dd>{geo.is_offside ? 'Offside' : 'Onside'}</dd>
+            <dt className="text-slate-400">Margin past the offside line</dt>
+            <dd>{Math.abs(geo.margin_meters).toFixed(2)} m</dd>
+            <dt className="text-slate-400">How clear-cut</dt>
+            <dd data-testid="confidence">{geo.confidence ?? 'n/a'}</dd>
+          </dl>
+          {lawText && (
+            <>
+              <h3 className="mt-3 text-sm font-semibold text-emerald-300">The Law</h3>
+              <p lang="en" data-testid="law-text" className="mt-1 text-sm leading-relaxed text-slate-300">
+                {lawText}
+              </p>
+            </>
+          )}
+        </section>
+      )}
 
       {/* Dual-use offside visualization: decorative, hidden from the screen reader. */}
       {geo && (
