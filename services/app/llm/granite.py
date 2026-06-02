@@ -10,30 +10,86 @@ from app.llm import _watsonx
 DEFAULT_MODEL = "ibm/granite-4-h-small"
 
 
+# Deterministic Law-11-grounded floors per language, used only when watsonx returns no
+# usable text. The live Granite path produces the real in-language explanation; these
+# keep the demo from ever showing nothing. Keyed by BCP-47-ish language prefixes.
+_FALLBACKS: dict[str, tuple[str, str]] = {
+    "en": (
+        "Under Law 11, the most advanced attacker was ahead of the second-to-last "
+        "defender by {m:.2f} meters when the ball was played, so the player was correctly "
+        "judged offside.",
+        "Under Law 11, the most advanced attacker was level with or behind the "
+        "second-to-last defender by {m:.2f} meters, so the position was legal.",
+    ),
+    "es": (
+        "Según la Ley 11, el atacante más adelantado estaba por delante del penúltimo "
+        "defensor por {m:.2f} metros cuando se jugó el balón, por lo que estaba "
+        "correctamente en posición de fuera de juego.",
+        "Según la Ley 11, el atacante más adelantado estaba a la altura o por detrás del "
+        "penúltimo defensor por {m:.2f} metros, por lo que su posición era legal.",
+    ),
+    "fr": (
+        "Selon la Loi 11, l'attaquant le plus avancé était devant l'avant-dernier "
+        "défenseur de {m:.2f} mètres au moment où le ballon a été joué, il était donc "
+        "correctement jugé hors-jeu.",
+        "Selon la Loi 11, l'attaquant le plus avancé était au niveau ou derrière "
+        "l'avant-dernier défenseur de {m:.2f} mètres, sa position était donc légale.",
+    ),
+    "pt": (
+        "Segundo a Lei 11, o atacante mais avançado estava à frente do penúltimo "
+        "defensor por {m:.2f} metros quando a bola foi jogada, por isso foi corretamente "
+        "marcado impedimento.",
+        "Segundo a Lei 11, o atacante mais avançado estava na linha ou atrás do penúltimo "
+        "defensor por {m:.2f} metros, por isso a posição era legal.",
+    ),
+    "de": (
+        "Nach Regel 11 war der vorderste Angreifer beim Abspiel {m:.2f} Meter vor dem "
+        "vorletzten Verteidiger, daher wurde korrekt auf Abseits entschieden.",
+        "Nach Regel 11 war der vorderste Angreifer auf gleicher Höhe mit oder hinter dem "
+        "vorletzten Verteidiger ({m:.2f} Meter), daher war die Position regulär.",
+    ),
+}
+
+
+def _lang_key(language: str) -> str:
+    """Map a language name or code to a fallback key (English if unknown)."""
+    low = language.lower()
+    prefixes = {
+        "en": ("en", "ingl"),
+        "es": ("es", "span", "español", "espanol"),
+        "fr": ("fr", "fren", "franç", "franc"),
+        "pt": ("pt", "port"),
+        "de": ("de", "germ", "deut"),
+    }
+    for key, starts in prefixes.items():
+        if low.startswith(starts):
+            return key
+    return "en"
+
+
 def _fallback_explanation(
     *, margin_meters: float, is_offside: bool, language: str = "English"
 ) -> str:
     """Deterministic Law-11-grounded floor when watsonx returns no usable text."""
-    meters = abs(margin_meters)
-    if language.lower().startswith(("span", "español")):
-        if is_offside:
-            return (
-                f"Según la Ley 11, el atacante más adelantado estaba por delante del "
-                f"penúltimo defensor por {meters:.2f} metros cuando se jugó el balón, "
-                "por lo que estaba correctamente en posición de fuera de juego."
-            )
-        return (
-            f"Según la Ley 11, el atacante más adelantado estaba a la altura o por "
-            f"detrás del penúltimo defensor por {meters:.2f} metros, por lo que su "
-            "posición era legal."
-        )
-    verdict = "offside" if is_offside else "onside"
-    relation = "ahead of" if is_offside else "level with or behind"
-    return (
-        f"Under Law 11, the most advanced attacker was {relation} the second-to-last "
-        f"defender by {meters:.2f} meters when the ball was played, so the player was "
-        f"correctly judged {verdict}."
-    )
+    offside_tpl, onside_tpl = _FALLBACKS[_lang_key(language)]
+    tpl = offside_tpl if is_offside else onside_tpl
+    return tpl.format(m=abs(margin_meters))
+
+
+# Markers that mean the model echoed the prompt instructions instead of answering.
+_LEAK_MARKERS = (
+    "<explanation",
+    "law text:",
+    "decision data:",
+    "do not invent",
+    "cite the law number",
+    "in 2 to 3 short sentences",
+)
+
+
+def _looks_like_prompt_leak(text: str) -> bool:
+    low = text.lower()
+    return any(marker in low for marker in _LEAK_MARKERS)
 
 
 @dataclass
@@ -88,11 +144,12 @@ class GraniteClient:
             f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
             f"the ball was played. Verdict: {verdict}.\n\nExplanation:"
         )
-        # watsonx greedy occasionally returns empty text; retry, then fall back to a
-        # deterministic Law-grounded floor so the demo never produces no explanation.
+        # watsonx greedy occasionally returns empty text, or (seen on some non-English
+        # runs) echoes the prompt scaffolding. Retry on either, then fall back to the
+        # in-language deterministic floor so the demo never shows nothing or leaked prompt.
         for _ in range(3):
             text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
-            if len(text) >= 20:
+            if len(text) >= 20 and not _looks_like_prompt_leak(text):
                 return text
         return _fallback_explanation(
             margin_meters=margin_meters, is_offside=is_offside, language=language
