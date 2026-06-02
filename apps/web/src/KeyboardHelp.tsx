@@ -4,6 +4,7 @@ export const SHORTCUTS: [string, string][] = [
   ['R', 'Read aloud'],
   ['C', 'Share clip'],
   ['S', 'Toggle spatial sound'],
+  ['B', 'Build-up sonification (approach to the line)'],
   ['D', 'Toggle detail / plain'],
   ['L', 'Live feed / replay'],
   ['V', 'Verbosity (minimal / standard / coach)'],
