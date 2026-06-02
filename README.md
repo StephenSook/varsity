@@ -37,7 +37,7 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 | 3D / GSAP cinematic hero | Wired-live | `apps/web/src/Hero3D.tsx` (React Three Fiber pitch, lazy-loaded, `aria-hidden`, motion-gated) + a GSAP intro |
 | Spatial-audio HRTF sonification of the three key players | Wired-live | `apps/web/src/sonify.ts`; the attacker tone is panned right of the centred offside line by the margin |
 | On-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano) | Wired-live | `apps/web/src/offline.ts`; generates a Law-grounded explanation fully in-browser, no backend (verified: 0 backend calls), with a deterministic floor when WebGPU is unavailable |
-| Premium Kokoro / Piper TTS (sighted track) | Roadmap | not yet built |
+| Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | Wired-live | `apps/web/src/tts.ts`; Web Speech API floor (verified) plus Kokoro-82M (`onnx-community/Kokoro-82M-v1.0-ONNX`) on WebGPU. The accessibility path stays the user's own screen reader |
 
 ## Architecture
 
@@ -49,7 +49,7 @@ Pipeline: trigger (live event feed or a deterministic StatsBomb 360 freeze-frame
 
 Only what is built and running is listed here. Roadmap technologies are in the table above.
 
-- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, a React Three Fiber + GSAP cinematic hero (lazy-loaded, motion-gated), an SVG offside-line visualization, a Web Audio HRTF spatial-audio cue, an on-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano, lazy-loaded), ARIA live regions.
+- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, a React Three Fiber + GSAP cinematic hero (lazy-loaded, motion-gated), an SVG offside-line visualization, a Web Audio HRTF spatial-audio cue, an on-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano, lazy-loaded), a sighted-track read-aloud (Web Speech API + Kokoro-82M on-device), ARIA live regions.
 - **Backend:** FastAPI, IBM Context Forge (MCP gateway), IBM Granite + Granite Guardian via watsonx (raw ML REST), the official `mcp` and `a2a-sdk` SDKs (IFAB-RAG and geometry MCP servers, an A2A narrator agent), Sportmonks / API-Football triggers with a cached replay buffer, pure-Python offside geometry over StatsBomb 360 data.
 - **Accessibility:** WCAG 2.2 AA, ARIA live regions (`assertive` for the verdict), screen-reader-native delivery, a `lang` attribute that switches the spoken voice, full keyboard support, decorative motion gated behind `prefers-reduced-motion`.
 

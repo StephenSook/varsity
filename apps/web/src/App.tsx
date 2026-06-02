@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { playOffsideChord } from './sonify'
+import { readAloud } from './tts'
 import { usePrefersReducedMotion } from './useReducedMotion'
 
 // The 3D hero is heavy and purely decorative, so it is code-split and only loaded
@@ -262,6 +263,16 @@ export default function App() {
           className="rounded-full border border-emerald-500/60 px-6 py-3 font-medium text-emerald-300 transition-colors hover:bg-emerald-500/10 disabled:opacity-60"
         >
           Offline mode (on-device)
+        </button>
+
+        {/* Read aloud (sighted track only): the accessibility path stays the user's
+            own screen reader; this is a supplementary spoken readout. */}
+        <button
+          onClick={() => void readAloud(explanation, { lang: t.bcp47 })}
+          disabled={streaming || !explanation}
+          className="rounded-full border border-slate-500/60 px-6 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-500/10 disabled:opacity-40"
+        >
+          Read aloud
         </button>
       </div>
 
