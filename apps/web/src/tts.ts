@@ -26,7 +26,7 @@ type KokoroAudio = { toBlob: () => Blob }
 type KokoroModel = { generate: (text: string, opts: { voice: string }) => Promise<KokoroAudio> }
 let _kokoro: KokoroModel | null = null
 
-async function speakKokoro(text: string): Promise<boolean> {
+async function synthKokoro(text: string): Promise<Blob> {
   const { KokoroTTS } = await import('kokoro-js')
   if (!_kokoro) {
     _kokoro = (await KokoroTTS.from_pretrained(KOKORO_MODEL, {
@@ -35,11 +35,34 @@ async function speakKokoro(text: string): Promise<boolean> {
     })) as unknown as KokoroModel
   }
   const audio = await _kokoro.generate(text, { voice: KOKORO_VOICE })
-  const url = URL.createObjectURL(audio.toBlob())
+  return audio.toBlob() // already an audio/wav Blob
+}
+
+async function speakKokoro(text: string): Promise<boolean> {
+  const url = URL.createObjectURL(await synthKokoro(text))
   const el = new Audio(url)
   el.addEventListener('ended', () => URL.revokeObjectURL(url))
   await el.play()
   return true
+}
+
+/**
+ * Render the explanation to a downloadable/shareable WAV clip with the on-device
+ * Kokoro voice. Kokoro is English-first and WebGPU-only, so returns null when those
+ * are unavailable (the caller then shares text instead). No network beyond the
+ * lazy first-run model download.
+ */
+export async function synthesizeClip(
+  text: string,
+  opts: { lang?: string } = {},
+): Promise<Blob | null> {
+  const lang = opts.lang ?? 'en'
+  if (!lang.startsWith('en') || !webgpuAvailable()) return null
+  try {
+    return await synthKokoro(text)
+  } catch {
+    return null
+  }
 }
 
 export type ReadAloudResult = 'kokoro' | 'web-speech' | 'unavailable'
