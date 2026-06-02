@@ -28,7 +28,19 @@ docker run --rm -it ghcr.io/ibm/mcp-context-forge:1.0.2 \
   --username admin@example.com --exp 10080 --secret "$CONTEXT_FORGE_JWT_SECRET"
 ```
 
-### Register a backend (federation)
+### Register the backends (federation)
+
+Automated (registers all 4 backends at once; see `docs/federation.md` for the
+full bring-up and the sequence diagram):
+
+```bash
+services/scripts/run_federation.sh   # launch ifab-rag :8001, match-geometry :8002, narrator :9000
+# then, with the gateway up and a token in CONTEXT_FORGE_TOKEN:
+cd services && PYTHONPATH=. python -m scripts.register_federation
+#   preview without a gateway:  python -m scripts.register_federation --dry-run
+```
+
+Manual equivalent:
 
 ```bash
 # an MCP server

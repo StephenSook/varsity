@@ -1,0 +1,67 @@
+# VARSITY federation (Context Forge)
+
+VARSITY's backend is a small federation behind the **IBM Context Forge** MCP
+gateway. One VAR offside event fans out across four backends; the gateway's
+`/admin` observability trace over that fan-out is the hero Technical-Execution
+artifact.
+
+## The four federated backends
+
+| # | Backend | Kind | Tool / skill | Endpoint |
+|---|---------|------|--------------|----------|
+| 1 | `ifab-rag` | MCP server | `retrieve_law` (IFAB Law corpus) | SSE `:8001` |
+| 2 | `match-geometry` | MCP server | `compute_offside_margin` (StatsBomb 360) | SSE `:8002` |
+| 3 | `narrator` | A2A agent | `a2a_narrator` (`message/send`) | JSON-RPC `:9000` |
+| 4 | Granite coordinator | watsonx | `explain_offside` reasoning | watsonx ML REST |
+
+Granite Guardian (`groundedness` + Law-citation) gates the output before it
+reaches the fan's screen reader.
+
+## Sequence: one offside decision, fanned out
+
+```mermaid
+sequenceDiagram
+    participant Fan as Blind fan (screen reader)
+    participant Web as VARSITY web (SSE -> aria-live)
+    participant CF as Context Forge gateway
+    participant Geo as match-geometry MCP
+    participant RAG as ifab-rag MCP
+    participant Narr as A2A narrator
+    participant G as Granite (watsonx)
+    participant Guard as Granite Guardian
+
+    Note over Web,CF: VAR offside event (Sportmonks "Goal Under Review" or canned 360 frame)
+    Web->>CF: explain(decision)
+    CF->>Geo: compute_offside_margin(freeze_frame)
+    Geo-->>CF: { is_offside: true, margin_meters: 5.45 }
+    CF->>RAG: retrieve_law("offside ... second-last defender")
+    RAG-->>CF: Law 11 (exact IFAB text)
+    CF->>Narr: a2a_narrator.message/send({ margin, law_text })
+    Narr->>G: explain_offside(margin, is_offside, law_text)
+    G-->>Narr: rule-grounded explanation
+    Narr-->>CF: explanation
+    CF->>Guard: groundedness (No = safe) + Law-citation
+    Guard-->>CF: SAFE
+    CF-->>Web: explanation + SAFE
+    Web-->>Fan: aria-live="assertive" speaks the why
+```
+
+## Bringing it up
+
+```bash
+# 1. gateway (Docker)
+cd infra && docker compose up -d            # Context Forge on :4444
+
+# 2. the three host backends
+services/scripts/run_federation.sh          # ifab-rag :8001, match-geometry :8002, narrator :9000
+
+# 3. register them with the gateway (token: see infra/README.md)
+cd services && PYTHONPATH=. CONTEXT_FORGE_TOKEN=... python -m scripts.register_federation
+#   dry run (no gateway needed):  python -m scripts.register_federation --dry-run
+
+# 4. open http://localhost:4444/admin and capture the observability Gantt trace
+```
+
+**Rollback for the artifact:** if `/admin` does not render a clean four-service
+fan-out, fall back to OpenTelemetry into Jaeger or Grafana Tempo and screenshot
+that waterfall instead. The gateway stays in the architecture either way.
