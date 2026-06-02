@@ -41,9 +41,41 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 
 ## Architecture
 
-See [docs/federation.md](docs/federation.md) for the four-backend federation and the VAR-event sequence diagram.
+One VAR offside event flows from a trigger, through the geometry and rule-grounding
+backends coordinated by the IBM Context Forge MCP gateway, into a Granite explanation
+that Granite Guardian gates, and out over SSE to the screen reader. See
+[docs/federation.md](docs/federation.md) for the four-backend federation and the
+VAR-event sequence diagram.
 
-Pipeline: trigger (live event feed or a deterministic StatsBomb 360 freeze-frame) to offside-margin geometry to IFAB-Laws RAG to IBM Granite reasoning, coordinated through the IBM Context Forge MCP gateway, to Granite Guardian safety, to Server-Sent Events, to an `aria-live` region the screen reader speaks. The canned StatsBomb path is the deterministic floor; the live trigger is a resilient flourish that falls back to a cached replay buffer.
+```mermaid
+flowchart LR
+    subgraph Trigger
+      SM["Sportmonks<br/>Goal Under Review"] --> RES{resilient<br/>resolver}
+      AF["API-Football<br/>final outcomes"] --> RES
+      RB["cached replay<br/>buffer (floor)"] --> RES
+      SB["StatsBomb 360<br/>canned frame"] --> RES
+    end
+
+    RES --> GEO["match-geometry MCP<br/>offside margin (m)"]
+
+    subgraph Gateway["IBM Context Forge MCP gateway"]
+      GEO --> COORD["Granite coordinator"]
+      RAG["ifab-rag MCP<br/>Law 11 retrieval"] --> COORD
+      A2A["A2A narrator agent"] --> COORD
+    end
+
+    COORD --> GRAN["IBM Granite (watsonx)<br/>rule-grounded explanation"]
+    GRAN --> GUARD["Granite Guardian<br/>groundedness + Law cite"]
+    GUARD --> SSE["FastAPI SSE<br/>/stream"]
+    SSE --> LIVE["aria-live region"]
+    LIVE --> SR(["Blind fan's<br/>own screen reader"])
+
+    SSE -. decorative, aria-hidden .-> VIZ["SVG offside-line viz<br/>+ spatial-audio cue"]
+
+    OFF["On-device offline mode<br/>Granite Nano · WebGPU"] -. no network .-> LIVE
+```
+
+The canned StatsBomb path is the deterministic floor; the live trigger is a resilient flourish that falls back to a cached replay buffer. The screen-reader layer is always parallel to (and independent of) the decorative visual and audio layers.
 
 ## Tech
 
