@@ -45,16 +45,25 @@ function mostAdvancedAttackerX(frame: Player[]): number {
   return Math.max(...pool.map((p) => p.x))
 }
 
+function confidenceLabel(marginMeters: number): string {
+  const m = Math.abs(marginMeters)
+  if (m >= 0.5) return 'clear'
+  if (m >= 0.2) return 'tight'
+  return 'very tight'
+}
+
 export function computeOffsideLocal(frame: Player[] = CANNED_FRAME): Geometry {
   const lineX = secondLastOpponentX(frame)
   const attX = mostAdvancedAttackerX(frame)
   const marginUnits = attX - lineX
+  const margin = Math.round(marginUnits * UNITS_TO_METERS * 100) / 100
   return {
     players: frame,
     offside_line_x: lineX,
     attacker_x: attX,
-    margin_meters: Math.round(marginUnits * UNITS_TO_METERS * 100) / 100,
+    margin_meters: margin,
     is_offside: marginUnits > 0,
+    confidence: confidenceLabel(margin),
     pitch: { length: 120, width: 80 },
   }
 }
@@ -89,6 +98,7 @@ export type OfflineResult = {
   text: string
   source: 'granite-nano-webgpu' | 'deterministic'
   geo: Geometry
+  lawText: string
 }
 
 /**
@@ -104,7 +114,7 @@ export async function generateOffline(
 
   if (!webgpuAvailable()) {
     opts.onStatus?.('WebGPU unavailable; explained on-device (deterministic).')
-    return { text: floor, source: 'deterministic', geo }
+    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
   }
 
   try {
@@ -136,11 +146,11 @@ export async function generateOffline(
     const text = out?.[0]?.generated_text?.at(-1)?.content?.trim()
     if (text && text.length >= 20 && /law/i.test(text)) {
       opts.onStatus?.('Generated on-device with Granite Nano (WebGPU).')
-      return { text, source: 'granite-nano-webgpu', geo }
+      return { text, source: 'granite-nano-webgpu', geo, lawText: LAW_11_TEXT }
     }
-    return { text: floor, source: 'deterministic', geo }
+    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
   } catch {
     opts.onStatus?.('On-device model unavailable; explained on-device (deterministic).')
-    return { text: floor, source: 'deterministic', geo }
+    return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
   }
 }

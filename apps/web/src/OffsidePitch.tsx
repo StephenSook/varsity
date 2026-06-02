@@ -12,6 +12,7 @@ export type Geometry = {
   attacker_x: number
   margin_meters: number
   is_offside: boolean
+  confidence?: string
   pitch: { length: number; width: number }
 }
 
