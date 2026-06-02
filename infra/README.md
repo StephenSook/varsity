@@ -65,3 +65,22 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
 - Rollback for the observability artifact: if `/admin` does not render a clean
   4-service fan-out trace, fall back to OpenTelemetry into Jaeger or Grafana Tempo
   and screenshot that waterfall instead.
+
+### KNOWN ISSUE: GA `latest` (arm64) hangs at startup (2026-06-02)
+
+On Apple Silicon the GA `ghcr.io/ibm/mcp-context-forge:latest` image
+(`arm64-e0967e65...`) builds all routers, logs `SECTION_PERMISSIONS validation
+passed`, then **hangs in the Starlette lifespan** ("Waiting for application
+startup" with no "Application startup complete"), so `:4444` never serves
+(`curl` returns `000`, container is `unhealthy`). Verified it is NOT worker
+contention or a corrupt DB: it still hangs with `GUNICORN_WORKERS=1` and a fresh
+volume (`docker compose down -v`). `GUNICORN_WORKERS=1` is kept anyway (correct
+for the local SQLite engine and removes one failure class).
+
+The live `/admin` observability Gantt trace is therefore **deferred**, not
+abandoned: the federation itself is fully built and proven by `app/federation.py`
++ `scripts/register_federation.py` (`--dry-run` lists all backends), the running
+MCP/A2A backends, and the sequence diagram in `docs/federation.md`. To capture
+the live trace later, options: (a) run the gateway from PyPI
+(`pip install mcp-contextforge-gateway==1.0.2`) outside Docker, (b) pin an older
+image tag that starts cleanly, or (c) the OTel -> Jaeger/Tempo rollback above.
