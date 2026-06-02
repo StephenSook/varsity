@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { OffsidePitch, type Geometry } from './OffsidePitch'
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
@@ -29,6 +30,7 @@ function describe(s: Stage): string {
 export default function App() {
   const [explanation, setExplanation] = useState('')
   const [stages, setStages] = useState<Stage[]>([])
+  const [geo, setGeo] = useState<Geometry | null>(null)
   const [streaming, setStreaming] = useState(false)
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
@@ -39,6 +41,7 @@ export default function App() {
     sourceRef.current?.close()
     setStages([])
     setExplanation('')
+    setGeo(null)
     setStreaming(true)
     const source = new EventSource(`${BACKEND}/stream/canned`)
     sourceRef.current = source
@@ -46,6 +49,9 @@ export default function App() {
       source.addEventListener(name, (event) => {
         const data = JSON.parse((event as MessageEvent).data) as Stage
         setStages((prev) => [...prev, data])
+        if (name === 'geometry') {
+          setGeo(data as unknown as Geometry)
+        }
         if (name === 'verdict') {
           setExplanation(String(data.text ?? ''))
           setStreaming(false)
@@ -77,6 +83,18 @@ export default function App() {
       <div ref={liveRef} aria-live="assertive" aria-atomic="true" role="status" className="sr-only">
         {explanation}
       </div>
+
+      {/* Dual-use offside visualization: decorative, hidden from the screen reader. */}
+      {geo && (
+        <figure aria-hidden="true" className="w-full max-w-2xl">
+          <OffsidePitch geo={geo} />
+          <figcaption className="mt-2 text-sm text-slate-400">
+            Offside line at the second-to-last defender · attacker{' '}
+            <span className="text-amber-300">{geo.margin_meters.toFixed(2)} m</span>{' '}
+            {geo.is_offside ? 'ahead' : 'behind'}
+          </figcaption>
+        </figure>
+      )}
 
       {/* Pipeline trace, decorative and hidden from the screen reader. */}
       {stages.length > 0 && (
