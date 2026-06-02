@@ -49,3 +49,15 @@ test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) 
     await expect(page.locator('[aria-hidden="true"] canvas').first()).toBeVisible()
   }
 })
+
+test('the ? keyboard shortcut toggles the shortcut help (keyboard power mode is wired)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const help = page.locator('section[aria-label="Keyboard shortcuts"]')
+  await expect(help).toHaveCount(0)
+  await page.keyboard.press('?')
+  await expect(help).toBeVisible()
+  // the help lists the core single-key actions (scoped to the help panel)
+  await expect(help.getByText('Explain the call')).toBeVisible()
+})

@@ -1,8 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
+import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
+import { shareExplanation } from './share'
 import { playOffsideChord } from './sonify'
-import { readAloud } from './tts'
+import { StageScrubber } from './StageScrubber'
+import { readAloud, synthesizeClip } from './tts'
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
@@ -116,6 +119,8 @@ export function Demo() {
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
   const [offlineStatus, setOfflineStatus] = useState('')
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
+  const [shareStatus, setShareStatus] = useState('')
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -217,6 +222,56 @@ export function Demo() {
     }
   }
 
+  async function shareCurrent() {
+    if (!explanation) return
+    setShareStatus('Preparing clip…')
+    const clip = await synthesizeClip(explanation, { lang: UI[lang].bcp47 })
+    const result = await shareExplanation(explanation, clip)
+    const msg: Record<string, string> = {
+      'shared-clip': 'Shared the audio clip.',
+      'shared-text': 'Shared the explanation.',
+      downloaded: 'Downloaded the audio clip.',
+      copied: 'Copied the explanation to the clipboard.',
+      cancelled: '',
+      unavailable: 'Sharing is not available in this browser.',
+    }
+    setShareStatus(msg[result] ?? '')
+  }
+
+  // Keyboard power mode: every core action from one keypress (ignored while typing in
+  // a field). The on-screen buttons stay tab-focusable; this is the power layer on top.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (e.target as HTMLElement | null)?.tagName ?? ''
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
+      const langs = ['English', 'Spanish', 'French', 'Portuguese', 'German'] as const
+      const k = e.key.toLowerCase()
+      if (k === 'e') {
+        if (!streaming) explainTheCall(lang)
+      } else if (k === 'o') {
+        if (!streaming) void explainOffline()
+      } else if (k === 'r') {
+        if (explanation && !streaming) void readAloud(explanation, { lang: UI[lang].bcp47 })
+      } else if (k === 'c') {
+        if (explanation && !streaming) void shareCurrent()
+      } else if (k === 's') {
+        setSoundOn((s) => !s)
+      } else if (k === 'd') {
+        setDetail((d) => !d)
+      } else if (e.key === '?') {
+        setShowHelp((h) => !h)
+      } else if (k >= '1' && k <= '5') {
+        selectLang(langs[Number(k) - 1])
+      } else {
+        return
+      }
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lang, streaming, explanation])
+
   const t = UI[lang]
   const segBtn = (active: boolean) =>
     `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -282,7 +337,20 @@ export function Demo() {
         >
           Read aloud
         </button>
+        <button
+          onClick={() => void shareCurrent()}
+          disabled={streaming || !explanation}
+          className="rounded-full border border-slate-500/60 px-6 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-500/10 disabled:opacity-40"
+        >
+          Share clip
+        </button>
       </div>
+
+      {shareStatus && (
+        <p role="status" aria-live="polite" className="text-xs text-slate-400">
+          {shareStatus}
+        </p>
+      )}
 
       {offlineSource && (
         <p aria-hidden="true" data-testid="offline-source" className="text-xs text-emerald-400/80">
@@ -350,6 +418,18 @@ export function Demo() {
       )}
 
       <BroadcastTicker latencyMs={latencyMs} />
+
+      <StageScrubber stages={stages} describe={describe} />
+
+      <button
+        type="button"
+        aria-pressed={showHelp}
+        onClick={() => setShowHelp((h) => !h)}
+        className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+      >
+        Keyboard shortcuts (press ?)
+      </button>
+      <KeyboardHelp open={showHelp} />
     </div>
   )
 }
