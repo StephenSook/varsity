@@ -45,7 +45,24 @@ def explanation_stages(
     yield {"stage": "trigger", "source": "StatsBomb 360 (canned)"}
 
     geo = compute_offside(frame)
-    yield {"stage": "geometry", "margin_meters": geo.margin_meters, "is_offside": geo.is_offside}
+    yield {
+        "stage": "geometry",
+        "margin_meters": geo.margin_meters,
+        "is_offside": geo.is_offside,
+        "offside_line_x": geo.offside_line_x,
+        "attacker_x": geo.attacker_x,
+        "pitch": {"length": 120, "width": 80},
+        "players": [
+            {
+                "x": p.x,
+                "y": p.y,
+                "teammate": p.teammate,
+                "actor": p.actor,
+                "keeper": p.keeper,
+            }
+            for p in frame
+        ],
+    }
 
     law = retriever.retrieve(OFFSIDE_QUERY)
     yield {"stage": "law", "law": law.law, "title": law.title}

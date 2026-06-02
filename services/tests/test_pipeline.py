@@ -43,3 +43,17 @@ def test_stages_order() -> None:
         for s in explanation_stages(frame, granite=FakeGranite(), guardian=FakeGuardian())
     ]
     assert stages == ["trigger", "geometry", "law", "granite", "guardian", "verdict"]
+
+
+def test_geometry_stage_carries_pitch_data() -> None:
+    frame = _frame(100.0, 98.0)
+    geo = next(
+        s
+        for s in explanation_stages(frame, granite=FakeGranite(), guardian=FakeGuardian())
+        if s["stage"] == "geometry"
+    )
+    assert "offside_line_x" in geo
+    assert "attacker_x" in geo
+    assert geo["pitch"] == {"length": 120, "width": 80}
+    assert geo["players"]
+    assert all({"x", "y", "teammate"} <= set(p) for p in geo["players"])
