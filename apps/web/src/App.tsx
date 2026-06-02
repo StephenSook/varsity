@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
+import { playOffsideChord } from './sonify'
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
@@ -66,13 +67,19 @@ export default function App() {
   const [geo, setGeo] = useState<Geometry | null>(null)
   const [streaming, setStreaming] = useState(false)
   const [lang, setLang] = useState<Lang>('English')
+  const [soundOn, setSoundOn] = useState(true)
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
 
-  // The button is the deliberate user gesture that opens the stream (and would
-  // unlock audio for the spatial-audio layer later). Language is passed explicitly
-  // so re-narrating on a language toggle does not race the lang state update.
+  // The button is the deliberate user gesture that opens the stream AND unlocks
+  // audio for the spatial-audio cue. Language is passed explicitly so re-narrating
+  // on a language toggle does not race the lang state update.
   function explainTheCall(language: Lang) {
+    if (soundOn) {
+      audioCtxRef.current ??= new AudioContext()
+      void audioCtxRef.current.resume()
+    }
     sourceRef.current?.close()
     setStages([])
     setExplanation('')
@@ -86,7 +93,19 @@ export default function App() {
         const data = JSON.parse((event as MessageEvent).data) as Stage
         setStages((prev) => [...prev, data])
         if (name === 'geometry') {
-          setGeo(data as unknown as Geometry)
+          const g = data as unknown as Geometry
+          setGeo(g)
+          // Spatial-audio cue: a ~500ms HRTF chord of the three key players,
+          // heard before the spoken explanation. Supplement, not a replacement.
+          const ctx = audioCtxRef.current
+          if (ctx) {
+            void playOffsideChord(ctx, g)
+              .then((plan) => {
+                const w = window as unknown as { __varsitySonification?: unknown }
+                w.__varsitySonification = plan
+              })
+              .catch(() => {})
+          }
         }
         if (name === 'verdict') {
           setExplanation(String(data.text ?? ''))
@@ -118,21 +137,36 @@ export default function App() {
         {t.sub}
       </p>
 
-      {/* Language toggle: real buttons with aria-pressed; switching re-narrates the call. */}
-      <div role="group" aria-label={t.langLabel} className="inline-flex rounded-full bg-slate-800/60 p-1">
-        {(['English', 'Spanish'] as const).map((l) => (
-          <button
-            key={l}
-            type="button"
-            aria-pressed={lang === l}
-            onClick={() => selectLang(l)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              lang === l ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            {UI[l].code}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* Language toggle: real buttons with aria-pressed; switching re-narrates the call. */}
+        <div role="group" aria-label={t.langLabel} className="inline-flex rounded-full bg-slate-800/60 p-1">
+          {(['English', 'Spanish'] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              aria-pressed={lang === l}
+              onClick={() => selectLang(l)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                lang === l ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              {UI[l].code}
+            </button>
+          ))}
+        </div>
+
+        {/* Spatial-audio cue toggle. The cue supplements the spoken explanation. */}
+        <button
+          type="button"
+          aria-pressed={soundOn}
+          aria-label="Spatial audio cue"
+          onClick={() => setSoundOn((s) => !s)}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            soundOn ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
+          }`}
+        >
+          {soundOn ? 'Sound on' : 'Sound off'}
+        </button>
       </div>
 
       <button
