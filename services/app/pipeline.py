@@ -101,11 +101,13 @@ def explanation_stages(
         verdict = guardian.check(explanation, law_context=law.text)
         span.set_attribute("varsity.safe", verdict.safe)
         span.set_attribute("varsity.grounded", verdict.grounded)
+        span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
     yield {
         "stage": "guardian",
         "safe": verdict.safe,
         "cites_law": verdict.cites_law,
         "grounded": verdict.grounded,
+        "screen_reader_ok": verdict.screen_reader_ok,
         "answer": verdict.model_answer,
     }
 
