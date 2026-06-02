@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { BroadcastTicker } from './BroadcastTicker'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { playOffsideChord } from './sonify'
 import { readAloud } from './tts'
@@ -11,9 +12,9 @@ const BACKEND =
 const STAGES = ['trigger', 'geometry', 'law', 'granite', 'guardian', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
-type Lang = 'English' | 'Spanish'
+type Lang = 'English' | 'Spanish' | 'French' | 'Portuguese' | 'German'
 
-// Granite is multilingual (EN/DE/ES/FR/PT); VARSITY ships the World Cup pair EN/ES.
+// Granite is multilingual (EN/DE/ES/FR/PT); VARSITY ships all five World Cup languages.
 const UI: Record<
   Lang,
   {
@@ -42,6 +43,33 @@ const UI: Record<
     explaining: 'Explicando…',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
+  },
+  French: {
+    code: 'FR',
+    bcp47: 'fr',
+    langLabel: "Langue de l'explication",
+    explain: "Expliquer l'action",
+    explaining: 'Explication…',
+    caption: (m, off) =>
+      `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
+  },
+  Portuguese: {
+    code: 'PT',
+    bcp47: 'pt',
+    langLabel: 'Idioma da explicação',
+    explain: 'Explicar o lance',
+    explaining: 'Explicando…',
+    caption: (m, off) =>
+      `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
+  },
+  German: {
+    code: 'DE',
+    bcp47: 'de',
+    langLabel: 'Sprache der Erklärung',
+    explain: 'Die Szene erklären',
+    explaining: 'Erkläre…',
+    caption: (m, off) =>
+      `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
   },
 }
 
@@ -87,9 +115,11 @@ export function Demo() {
   const [soundOn, setSoundOn] = useState(true)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
   const [offlineStatus, setOfflineStatus] = useState('')
+  const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const startRef = useRef(0)
 
   function explainTheCall(language: Lang) {
     if (soundOn) {
@@ -102,6 +132,8 @@ export function Demo() {
     setGeo(null)
     setLawText('')
     setOfflineSource(null)
+    setLatencyMs(null)
+    startRef.current = performance.now()
     setStreaming(true)
     const url = `${BACKEND}/stream/canned?language=${encodeURIComponent(language)}`
     const source = new EventSource(url)
@@ -130,6 +162,7 @@ export function Demo() {
           setExplanation(String(data.text ?? ''))
           if (data.law_text) setLawText(String(data.law_text))
           triggerHaptic(data as unknown as Geometry)
+          setLatencyMs(performance.now() - startRef.current)
           setStreaming(false)
           source.close()
         }
@@ -150,6 +183,8 @@ export function Demo() {
     setLawText('')
     setOfflineSource(null)
     setOfflineStatus('')
+    setLatencyMs(null)
+    startRef.current = performance.now()
     setStreaming(true)
     if (soundOn) {
       audioCtxRef.current ??= new AudioContext()
@@ -170,6 +205,7 @@ export function Demo() {
     setExplanation(res.text)
     setLawText(res.lawText)
     triggerHaptic(res.geo)
+    setLatencyMs(performance.now() - startRef.current)
     setOfflineSource(res.source)
     setStreaming(false)
   }
@@ -195,8 +231,8 @@ export function Demo() {
           aria-label={t.langLabel}
           className="inline-flex rounded-full bg-slate-800/60 p-1"
         >
-          {(['English', 'Spanish'] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={lang === l} onClick={() => selectLang(l)} className={segBtn(lang === l)}>
+          {(['English', 'Spanish', 'French', 'Portuguese', 'German'] as const).map((l) => (
+            <button key={l} type="button" aria-pressed={lang === l} aria-label={l} onClick={() => selectLang(l)} className={segBtn(lang === l)}>
               {UI[l].code}
             </button>
           ))}
@@ -312,6 +348,8 @@ export function Demo() {
           {explanation}
         </p>
       )}
+
+      <BroadcastTicker latencyMs={latencyMs} />
     </div>
   )
 }
