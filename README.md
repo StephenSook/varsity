@@ -35,7 +35,7 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 | Live-trigger resilience (Sportmonks to API-Football to cached replay buffer) | Wired-live | `services/app/triggers/`, `GET /stream/live` emits the transitional review event |
 | Docling to FAISS IFAB-Laws ingestion | Integration | `services/app/rag/ingest.py` (build-time; the demo uses the curated `laws.json`) |
 | 3D / GSAP cinematic hero | Roadmap | not yet built |
-| Spatial-audio HRTF sonification of the key players | Roadmap | not yet built |
+| Spatial-audio HRTF sonification of the three key players | Wired-live | `apps/web/src/sonify.ts`; the attacker tone is panned right of the centred offside line by the margin |
 | On-device Granite Nano offline mode (Transformers.js + WebGPU) | Roadmap | not yet built |
 | Premium Kokoro / Piper TTS (sighted track) | Roadmap | not yet built |
 
@@ -49,7 +49,7 @@ Pipeline: trigger (live event feed or a deterministic StatsBomb 360 freeze-frame
 
 Only what is built and running is listed here. Roadmap technologies are in the table above.
 
-- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, an SVG offside-line visualization, ARIA live regions.
+- **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, an SVG offside-line visualization, a Web Audio HRTF spatial-audio cue, ARIA live regions.
 - **Backend:** FastAPI, IBM Context Forge (MCP gateway), IBM Granite + Granite Guardian via watsonx (raw ML REST), the official `mcp` and `a2a-sdk` SDKs (IFAB-RAG and geometry MCP servers, an A2A narrator agent), Sportmonks / API-Football triggers with a cached replay buffer, pure-Python offside geometry over StatsBomb 360 data.
 - **Accessibility:** WCAG 2.2 AA, ARIA live regions (`assertive` for the verdict), screen-reader-native delivery, a `lang` attribute that switches the spoken voice, full keyboard support, decorative motion gated behind `prefers-reduced-motion`.
 
