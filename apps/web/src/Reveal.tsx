@@ -33,11 +33,14 @@ export function Reveal({ children, className = '' }: { children: ReactNode; clas
     return () => io.disconnect()
   }, [reduced])
 
+  // Under reduced motion, render fully visible on the first paint with no transition
+  // at all: no fade, and nothing for a contrast checker to catch mid-animation.
+  const visible = shown || reduced
   return (
     <div
       ref={ref}
-      className={`${className} transition-all duration-700 ease-out ${
-        shown ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      className={`${className} ${reduced ? '' : 'transition-all duration-700 ease-out'} ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
       }`}
     >
       {children}

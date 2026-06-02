@@ -1,0 +1,51 @@
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test } from '@playwright/test'
+
+// VARSITY's whole premise is that a screen-reader user gets the explanation, so the
+// accessibility contract is a first-class CI gate, not an afterthought. These run on
+// the production preview build.
+
+test('no serious or critical axe violations (reduced motion)', async ({ page }) => {
+  // Reduced motion is the deterministic path: the decorative 3D canvas is not
+  // mounted, so axe scans the real semantic layer.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.getByRole('heading', { level: 1, name: 'VARSITY' }).waitFor()
+
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  const blocking = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  )
+  const summary = blocking.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length }))
+  expect(summary, JSON.stringify(summary, null, 2)).toEqual([])
+})
+
+test('the aria-live verdict region is pre-registered and empty on load', async ({ page }) => {
+  // The region must exist BEFORE the verdict so a screen reader announces the
+  // in-place text change. If it were created on demand, the announcement is lost.
+  await page.goto('/')
+  const live = page.locator('[aria-live]')
+  await expect(live).toHaveAttribute('aria-live', 'assertive')
+  await expect(live).toHaveAttribute('role', 'status')
+  await expect(live).toHaveAttribute('aria-atomic', 'true')
+  await expect(live).toHaveText('')
+})
+
+test('single h1 and the cinematic sections render with the demo reachable', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('h1')).toHaveCount(1)
+  for (const id of ['problem', 'demo', 'pipeline', 'judges']) {
+    await expect(page.locator(`section#${id}`)).toBeVisible()
+  }
+  await expect(page.getByRole('button', { name: 'Explain the call' })).toBeVisible()
+})
+
+test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
+  await page.goto('/')
+  const canvas = page.locator('canvas')
+  if (await canvas.count()) {
+    await expect(page.locator('[aria-hidden="true"] canvas').first()).toBeVisible()
+  }
+})
