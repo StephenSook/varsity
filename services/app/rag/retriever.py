@@ -76,11 +76,11 @@ class LawRetriever:
     # penalty shoot-out is penalty-heavy but is not "the penalty kick").
     _TITLE_BONUS = 4.0
 
-    def _keyword(self, query: str, k1: float = 1.5, b: float = 0.75) -> LawChunk:
+    def _keyword_scores(self, query: str, k1: float = 1.5, b: float = 0.75) -> list[float]:
         q = _tokens(query)
         qset = set(q)
-
-        def score(i: int) -> float:
+        scores: list[float] = []
+        for i in range(len(self.chunks)):
             tf, dl = self._tf[i], self._len[i]
             total = 0.0
             for t in q:
@@ -91,9 +91,12 @@ class LawRetriever:
                 total += idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * dl / self._avgdl))
             for t in qset & self._title_tokens[i]:
                 total += self._TITLE_BONUS * max(self._idf.get(t, 0.0), 1.0)
-            return total
+            scores.append(total)
+        return scores
 
-        return self.chunks[max(range(len(self.chunks)), key=score)]
+    def _keyword(self, query: str) -> LawChunk:
+        scores = self._keyword_scores(query)
+        return self.chunks[max(range(len(self.chunks)), key=scores.__getitem__)]
 
     def _faiss(self):
         if self._index is None:
@@ -102,22 +105,40 @@ class LawRetriever:
             self._index = faiss.read_index(str(FAISS_INDEX))
         return self._index
 
-    def _embeddings(self, query: str) -> LawChunk:
+    def _embed_query(self, query: str):
         import faiss
         import numpy as np
 
         from app.llm import _watsonx
 
-        index = self._faiss()
         qv = np.asarray(_watsonx.embed(GRANITE_EMBED_MODEL, [query]), dtype="float32")
         faiss.normalize_L2(qv)
-        _, ids = index.search(qv, 1)
+        return qv
+
+    def _embeddings(self, query: str) -> LawChunk:
+        _, ids = self._faiss().search(self._embed_query(query), 1)
         return self.chunks[int(ids[0][0])]
 
+    def _online(self, use_embeddings: bool) -> bool:
+        return use_embeddings and bool(os.environ.get("WATSONX_API_KEY")) and FAISS_INDEX.exists()
+
     def retrieve(self, query: str, *, use_embeddings: bool = True) -> LawChunk:
-        if use_embeddings and os.environ.get("WATSONX_API_KEY") and FAISS_INDEX.exists():
+        if self._online(use_embeddings):
             try:
                 return self._embeddings(query)
             except Exception:
                 pass
         return self._keyword(query)
+
+    def rank(self, query: str, *, k: int = 5, use_embeddings: bool = True) -> list[LawChunk]:
+        """Return the top-k chunks in descending relevance (for hit@k / MRR evaluation)."""
+        k = min(k, len(self.chunks))
+        if self._online(use_embeddings):
+            try:
+                _, ids = self._faiss().search(self._embed_query(query), k)
+                return [self.chunks[int(i)] for i in ids[0] if i >= 0]
+            except Exception:
+                pass
+        scores = self._keyword_scores(query)
+        order = sorted(range(len(self.chunks)), key=scores.__getitem__, reverse=True)
+        return [self.chunks[i] for i in order[:k]]
