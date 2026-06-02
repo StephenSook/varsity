@@ -12,7 +12,7 @@ Built for the IBM SkillsBuild AI Builders Challenge (June 2026, Soccer / AI / Wo
 
 ## The problem
 
-A blind football fan is often the last person in the room to understand a VAR call. The decision data exists (the applied Law, the offside geometry, the structured outcome) but it lives only in visual pipelines: stadium screens, broadcast overlays, and officials-only tools. No deployed product translates that into rule-grounded natural language delivered through a blind fan's accessibility channel in real time. VARSITY closes that last-mile gap.
+A blind football fan is often the last person in the room to understand a VAR call. Audio description is improving and major tournaments increasingly offer it, but even great commentary rarely explains the rule-grounded reason behind a contested VAR or offside decision as it happens. The decision data exists (the applied Law, the offside geometry, the structured outcome) yet it lives only in visual pipelines: stadium screens, broadcast overlays, and officials-only tools. No deployed product turns that into rule-grounded natural language delivered through a blind fan's own accessibility channel in real time. VARSITY adds that layer. It complements audio description and commentary, it does not replace them.
 
 ## What makes it different
 
@@ -91,7 +91,7 @@ Only what is built and running is listed here. Roadmap technologies are in the t
 
 ## Accessibility validation
 
-Validation with blind and low-vision football fans and audio-description practitioners is in progress. Until a first-hand conversation is logged, the persona in the demo is presented as a researched hypothesis grounded in published vision-impairment and audio-description-access data, not as a quoted user. Outreach records are kept private and are not in this repository.
+We are validating VARSITY with blind and low-vision football fans and audio-description users. A first-hand reply from a blind supporter on an audio-description community list confirmed the core need: current match commentary often leaves them unsure what is happening on the pitch, and clear information on the rules during a contested moment would be genuinely helpful. That is exactly the gap VARSITY targets, alongside (not instead of) the audio description and commentary fans already rely on. Outreach records and any personal details are kept private and are not in this repository.
 
 ## Develop
 
