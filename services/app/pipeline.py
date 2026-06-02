@@ -18,6 +18,16 @@ from app.rag.retriever import LawRetriever
 OFFSIDE_QUERY = "offside attacker nearer the goal line than the second-last defender and the ball"
 
 
+def _confidence(margin_meters: float) -> str:
+    """How clear-cut the call is, from the geometry margin. Honest about marginal calls."""
+    m = abs(margin_meters)
+    if m >= 0.5:
+        return "clear"
+    if m >= 0.2:
+        return "tight"
+    return "very tight"
+
+
 @dataclass
 class PipelineResult:
     is_offside: bool
@@ -49,6 +59,7 @@ def explanation_stages(
         "stage": "geometry",
         "margin_meters": geo.margin_meters,
         "is_offside": geo.is_offside,
+        "confidence": _confidence(geo.margin_meters),
         "offside_line_x": geo.offside_line_x,
         "attacker_x": geo.attacker_x,
         "pitch": {"length": 120, "width": 80},
@@ -65,7 +76,7 @@ def explanation_stages(
     }
 
     law = retriever.retrieve(OFFSIDE_QUERY)
-    yield {"stage": "law", "law": law.law, "title": law.title}
+    yield {"stage": "law", "law": law.law, "title": law.title, "text": law.text}
 
     explanation = granite.explain_offside(
         margin_meters=geo.margin_meters,
@@ -90,7 +101,9 @@ def explanation_stages(
         "text": explanation,
         "is_offside": geo.is_offside,
         "law": law.law,
+        "law_text": law.text,
         "margin_meters": geo.margin_meters,
+        "confidence": _confidence(geo.margin_meters),
         "safe": verdict.safe,
     }
 
