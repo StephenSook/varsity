@@ -21,7 +21,11 @@ from dataclasses import dataclass
 from app.llm import _watsonx
 
 DEFAULT_GUARDIAN = "ibm/granite-guardian-3-8b"
-_LAW_CITATION = re.compile(r"\blaw\s+\d{1,2}\b", re.IGNORECASE)
+# Match a Law-number citation in any supported language (EN/ES/FR/PT/DE), so a
+# Spanish "Ley 11" explanation is not wrongly flagged as not citing a clause.
+_LAW_CITATION = re.compile(
+    r"\b(?:law|ley|loi|lei|gesetz|regel|regra)\b.{0,12}?\d{1,2}\b", re.IGNORECASE
+)
 
 # Granite Guardian's native output tokens (model card): "Yes" = risk present, "No" = safe.
 _SAFE_TOKEN = "no"

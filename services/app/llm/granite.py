@@ -10,14 +10,29 @@ from app.llm import _watsonx
 DEFAULT_MODEL = "ibm/granite-4-h-small"
 
 
-def _fallback_explanation(*, margin_meters: float, is_offside: bool) -> str:
+def _fallback_explanation(
+    *, margin_meters: float, is_offside: bool, language: str = "English"
+) -> str:
     """Deterministic Law-11-grounded floor when watsonx returns no usable text."""
+    meters = abs(margin_meters)
+    if language.lower().startswith(("span", "español")):
+        if is_offside:
+            return (
+                f"Según la Ley 11, el atacante más adelantado estaba por delante del "
+                f"penúltimo defensor por {meters:.2f} metros cuando se jugó el balón, "
+                "por lo que estaba correctamente en posición de fuera de juego."
+            )
+        return (
+            f"Según la Ley 11, el atacante más adelantado estaba a la altura o por "
+            f"detrás del penúltimo defensor por {meters:.2f} metros, por lo que su "
+            "posición era legal."
+        )
     verdict = "offside" if is_offside else "onside"
     relation = "ahead of" if is_offside else "level with or behind"
     return (
         f"Under Law 11, the most advanced attacker was {relation} the second-to-last "
-        f"defender by {abs(margin_meters):.2f} meters when the ball was played, so the "
-        f"player was correctly judged {verdict}."
+        f"defender by {meters:.2f} meters when the ball was played, so the player was "
+        f"correctly judged {verdict}."
     )
 
 
@@ -79,4 +94,6 @@ class GraniteClient:
             text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
             if len(text) >= 20:
                 return text
-        return _fallback_explanation(margin_meters=margin_meters, is_offside=is_offside)
+        return _fallback_explanation(
+            margin_meters=margin_meters, is_offside=is_offside, language=language
+        )
