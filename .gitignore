@@ -67,3 +67,6 @@ npm-debug.log*
 
 # Keep these tracked
 !.env.example
+
+# Vercel CLI link
+.vercel/
