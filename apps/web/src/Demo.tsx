@@ -138,6 +138,7 @@ export function Demo() {
   const [lang, setLang] = useState<Lang>('English')
   const [soundOn, setSoundOn] = useState(true)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
+  const [offlineRetrieval, setOfflineRetrieval] = useState<'orama-bm25' | 'bundled' | null>(null)
   const [offlineStatus, setOfflineStatus] = useState('')
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showHelp, setShowHelp] = useState(false)
@@ -295,6 +296,7 @@ export function Demo() {
     triggerHaptic(res.geo)
     setLatencyMs(performance.now() - startRef.current)
     setOfflineSource(res.source)
+    setOfflineRetrieval(res.retrieval)
     setStreaming(false)
   }
 
@@ -502,6 +504,7 @@ export function Demo() {
           {offlineSource === 'granite-nano-webgpu'
             ? 'Explained on-device by Granite Nano (WebGPU), no network.'
             : 'Explained on-device (deterministic, no network).'}
+          {offlineRetrieval === 'orama-bm25' ? ' Law retrieved on-device (Orama BM25).' : ''}
           {offlineStatus ? ` ${offlineStatus}` : ''}
         </p>
       )}
