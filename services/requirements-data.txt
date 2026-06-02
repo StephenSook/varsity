@@ -1,5 +1,6 @@
 # Build-time / local only (NOT installed in CI). Used by the data-pull and RAG-ingest scripts.
+# The runtime needs faiss-cpu + numpy too (see requirements.txt); they live there now.
 statsbombpy>=1.14
-faiss-cpu>=1.9
-# docling is added when the IFAB ingest step runs (large; pulls model weights).
-# docling>=2.0
+# IFAB ingest (app/rag/ingest.py): Docling converts the PDF, Granite (via watsonx,
+# already a runtime dep through httpx) embeds the chunks. Large; pulls model weights.
+docling>=2.0
