@@ -11,4 +11,8 @@ a2a-sdk>=1.0.3
 # index built at ingest; the offline/CI keyword path does not import these).
 faiss-cpu>=1.9
 numpy>=1.26
+# OpenTelemetry: per-request span tree (HTTP + pipeline stages) to a console exporter.
+opentelemetry-api>=1.27
+opentelemetry-sdk>=1.27
+opentelemetry-instrumentation-fastapi>=0.48b0
 pytest>=8.3
