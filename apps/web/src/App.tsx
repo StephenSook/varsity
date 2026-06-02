@@ -74,6 +74,8 @@ export default function App() {
   const [streaming, setStreaming] = useState(false)
   const [lang, setLang] = useState<Lang>('English')
   const [soundOn, setSoundOn] = useState(true)
+  const [offlineSource, setOfflineSource] = useState<string | null>(null)
+  const [offlineStatus, setOfflineStatus] = useState('')
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -110,6 +112,7 @@ export default function App() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setOfflineSource(null)
     setStreaming(true)
     const url = `${BACKEND}/stream/canned?language=${encodeURIComponent(language)}`
     const source = new EventSource(url)
@@ -144,6 +147,38 @@ export default function App() {
       setStreaming(false)
       source.close()
     }
+  }
+
+  // Airplane mode: explain entirely on-device, with NO backend call. Geometry and
+  // the Law text are bundled; Granite Nano (WebGPU) phrases it when available, else a
+  // deterministic Law-grounded floor. Proves the explanation survives a cut network.
+  async function explainOffline() {
+    sourceRef.current?.close()
+    setStages([])
+    setExplanation('')
+    setGeo(null)
+    setOfflineSource(null)
+    setOfflineStatus('')
+    setStreaming(true)
+    if (soundOn) {
+      audioCtxRef.current ??= new AudioContext()
+      void audioCtxRef.current.resume()
+    }
+    const { generateOffline } = await import('./offline')
+    const res = await generateOffline({ onStatus: setOfflineStatus })
+    setGeo(res.geo)
+    const ctx = audioCtxRef.current
+    if (ctx) {
+      void playOffsideChord(ctx, res.geo)
+        .then((plan) => {
+          const w = window as unknown as { __varsitySonification?: unknown }
+          w.__varsitySonification = plan
+        })
+        .catch(() => {})
+    }
+    setExplanation(res.text)
+    setOfflineSource(res.source)
+    setStreaming(false)
   }
 
   function selectLang(l: Lang) {
@@ -211,14 +246,33 @@ export default function App() {
         </button>
       </div>
 
-      <button
-        data-hero-item
-        onClick={() => explainTheCall(lang)}
-        disabled={streaming}
-        className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
-      >
-        {streaming ? t.explaining : t.explain}
-      </button>
+      <div data-hero-item className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={() => explainTheCall(lang)}
+          disabled={streaming}
+          className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
+        >
+          {streaming ? t.explaining : t.explain}
+        </button>
+
+        {/* Airplane mode: explain on-device with no backend call. */}
+        <button
+          onClick={() => void explainOffline()}
+          disabled={streaming}
+          className="rounded-full border border-emerald-500/60 px-6 py-3 font-medium text-emerald-300 transition-colors hover:bg-emerald-500/10 disabled:opacity-60"
+        >
+          Offline mode (on-device)
+        </button>
+      </div>
+
+      {offlineSource && (
+        <p aria-hidden="true" data-testid="offline-source" className="text-xs text-emerald-400/80">
+          {offlineSource === 'granite-nano-webgpu'
+            ? 'Explained on-device by Granite Nano (WebGPU), no network.'
+            : 'Explained on-device (deterministic, no network).'}
+          {offlineStatus ? ` ${offlineStatus}` : ''}
+        </p>
+      )}
 
       {/* Pre-registered aria-live region: the screen reader speaks the verdict, mutated in
           place. lang switches the voice (en/es) for the spoken explanation. */}
