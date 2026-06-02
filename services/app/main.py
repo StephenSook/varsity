@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 from app.geometry import FreezeFramePlayer
+from app.observability import setup_tracing
 from app.pipeline import explanation_stages
 from app.triggers.resolver import pick_transitional, resolve_live_var_events, reviewing_stage
 
@@ -27,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Emit an OpenTelemetry span tree per request (HTTP span + nested pipeline stages).
+setup_tracing(app)
 
 FIXTURE = Path(__file__).resolve().parent.parent / "tests/fixtures/wc2022_offside_frame.json"
 _SENTINEL = object()

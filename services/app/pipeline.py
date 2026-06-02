@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
 from app.llm.guardian import GuardianClient
+from app.observability import tracer
 from app.rag.retriever import LawRetriever
 
 OFFSIDE_QUERY = "offside attacker nearer the goal line than the second-last defender and the ball"
@@ -54,7 +55,10 @@ def explanation_stages(
 
     yield {"stage": "trigger", "source": "StatsBomb 360 (canned)"}
 
-    geo = compute_offside(frame)
+    with tracer.start_as_current_span("geometry") as span:
+        geo = compute_offside(frame)
+        span.set_attribute("varsity.is_offside", geo.is_offside)
+        span.set_attribute("varsity.margin_meters", geo.margin_meters)
     yield {
         "stage": "geometry",
         "margin_meters": geo.margin_meters,
@@ -75,19 +79,28 @@ def explanation_stages(
         ],
     }
 
-    law = retriever.retrieve(OFFSIDE_QUERY)
+    with tracer.start_as_current_span("law") as span:
+        law = retriever.retrieve(OFFSIDE_QUERY)
+        span.set_attribute("varsity.law", law.law)
+        span.set_attribute("varsity.law_title", law.title)
     yield {"stage": "law", "law": law.law, "title": law.title, "text": law.text}
 
-    explanation = granite.explain_offside(
-        margin_meters=geo.margin_meters,
-        is_offside=geo.is_offside,
-        law_text=law.text,
-        language=language,
-    )
-    model = getattr(getattr(granite, "config", None), "model_id", "granite")
+    with tracer.start_as_current_span("granite") as span:
+        explanation = granite.explain_offside(
+            margin_meters=geo.margin_meters,
+            is_offside=geo.is_offside,
+            law_text=law.text,
+            language=language,
+        )
+        model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.language", language)
     yield {"stage": "granite", "model": model}
 
-    verdict = guardian.check(explanation, law_context=law.text)
+    with tracer.start_as_current_span("guardian") as span:
+        verdict = guardian.check(explanation, law_context=law.text)
+        span.set_attribute("varsity.safe", verdict.safe)
+        span.set_attribute("varsity.grounded", verdict.grounded)
     yield {
         "stage": "guardian",
         "safe": verdict.safe,
