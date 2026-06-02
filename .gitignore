@@ -17,6 +17,7 @@ coverage/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-ingest/
 venv/
 .pytest_cache/
 .mypy_cache/
@@ -40,9 +41,10 @@ infra/secrets/
 models/
 *.pdf
 
-# RAG build artifacts (built once at build time)
-services/app/rag/index/
+# RAG raw intermediates (the small built index in services/app/rag/index/ IS
+# committed so the app/Docker/CI ship the real corpus without re-running Docling).
 services/app/rag/corpus/
+services/data/
 
 # OS / IDE
 .DS_Store
