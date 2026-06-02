@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
+import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { shareExplanation } from './share'
@@ -142,6 +143,7 @@ export function Demo() {
   const [offlineStatus, setOfflineStatus] = useState('')
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showHelp, setShowHelp] = useState(false)
+  const [showDiag, setShowDiag] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
   const [live, setLive] = useState(false)
   const [reviewing, setReviewing] = useState<{
@@ -570,15 +572,26 @@ export function Demo() {
 
       <StageScrubber stages={stages} describe={describe} />
 
-      <button
-        type="button"
-        aria-pressed={showHelp}
-        onClick={() => setShowHelp((h) => !h)}
-        className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
-      >
-        Keyboard shortcuts (press ?)
-      </button>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <button
+          type="button"
+          aria-pressed={showHelp}
+          onClick={() => setShowHelp((h) => !h)}
+          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+        >
+          Keyboard shortcuts (press ?)
+        </button>
+        <button
+          type="button"
+          aria-pressed={showDiag}
+          onClick={() => setShowDiag((d) => !d)}
+          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+        >
+          {showDiag ? 'Hide diagnostics' : 'On-device diagnostics'}
+        </button>
+      </div>
       <KeyboardHelp open={showHelp} />
+      {showDiag && <DiagnosticsPanel />}
     </div>
   )
 }
