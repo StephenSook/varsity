@@ -87,6 +87,22 @@ export function webgpuAvailable(): boolean {
   return typeof navigator !== 'undefined' && (navigator as { gpu?: unknown }).gpu != null
 }
 
+/**
+ * A stronger WebGPU check than `navigator.gpu != null`: confirms an adapter can
+ * actually be acquired (navigator.gpu can exist while requestAdapter() returns null,
+ * e.g. blocklisted GPUs), so we never start a doomed model download. Transformers.js
+ * exposes no "did it really use the GPU" signal, so we verify the adapter ourselves.
+ */
+export async function webgpuReady(): Promise<boolean> {
+  const gpu = (navigator as { gpu?: { requestAdapter?: () => Promise<unknown> } }).gpu
+  if (!gpu?.requestAdapter) return false
+  try {
+    return (await gpu.requestAdapter()) != null
+  } catch {
+    return false
+  }
+}
+
 type Generator = (
   messages: unknown,
   opts: unknown,
@@ -112,7 +128,7 @@ export async function generateOffline(
   const geo = computeOffsideLocal(opts.frame)
   const floor = deterministicExplanation(geo)
 
-  if (!webgpuAvailable()) {
+  if (!(await webgpuReady())) {
     opts.onStatus?.('WebGPU unavailable; explained on-device (deterministic).')
     return { text: floor, source: 'deterministic', geo, lawText: LAW_11_TEXT }
   }
