@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { Demo } from './Demo'
+import { OnlineBadge } from './OnlineBadge'
 import { Reveal } from './Reveal'
 import { useLenis } from './useLenis'
 import { usePrefersReducedMotion } from './useReducedMotion'
@@ -65,6 +66,7 @@ export default function App() {
 
   return (
     <div className="relative">
+      <OnlineBadge />
       {/* HERO */}
       <section
         aria-label="Introduction"

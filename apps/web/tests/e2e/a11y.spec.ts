@@ -26,8 +26,7 @@ test('the aria-live verdict region is pre-registered and empty on load', async (
   // The region must exist BEFORE the verdict so a screen reader announces the
   // in-place text change. If it were created on demand, the announcement is lost.
   await page.goto('/')
-  const live = page.locator('[aria-live]')
-  await expect(live).toHaveAttribute('aria-live', 'assertive')
+  const live = page.locator('[aria-live="assertive"]')
   await expect(live).toHaveAttribute('role', 'status')
   await expect(live).toHaveAttribute('aria-atomic', 'true')
   await expect(live).toHaveText('')
