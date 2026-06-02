@@ -18,6 +18,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.geometry import FreezeFramePlayer
 from app.pipeline import explanation_stages
+from app.triggers.resolver import pick_transitional, resolve_live_var_events, reviewing_stage
 
 app = FastAPI(title="VARSITY backend", version="0.1.0")
 app.add_middleware(
@@ -46,6 +47,32 @@ async def stream_canned(language: str = "English") -> EventSourceResponse:
     frame = _canned_frame()
 
     async def event_gen():
+        gen = explanation_stages(frame, language=language)
+        while True:
+            stage = await asyncio.to_thread(next, gen, _SENTINEL)
+            if stage is _SENTINEL:
+                break
+            yield {"event": stage["stage"], "data": json.dumps(stage)}
+
+    return EventSourceResponse(event_gen())
+
+
+@app.get("/stream/live")
+async def stream_live(language: str = "English") -> EventSourceResponse:
+    """Live-trigger beat: emit the transitional 'VAR is reviewing' announcement, then
+    the full explanation. Uses the deterministic replay floor so the demo never depends
+    on a live match; real Sportmonks / API-Football events are used when available.
+    """
+    frame = _canned_frame()
+    events, source = resolve_live_var_events()
+    transitional = pick_transitional(events)
+
+    async def event_gen():
+        if transitional is not None:
+            yield {
+                "event": "reviewing",
+                "data": json.dumps(reviewing_stage(transitional, source)),
+            }
         gen = explanation_stages(frame, language=language)
         while True:
             stage = await asyncio.to_thread(next, gen, _SENTINEL)
