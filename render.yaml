@@ -1,0 +1,26 @@
+# Render blueprint for the VARSITY backend (one click: New > Blueprint > this repo).
+# Secrets (sync: false) are set in the Render dashboard, never in the repo.
+services:
+  - type: web
+    name: varsity-api
+    runtime: docker
+    rootDir: services
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: WATSONX_API_KEY
+        sync: false
+      - key: WATSONX_PROJECT_ID
+        sync: false
+      - key: WATSONX_URL
+        value: https://us-south.ml.cloud.ibm.com
+      - key: GRANITE_MODEL_ID
+        value: ibm/granite-4-h-small
+      - key: GRANITE_GUARDIAN_MODEL_ID
+        value: ibm/granite-guardian-3-8b
+      - key: GRANITE_EMBED_MODEL_ID
+        value: ibm/granite-embedding-278m-multilingual
+      - key: SPORTMONKS_API_KEY
+        sync: false
