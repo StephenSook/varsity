@@ -55,13 +55,50 @@ cd infra && docker compose up -d            # Context Forge on :4444
 # 2. the three host backends
 services/scripts/run_federation.sh          # ifab-rag :8001, match-geometry :8002, narrator :9000
 
-# 3. register them with the gateway (token: see infra/README.md)
-cd services && PYTHONPATH=. CONTEXT_FORGE_TOKEN=... python -m scripts.register_federation
+# 3. register them (gateway URL/token + the host the gateway reaches them on)
+cd services && PYTHONPATH=. \
+  CONTEXT_FORGE_URL=http://localhost:4444 \
+  CONTEXT_FORGE_BACKEND_HOST=localhost \
+  CONTEXT_FORGE_TOKEN="$TOKEN" \
+  python -m scripts.register_federation
 #   dry run (no gateway needed):  python -m scripts.register_federation --dry-run
 
-# 4. open http://localhost:4444/admin and capture the observability Gantt trace
+# 4. open http://localhost:4444/admin -> Gateways / Tools / Observability
 ```
 
-**Rollback for the artifact:** if `/admin` does not render a clean four-service
-fan-out, fall back to OpenTelemetry into Jaeger or Grafana Tempo and screenshot
-that waterfall instead. The gateway stays in the architecture either way.
+## Run the gateway (the working path)
+
+The Docker GA `latest` arm64 image hangs at startup (see `infra/README.md` "KNOWN
+ISSUE"). The working path is the **PyPI gateway on the host, single uvicorn worker,
+with SSRF allowed for local backends**:
+
+```bash
+python3.12 -m venv /tmp/cfgw && /tmp/cfgw/bin/pip install mcp-contextforge-gateway==1.0.2
+export JWT_SECRET_KEY="<32+ char secret>" AUTH_ENCRYPTION_SECRET="<32+ char secret>"
+export SSRF_ALLOW_LOCALHOST=true SSRF_ALLOW_PRIVATE_NETWORKS=true
+export MCPGATEWAY_UI_ENABLED=true MCPGATEWAY_ADMIN_API_ENABLED=true AUTH_REQUIRED=true
+/tmp/cfgw/bin/mcpgateway mcpgateway.main:app --host 0.0.0.0 --port 4444 --workers 1
+# token:
+TOKEN=$(/tmp/cfgw/bin/python -m mcpgateway.utils.create_jwt_token \
+  --username admin@example.com --exp 10080 --secret "$JWT_SECRET_KEY")
+```
+
+Registration schemas (confirmed vs the live gateway): MCP servers ->
+`POST /gateways {name, url, transport:"SSE"}`; A2A agents -> `POST /a2a` nested as
+`{"agent": {name, endpoint_url}}`. SSRF blocks localhost/private hosts unless the
+two `SSRF_ALLOW_*` flags are set.
+
+## Verified live (2026-06-02)
+
+Against PyPI gateway 1.0.2: all 4 backends registered and **reachable** (ifab-rag +
+match-geometry over SSE, narrator A2A); the 3 tools were discovered
+(`ifab-rag-retrieve-law`, `match-geometry-compute-offside-margin`, `a2a-narrator`)
+and **invoked through the gateway** (`POST /rpc`) with correct results:
+`retrieve_law` -> Law 11, `compute_offside_margin` -> margin 1.75 m. Gateway
+observability recorded **10 tool executions, 100% success, ~27 ms average** (the
+data the `/admin/observability` view visualizes).
+
+**Rollback for the artifact:** the metrics API (`/metrics`,
+`/admin/observability/*`) carries the same fan-out data if the UI does not render;
+or fall back to OpenTelemetry -> Jaeger / Grafana Tempo. The gateway stays in the
+architecture either way.
