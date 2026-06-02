@@ -1,4 +1,4 @@
-# CLAUDE.md — VARSITY build guide
+# CLAUDE.md: VARSITY build guide
 
 Neutral build guide for anyone (human or AI assistant) working in this repository. Stack, commands, conventions, and the accuracy guardrails.
 
@@ -8,12 +8,12 @@ VARSITY: a real-time, screen-reader-native, IFAB-Laws-grounded AI explainer of V
 
 ## Layout
 
-- `apps/web` — React + Vite + TypeScript front end.
-- `services` — FastAPI backend + the MCP servers (IFAB-RAG, match-data/geometry) + the A2A narrator agent.
-- `packages/geometry` — offside-margin computation from StatsBomb 360 freeze-frames.
-- `packages/rag` — Docling ingestion + FAISS index build for the IFAB Laws corpus.
-- `infra` — docker-compose, Context Forge config, `VERSIONS.lock`.
-- `docs` — architecture diagrams and ADRs.
+- `apps/web`: React + Vite + TypeScript front end.
+- `services`: FastAPI backend + the MCP servers (IFAB-RAG, match-data/geometry) + the A2A narrator agent.
+- `packages/geometry`: offside-margin computation from StatsBomb 360 freeze-frames.
+- `packages/rag`: Docling ingestion + FAISS index build for the IFAB Laws corpus.
+- `infra`: docker-compose, Context Forge config, `VERSIONS.lock`.
+- `docs`: architecture diagrams and ADRs.
 
 ## Commands
 
