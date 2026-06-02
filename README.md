@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/banner.png" alt="VARSITY. Hear the why behind every VAR call. A real-time, screen-reader-native, IFAB-grounded AI explainer of VAR and offside decisions, built on IBM Granite, Granite Guardian, and Context Forge for the World Cup 2026 challenge." width="100%" />
+</p>
+
 # VARSITY
 
 **Verifiable, Accessible, Rule-grounded Soccer Transparency Interpreter for You.**
