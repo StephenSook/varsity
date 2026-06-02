@@ -107,8 +107,29 @@ function triggerHaptic(g: { is_offside: boolean; margin_meters: number }) {
   ;(window as unknown as { __varsityHaptic?: number[] }).__varsityHaptic = pattern
 }
 
+type Verbosity = 'minimal' | 'standard' | 'coach'
+const VERBOSITY_ORDER: Verbosity[] = ['minimal', 'standard', 'coach']
+
+// Verbosity control fights sonification/announcement fatigue: a verdict every 30s in
+// full prose exhausts a screen-reader listener. Minimal = headline only; Standard =
+// the full explanation; Coach = explanation plus how clear-cut the call was. The full
+// text always stays in the visible panel; this only gates what the live region speaks.
+function announceText(
+  v: Verbosity,
+  d: { text: string; isOffside: boolean; marginM: number; confidence?: string },
+): string {
+  if (v === 'minimal') {
+    return d.isOffside ? `Offside, by ${Math.abs(d.marginM).toFixed(2)} metres.` : 'Onside.'
+  }
+  if (v === 'coach') {
+    return d.confidence ? `${d.text} How clear-cut: ${d.confidence}.` : d.text
+  }
+  return d.text
+}
+
 export function Demo() {
   const [explanation, setExplanation] = useState('')
+  const [liveMessage, setLiveMessage] = useState('')
   const [stages, setStages] = useState<Stage[]>([])
   const [geo, setGeo] = useState<Geometry | null>(null)
   const [lawText, setLawText] = useState('')
@@ -127,9 +148,35 @@ export function Demo() {
     detail: string
     minute: number
   } | null>(null)
+  const [verbosity, setVerbosity] = useState<Verbosity>(() => {
+    const v = typeof localStorage !== 'undefined' && localStorage.getItem('varsity-verbosity')
+    return v === 'minimal' || v === 'coach' ? v : 'standard'
+  })
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const nbspRef = useRef(false)
+
+  // Set the live-region message, alternating a trailing non-breaking space so an
+  // identical re-announcement still produces a textContent diff: Safari + VoiceOver
+  // will not re-speak an unchanged string (WordPress core trac #36853).
+  function announce(message: string) {
+    nbspRef.current = !nbspRef.current
+    setLiveMessage(message + (nbspRef.current ? ' ' : ''))
+  }
+
+  function applyVerbosity(next: Verbosity) {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('varsity-verbosity', next)
+    setVerbosity(next)
+  }
+
+  function cycleVerbosity() {
+    setVerbosity((cur) => {
+      const next = VERBOSITY_ORDER[(VERBOSITY_ORDER.indexOf(cur) + 1) % VERBOSITY_ORDER.length]
+      if (typeof localStorage !== 'undefined') localStorage.setItem('varsity-verbosity', next)
+      return next
+    })
+  }
   const startRef = useRef(0)
 
   function explainTheCall(language: Lang) {
@@ -183,7 +230,16 @@ export function Demo() {
           setLawText(String(data.text ?? ''))
         }
         if (name === 'verdict') {
-          setExplanation(String(data.text ?? ''))
+          const text = String(data.text ?? '')
+          setExplanation(text)
+          announce(
+            announceText(verbosity, {
+              text,
+              isOffside: Boolean(data.is_offside),
+              marginM: Number(data.margin_meters ?? 0),
+              confidence: data.confidence ? String(data.confidence) : undefined,
+            }),
+          )
           if (data.law_text) setLawText(String(data.law_text))
           triggerHaptic(data as unknown as Geometry)
           setLatencyMs(performance.now() - startRef.current)
@@ -227,6 +283,14 @@ export function Demo() {
         .catch(() => {})
     }
     setExplanation(res.text)
+    announce(
+      announceText(verbosity, {
+        text: res.text,
+        isOffside: res.geo.is_offside,
+        marginM: res.geo.margin_meters,
+        confidence: res.geo.confidence,
+      }),
+    )
     setLawText(res.lawText)
     triggerHaptic(res.geo)
     setLatencyMs(performance.now() - startRef.current)
@@ -280,6 +344,8 @@ export function Demo() {
         setDetail((d) => !d)
       } else if (k === 'l') {
         setLive((v) => !v)
+      } else if (k === 'v') {
+        cycleVerbosity()
       } else if (e.key === '?') {
         setShowHelp((h) => !h)
       } else if (k >= '1' && k <= '5') {
@@ -292,6 +358,20 @@ export function Demo() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [lang, streaming, explanation, live])
+
+  // Re-announce the current verdict at the new level when verbosity changes.
+  useEffect(() => {
+    if (!explanation || !geo) return
+    announce(
+      announceText(verbosity, {
+        text: explanation,
+        isOffside: geo.is_offside,
+        marginM: geo.margin_meters,
+        confidence: geo.confidence,
+      }),
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verbosity])
 
   const t = UI[lang]
   const segBtn = (active: boolean) =>
@@ -345,6 +425,24 @@ export function Demo() {
         >
           {live ? 'Live feed' : 'Replay'}
         </button>
+        <div
+          role="group"
+          aria-label="Announcement verbosity"
+          className="inline-flex rounded-full bg-slate-800/60 p-1"
+        >
+          {VERBOSITY_ORDER.map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={verbosity === v}
+              aria-label={`${v} verbosity`}
+              onClick={() => applyVerbosity(v)}
+              className={segBtn(verbosity === v)}
+            >
+              {v === 'minimal' ? 'Min' : v === 'standard' ? 'Std' : 'Coach'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -408,9 +506,10 @@ export function Demo() {
         </p>
       )}
 
-      {/* Pre-registered aria-live region: the screen reader speaks the verdict in place. */}
+      {/* Pre-registered aria-live region: the screen reader speaks the verdict in place,
+          at the chosen verbosity, with a re-announce-safe trailing space. */}
       <div ref={liveRef} aria-live="assertive" aria-atomic="true" role="status" lang={t.bcp47} className="sr-only">
-        {explanation}
+        {liveMessage}
       </div>
 
       {detail && geo && (
