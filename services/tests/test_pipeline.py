@@ -1,6 +1,6 @@
 from app.geometry import FreezeFramePlayer
 from app.llm.guardian import GuardianVerdict, cites_law_clause
-from app.pipeline import explain_offside_decision, explanation_stages
+from app.pipeline import _confidence, explain_offside_decision, explanation_stages
 
 
 class FakeGranite:
@@ -57,3 +57,22 @@ def test_geometry_stage_carries_pitch_data() -> None:
     assert geo["pitch"] == {"length": 120, "width": 80}
     assert geo["players"]
     assert all({"x", "y", "teammate"} <= set(p) for p in geo["players"])
+    assert geo["confidence"] in {"clear", "tight", "very tight"}
+
+
+def test_law_stage_carries_full_text_and_verdict_confidence() -> None:
+    frame = _frame(100.0, 98.0)
+    stages = {
+        s["stage"]: s
+        for s in explanation_stages(frame, granite=FakeGranite(), guardian=FakeGuardian())
+    }
+    assert "offside" in stages["law"]["text"].lower()  # full Law text for Detail mode
+    assert stages["verdict"]["law_text"] == stages["law"]["text"]
+    assert stages["verdict"]["confidence"] in {"clear", "tight", "very tight"}
+
+
+def test_confidence_thresholds() -> None:
+    assert _confidence(5.45) == "clear"
+    assert _confidence(0.3) == "tight"
+    assert _confidence(0.1) == "very tight"
+    assert _confidence(-0.05) == "very tight"  # absolute value, onside-but-tight
