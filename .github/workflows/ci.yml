@@ -20,6 +20,10 @@ jobs:
           if [ -f apps/web/package.json ]; then
             cd apps/web
             npm ci
+            # npm intermittently skips the platform-specific lightningcss binary
+            # (optional-dep extraction race); reinstall if it failed to land.
+            node -e "require('lightningcss')" 2>/dev/null \
+              || { echo "lightningcss native binary missing; reinstalling"; rm -rf node_modules; npm install; }
             npm run lint --if-present
             npm run typecheck --if-present
             npm run build --if-present
@@ -41,6 +45,9 @@ jobs:
           if [ -f apps/web/playwright.config.ts ]; then
             cd apps/web
             npm ci
+            # Same lightningcss optional-dep guard as the web job (see above).
+            node -e "require('lightningcss')" 2>/dev/null \
+              || { echo "lightningcss native binary missing; reinstalling"; rm -rf node_modules; npm install; }
             npx playwright install --with-deps chromium
             npm run build
             npm run test:e2e
