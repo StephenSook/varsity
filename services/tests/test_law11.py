@@ -69,4 +69,17 @@ def test_proof_payload_shape() -> None:
     payload = proof_payload(p)
     assert payload["stage"] == "proof"
     assert payload["consistent"] is True
-    assert all({"key", "claim", "status", "law", "role"} <= set(s) for s in payload["steps"])
+    assert all(
+        {"key", "claim", "status", "law", "role", "clause"} <= set(s) for s in payload["steps"]
+    )
+
+
+def test_steps_carry_finer_clause_descriptors() -> None:
+    # finer than the bare Law number: each step names its specific Law-11 condition
+    p = prove(
+        is_offside=True, margin_meters=5.45, beyond_defender=True, beyond_ball=True, attacker_x=72.2
+    )
+    by_key = {s.key: s.clause for s in p.steps}
+    assert by_key["position.beyond_defender"] == "beyond the second-to-last opponent"
+    assert by_key["position.beyond_ball"] == "beyond the ball"
+    assert by_key["defeater.goal_kick"] == "goal-kick exception"

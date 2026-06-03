@@ -26,6 +26,19 @@ def _frame():
     ]
 
 
+def test_links_from_proof_uses_the_finer_clause_when_present() -> None:
+    steps = [
+        {
+            "claim": "Nearer the goal line than the second-to-last opponent.",
+            "law": "11.1",
+            "status": "pass",
+            "clause": "beyond the second-to-last opponent",
+        }
+    ]
+    links = provenance.links_from_proof(steps)
+    assert links[0].law_clause == "Law 11.1 (beyond the second-to-last opponent)"
+
+
 def test_links_from_proof_carry_clause_and_source() -> None:
     steps = [
         {"claim": "In the opponents' half.", "law": "11.1", "status": "pass"},

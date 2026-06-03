@@ -59,10 +59,15 @@ def _hash(payload: dict) -> str:
 def links_from_proof(proof_steps: list[dict]) -> list[GroundingLink]:
     """Each Law-11 proof step becomes a claim grounded in its clause + the freeze-frame."""
     status_word = {"pass": "met", "fail": "not met", "n/a": "not applicable"}
+
+    def _clause(s: dict) -> str:
+        base = f"Law {s.get('law', '11')}"
+        return f"{base} ({s['clause']})" if s.get("clause") else base
+
     return [
         GroundingLink(
             claim=s["claim"],
-            law_clause=f"Law {s.get('law', '11')}",
+            law_clause=_clause(s),
             evidence=f"{status_word.get(s.get('status', ''), 'noted')} in the Law 11 proof",
             source="StatsBomb 360 freeze-frame",
         )
