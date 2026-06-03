@@ -115,6 +115,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Cited confidence earcon: loudness encodes certainty, broadband noise encodes blur (Vriend; Ferguson & Brewster)',
+    w: 'apps/web/src/sonify.ts',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
