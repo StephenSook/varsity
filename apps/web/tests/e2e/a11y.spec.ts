@@ -72,6 +72,13 @@ test('the ask-any-rule oracle exposes a labelled question input and Ask button',
   await expect(form.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled()
 })
 
+test('the /judges surface shows verifiability tiers and live run buttons', async ({ page }) => {
+  await page.goto('/')
+  const judges = page.locator('section#judges')
+  await expect(judges.getByText('LIVE', { exact: true }).first()).toBeVisible()
+  await expect(judges.getByRole('button', { name: 'Run the geometry engine' })).toBeVisible()
+})
+
 test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
   await page.goto('/')
   const canvas = page.locator('canvas')

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { Demo } from './Demo'
+import { JudgesPanel } from './JudgesPanel'
 import { OnlineBadge } from './OnlineBadge'
 import { Reveal } from './Reveal'
 import { useLenis } from './useLenis'
@@ -19,18 +20,6 @@ const PIPELINE = [
   { k: 'IBM Granite', d: 'A plain explanation, coordinated through Context Forge.' },
   { k: 'Guardian', d: 'Granite Guardian checks it stays grounded in the Law.' },
   { k: 'Screen reader', d: 'Spoken in your language through your own screen reader.' },
-]
-
-const CLAIMS: { t: string; w: string }[] = [
-  { t: 'Offside geometry from StatsBomb 360', w: 'services/app/geometry.py' },
-  { t: 'IFAB-Laws retrieval + IBM Granite reasoning', w: 'services/app/rag, services/app/llm' },
-  { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py' },
-  { t: 'Context Forge MCP + A2A federation', w: 'services/app/federation.py, docs/federation.md' },
-  { t: 'On-device offline mode (Granite Nano, WebGPU)', w: 'apps/web/src/offline.ts' },
-  { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py' },
-  { t: 'Any VAR call: penalty & handball (Law 12/14)', w: 'services/app/decisions.py' },
-  { t: 'Ask-any-rule oracle, grounded + Guardian-checked', w: 'services/app/pipeline.py' },
-  { t: 'Spatial audio, haptics, 5 languages, read-aloud', w: 'apps/web/src/sonify.ts, tts.ts' },
 ]
 
 function Section({
@@ -57,6 +46,13 @@ export default function App() {
   const reducedMotion = usePrefersReducedMotion()
   const heroRef = useRef<HTMLDivElement>(null)
   useLenis()
+
+  // Warm the free-tier backend on page load so a judge's first Explain / ask / Run-it-now
+  // does not hit a ~30s cold start.
+  useEffect(() => {
+    const backend = (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL
+    if (backend) void fetch(`${backend}/health`).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (reducedMotion || !heroRef.current) return
@@ -214,29 +210,7 @@ export default function App() {
             file that proves it. Built on IBM Granite, Granite Guardian, Context Forge, and Docling.
           </p>
         </Reveal>
-        <ul className="mt-12 grid list-none gap-4 sm:grid-cols-2">
-          {CLAIMS.map((c) => (
-            <li key={c.t}>
-              <Reveal className="glass flex h-full items-start gap-3 rounded-2xl p-5 text-left">
-                <span aria-hidden="true" className="mt-1 text-emerald-400">
-                  ✓
-                </span>
-                <div>
-                  <p className="font-medium text-slate-100">{c.t}</p>
-                  <p className="mt-1 font-mono text-xs text-slate-400">{c.w}</p>
-                </div>
-              </Reveal>
-            </li>
-          ))}
-        </ul>
-        <Reveal className="mt-10">
-          <a
-            href="https://github.com/StephenSook/varsity"
-            className="inline-block rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400"
-          >
-            Read the code on GitHub
-          </a>
-        </Reveal>
+        <JudgesPanel />
       </Section>
 
       {/* CLOSE */}
