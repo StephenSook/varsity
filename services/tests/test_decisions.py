@@ -38,6 +38,7 @@ def test_decision_stages_order_and_content() -> None:
     assert [s["stage"] for s in stages] == [
         "trigger",
         "decision",
+        "signal",
         "law",
         "granite",
         "guardian",

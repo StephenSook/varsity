@@ -42,7 +42,7 @@ def test_stages_order() -> None:
         s["stage"]
         for s in explanation_stages(frame, granite=FakeGranite(), guardian=FakeGuardian())
     ]
-    assert stages == ["trigger", "geometry", "law", "granite", "guardian", "verdict"]
+    assert stages == ["trigger", "geometry", "signal", "law", "granite", "guardian", "verdict"]
 
 
 def test_geometry_stage_carries_pitch_data() -> None:
