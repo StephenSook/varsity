@@ -76,6 +76,22 @@ def _fallback_explanation(
     return tpl.format(m=abs(margin_meters))
 
 
+# Deterministic floors for non-offside decisions (penalty, handball, ...). Each cites the
+# Law number because the Guardian gate requires a Law citation. Used only when watsonx
+# returns no usable text; the live path produces the real in-language explanation.
+_DECISION_FALLBACKS: dict[str, str] = {
+    "en": "Under Law {law}, the referee's decision was: {outcome}. The official applied that Law to the incident.",  # noqa: E501
+    "es": "Según la Ley {law}, la decisión del árbitro fue: {outcome}. El colegiado aplicó esa Ley a la jugada.",  # noqa: E501
+    "fr": "Selon la Loi {law}, la décision de l'arbitre était : {outcome}. L'arbitre a appliqué cette Loi à l'action.",  # noqa: E501
+    "pt": "Segundo a Lei {law}, a decisão do árbitro foi: {outcome}. O árbitro aplicou essa Lei ao lance.",  # noqa: E501
+    "de": "Nach Regel {law} lautete die Entscheidung des Schiedsrichters: {outcome}. Der Schiedsrichter wandte diese Regel an.",  # noqa: E501
+}
+
+
+def _fallback_decision(*, law: str, outcome: str, language: str = "English") -> str:
+    return _DECISION_FALLBACKS[_lang_key(language)].format(law=law, outcome=outcome)
+
+
 # Markers that mean the model echoed the prompt instructions instead of answering.
 _LEAK_MARKERS = (
     "<explanation",
@@ -154,3 +170,28 @@ class GraniteClient:
         return _fallback_explanation(
             margin_meters=margin_meters, is_offside=is_offside, language=language
         )
+
+    def explain_decision(
+        self,
+        *,
+        incident: str,
+        outcome: str,
+        law: str,
+        law_text: str,
+        language: str = "English",
+    ) -> str:
+        """Plain-language, Law-grounded explanation of a non-offside VAR decision (penalty,
+        handball, ...) over the SAME retrieval + safety path as offside."""
+        prompt = (
+            "You are explaining a soccer VAR decision to a blind fan in plain, warm "
+            f"language. Reply in {language}, in 2 to 3 short sentences. Ground the "
+            "explanation in the Law text below and cite the Law number. Do not invent any "
+            "rule that is not in the Law text.\n\n"
+            f"Law text:\n{law_text}\n\n"
+            f"Incident: {incident} Verdict: {outcome}.\n\nExplanation:"
+        )
+        for _ in range(3):
+            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            if len(text) >= 20 and not _looks_like_prompt_leak(text):
+                return text
+        return _fallback_decision(law=law, outcome=outcome, language=language)

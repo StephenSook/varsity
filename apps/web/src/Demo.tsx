@@ -19,7 +19,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'geometry', 'law', 'granite', 'guardian', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'law', 'granite', 'guardian', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 type Lang = 'English' | 'Spanish' | 'French' | 'Portuguese' | 'German'
@@ -83,22 +83,30 @@ const UI: Record<
   },
 }
 
-type Scenario = 'offside' | 'onside' | 'tight'
+type Scenario = 'offside' | 'onside' | 'tight' | 'penalty' | 'handball'
+type ScenarioKind = 'geometry' | 'decision'
 
-// Real World Cup 2022 freeze-frames (Canada vs Morocco). Picking one re-streams that
-// frame; the verdict word, the offside line, the verdict earcon and the haptic all flip
-// from the geometry, proving the engine DECIDES rather than replaying one fixed offside.
-const SCENARIOS: { id: Scenario; label: string }[] = [
-  { id: 'offside', label: 'Offside' },
-  { id: 'onside', label: 'Onside' },
-  { id: 'tight', label: 'Tight call' },
+// Offside/onside/tight are REAL World Cup 2022 freeze-frames (Canada vs Morocco) whose
+// verdict the geometry decides. Penalty/handball run the SAME RAG + Granite + Guardian
+// engine over Law 14 / Law 12 (illustrative incidents, no geometry), proving VARSITY
+// explains any VAR call, not just offside.
+const SCENARIOS: { id: Scenario; label: string; kind: ScenarioKind }[] = [
+  { id: 'offside', label: 'Offside', kind: 'geometry' },
+  { id: 'onside', label: 'Onside', kind: 'geometry' },
+  { id: 'tight', label: 'Tight call', kind: 'geometry' },
+  { id: 'penalty', label: 'Penalty', kind: 'decision' },
+  { id: 'handball', label: 'Handball', kind: 'decision' },
 ]
+const kindOf = (id: Scenario): ScenarioKind =>
+  SCENARIOS.find((s) => s.id === id)?.kind ?? 'geometry'
 
 type Moment = {
   competition?: string
   matchName?: string
   minute?: number
 } | null
+
+type DecisionCard = { decisionType: string; incident: string; outcome: string } | null
 
 function describe(s: Stage): string {
   switch (s.stage) {
@@ -112,6 +120,8 @@ function describe(s: Stage): string {
       return ` — ${String(s.model)}`
     case 'guardian':
       return ` — ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
+    case 'decision':
+      return ` — ${String(s.outcome)}`
     default:
       return ''
   }
@@ -162,6 +172,7 @@ export function Demo() {
   const [lang, setLang] = useState<Lang>('English')
   const [scenario, setScenario] = useState<Scenario>('offside')
   const [moment, setMoment] = useState<Moment>(null)
+  const [decision, setDecision] = useState<DecisionCard>(null)
   const [soundOn, setSoundOn] = useState(true)
   const [buildUp, setBuildUp] = useState(false)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
@@ -242,13 +253,19 @@ export function Demo() {
     setLatencyMs(null)
     setReviewing(null)
     setMoment(null)
+    setDecision(null)
     startRef.current = performance.now()
     setStreaming(true)
-    // Live mode hits /stream/live, which first emits the transitional "VAR is
-    // reviewing" announcement (from Sportmonks / API-Football, or the replay buffer
-    // when there is no live match), then the same explanation pipeline.
-    const endpoint = live ? 'live' : 'canned'
-    const url = `${BACKEND}/stream/${endpoint}?language=${encodeURIComponent(language)}&scenario=${scenarioOverride ?? scenario}`
+    // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
+    // decisions (penalty/handball) stream /stream/decision over the SAME RAG + Granite +
+    // Guardian engine. Live mode (geometry only) first emits the transitional "VAR is
+    // reviewing" announcement, then the same explanation pipeline.
+    const sc = scenarioOverride ?? scenario
+    const langParam = encodeURIComponent(language)
+    const url =
+      kindOf(sc) === 'decision'
+        ? `${BACKEND}/stream/decision?type=${sc}&language=${langParam}`
+        : `${BACKEND}/stream/${live ? 'live' : 'canned'}?language=${langParam}&scenario=${sc}`
     const source = new EventSource(url)
     sourceRef.current = source
     source.addEventListener('reviewing', (event) => {
@@ -270,6 +287,13 @@ export function Demo() {
             minute: typeof data.minute === 'number' ? data.minute : undefined,
           })
         }
+        if (name === 'decision') {
+          setDecision({
+            decisionType: String(data.decision_type ?? ''),
+            incident: String(data.incident ?? ''),
+            outcome: String(data.outcome ?? ''),
+          })
+        }
         if (name === 'geometry') {
           const g = data as unknown as Geometry
           setGeo(g)
@@ -282,16 +306,19 @@ export function Demo() {
         if (name === 'verdict') {
           const text = String(data.text ?? '')
           setExplanation(text)
+          const isDecision = Boolean(data.decision_type)
           announce(
-            announceText(verbosity, {
-              text,
-              isOffside: Boolean(data.is_offside),
-              marginM: Number(data.margin_meters ?? 0),
-              confidence: data.confidence ? String(data.confidence) : undefined,
-            }),
+            isDecision
+              ? text
+              : announceText(verbosity, {
+                  text,
+                  isOffside: Boolean(data.is_offside),
+                  marginM: Number(data.margin_meters ?? 0),
+                  confidence: data.confidence ? String(data.confidence) : undefined,
+                }),
           )
           if (data.law_text) setLawText(String(data.law_text))
-          triggerHaptic(data as unknown as Geometry)
+          if (!isDecision) triggerHaptic(data as unknown as Geometry)
           setLatencyMs(performance.now() - startRef.current)
           setStreaming(false)
           source.close()
@@ -314,6 +341,7 @@ export function Demo() {
     setOfflineSource(null)
     setOfflineStatus('')
     setMoment(null)
+    setDecision(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -602,6 +630,19 @@ export function Demo() {
       <div ref={liveRef} aria-live="assertive" aria-atomic="true" role="status" lang={t.bcp47} className="sr-only">
         {liveMessage}
       </div>
+
+      {decision && (
+        <section
+          aria-label="Illustrative incident"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-amber-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-amber-300/80">
+            Illustrative incident · {decision.decisionType}
+          </p>
+          <p className="mt-1 text-sm text-slate-300">{decision.incident}</p>
+          <p className="mt-1 text-sm font-medium text-emerald-200">Outcome: {decision.outcome}</p>
+        </section>
+      )}
 
       {detail && geo && (
         <section

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
 from app.llm.guardian import GuardianClient
@@ -120,6 +121,80 @@ def explanation_stages(
         "law_text": law.text,
         "margin_meters": geo.margin_meters,
         "confidence": _confidence(geo.margin_meters),
+        "safe": verdict.safe,
+    }
+
+
+def decision_stages(
+    decision_name: str,
+    *,
+    language: str = "English",
+    retriever: LawRetriever | None = None,
+    granite: object | None = None,
+    guardian: object | None = None,
+) -> Iterator[dict]:
+    """Stream a NON-geometry VAR decision (penalty, handball, ...) through the same
+    RAG -> Granite -> Guardian path as offside. No geometry stage; a ``decision`` stage
+    carries the illustrative incident instead."""
+    d = get_decision(decision_name)
+    retriever = retriever or LawRetriever()
+    granite = granite or GraniteClient()
+    guardian = guardian or GuardianClient()
+
+    yield {
+        "stage": "trigger",
+        "source": "Illustrative VAR incident",
+        "decision_type": d["decision_type"],
+        "label": d["label"],
+        "tier": "illustrative",
+    }
+    yield {
+        "stage": "decision",
+        "decision_type": d["decision_type"],
+        "incident": d["incident"],
+        "outcome": d["outcome"],
+    }
+
+    with tracer.start_as_current_span("law") as span:
+        law = retriever.retrieve(d["law_query"])
+        span.set_attribute("varsity.law", law.law)
+        span.set_attribute("varsity.law_title", law.title)
+    yield {"stage": "law", "law": law.law, "title": law.title, "text": law.text}
+
+    with tracer.start_as_current_span("granite") as span:
+        explanation = granite.explain_decision(
+            incident=d["incident"],
+            outcome=d["outcome"],
+            law=law.law,
+            law_text=law.text,
+            language=language,
+        )
+        model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.language", language)
+    yield {"stage": "granite", "model": model}
+
+    with tracer.start_as_current_span("guardian") as span:
+        verdict = guardian.check(explanation, law_context=law.text)
+        span.set_attribute("varsity.safe", verdict.safe)
+        span.set_attribute("varsity.grounded", verdict.grounded)
+        span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
+    yield {
+        "stage": "guardian",
+        "safe": verdict.safe,
+        "cites_law": verdict.cites_law,
+        "grounded": verdict.grounded,
+        "screen_reader_ok": verdict.screen_reader_ok,
+        "answer": verdict.model_answer,
+    }
+
+    yield {
+        "stage": "verdict",
+        "text": explanation,
+        "decision_type": d["decision_type"],
+        "law": law.law,
+        "law_text": law.text,
+        "outcome": d["outcome"],
         "safe": verdict.safe,
     }
 
