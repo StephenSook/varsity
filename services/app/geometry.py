@@ -1,28 +1,46 @@
 """Offside-margin geometry over StatsBomb 360 freeze-frames.
 
-The StatsBomb pitch is 120 x 80 units and the attack direction is ALWAYS
-left-to-right, so the attacking team is shooting toward the goal line at x = 120
-in every frame. Every margin computed here assumes that normalization. Do not
-feed raw multi-direction coordinates without standardizing them first, or the
-margins will compute backwards.
+StatsBomb standardizes every event onto a 120 x 80 pitch grid whose units are YARDS (the Open
+Data spec measures pass length in yards and defines a "switch" as a pass over 40 yards; mplsoccer
+converts StatsBomb distances with ``* 0.9144  # yards -> meters``, and the Hudl/StatsBomb live
+schema documents z-height in yards on the same 0-120 / 0-80 frame). So a margin in grid units
+converts to metres with the international yard, 1 yd = 0.9144 m - NOT by assuming the 120-unit
+length spans a 105 m pitch (that double-applies a normalization StatsBomb never performed and
+under-states every margin by ~4.3%). See docs/GEOMETRY.md for sources.
+
+The attack direction is ALWAYS left-to-right (the attacking team shoots toward x = 120), a
+StatsBomb standardization. This module assumes it; do not feed raw multi-direction coordinates
+without standardizing them first, or the margins compute backwards.
+
+This is a COARSE, point-based, ILLUSTRATIVE description of a RECEIVED decision: StatsBomb 360
+gives a single (x, y) per visible player (no limbs), so VARSITY cannot and does not reproduce
+FIFA SAOT / the Premier League's Dragon limb-level precision. It never re-adjudicates.
 
 Convention:
-- ``teammate=True`` marks a player on the same side as the actor (the attacking
-  side that just played the ball).
-- The "second-to-last opponent" is the offside line. Opponents defend the goal at
-  x = 120, so the last opponent is the one with the largest x (often the keeper)
-  and the second-last is the next-largest x.
-- ``margin_meters`` is signed and measured against the second-to-last opponent:
-  positive means the attacker is ahead of the line (the offside side).
+- ``teammate=True`` marks a player on the actor's (attacking) side.
+- The offside line is the second-to-last OPPONENT. The keeper is INTENTIONALLY kept in the
+  candidate pool (Law 11: the second-last opponent, whoever that is - usually but not always the
+  keeper); do not "fix" this by excluding ``p.keeper``.
+- ``margin_meters`` is signed and measured along the x-axis (the goal-line-normal direction; it
+  is intentionally NOT a Euclidean distance, which would inflate the margin with irrelevant
+  lateral separation) against the binding Law-11 reference: the nearer of the second-to-last
+  opponent and the ball. Positive = ahead of the reference (the offside side).
+- By default the most-advanced attacker is evaluated; the received decision identifies the
+  flagged player, which can be passed as ``target``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+# StatsBomb's 120 x 80 grid is in yards; convert margins with the international yard.
+METERS_PER_UNIT = 0.9144
 PITCH_LENGTH_UNITS = 120.0
-PITCH_LENGTH_METERS = 105.0
-_UNITS_TO_METERS = PITCH_LENGTH_METERS / PITCH_LENGTH_UNITS
+
+# A tiny tolerance so an EXACTLY level attacker (float noise at the line) is treated as onside,
+# never a self-contradicting "offside by 0.00 m". The cm-scale "too close to call" is handled
+# honestly by the uncertainty band (the ~13 cm "VARSITY's Call"), not a hard verdict flip here.
+LEVEL_EPS_UNITS = 1e-9
 
 # Attack is always left-to-right, so the opponents' half is x > the midline (Law 11.1:
 # an offside position requires being in the opponents' half, excluding the halfway line).
@@ -46,6 +64,7 @@ class OffsideResult:
     attacker_x: float
     beyond_defender: bool
     beyond_ball: bool
+    reference_x: float = 0.0  # binding Law-11 reference x: nearer of the defender line and the ball
 
 
 def _attackers(frame: list[FreezeFramePlayer]) -> list[FreezeFramePlayer]:
@@ -57,7 +76,13 @@ def _defenders(frame: list[FreezeFramePlayer]) -> list[FreezeFramePlayer]:
 
 
 def second_last_opponent(frame: list[FreezeFramePlayer]) -> FreezeFramePlayer:
-    """The second-to-last opponent (the offside line), attack left-to-right."""
+    """The second-to-last opponent (the offside line), attack left-to-right.
+
+    The keeper is INTENTIONALLY included in the candidate pool: Law 11 defines the line by the
+    second-last opponent whoever that is (usually but not always the keeper). Do not exclude
+    ``p.keeper`` - that would compute the second-last OUTFIELDER and misplace the line whenever an
+    outfield defender is deeper than the keeper.
+    """
     defenders = _defenders(frame)
     if len(defenders) < 2:
         raise ValueError("need at least two opponents to define an offside line")
@@ -83,25 +108,33 @@ def most_advanced_attacker(
 
 
 def compute_offside(
-    frame: list[FreezeFramePlayer], *, ball_x: float | None = None
+    frame: list[FreezeFramePlayer],
+    *,
+    ball_x: float | None = None,
+    target: FreezeFramePlayer | None = None,
 ) -> OffsideResult:
-    """Compute whether the most advanced attacker is in an offside position.
+    """Compute whether the evaluated attacker is in an offside position.
 
-    A player is offside if any scorable part of the body is nearer the goal line
-    than BOTH the ball and the second-to-last opponent. ``margin_meters`` is the
-    distance ahead of the second-to-last opponent (the narrated number).
+    A player is offside if any scorable part of the body is nearer the goal line than BOTH the
+    ball and the second-to-last opponent. ``margin_meters`` is the signed x-distance from the
+    attacker to the BINDING Law-11 reference (the nearer of the second-to-last opponent and the
+    ball), so an attacker ahead of the defender line but behind the ball reports a negative
+    (onside) margin rather than a misleading positive one. ``target`` is the flagged attacker from
+    the received decision; it defaults to the most-advanced attacker.
     """
     line_x = second_last_opponent_x(frame)
-    attacker = most_advanced_attacker(frame)
-    margin_units = attacker.x - line_x
-    beyond_defender = margin_units > 0
+    attacker = target or most_advanced_attacker(frame)
+    reference_x = line_x if ball_x is None else max(line_x, ball_x)
+    margin_units = attacker.x - reference_x
+    beyond_defender = (attacker.x - line_x) > LEVEL_EPS_UNITS
     beyond_ball = True if ball_x is None else attacker.x > ball_x
     in_opponent_half = attacker.x > HALFWAY_X
     return OffsideResult(
         is_offside=in_opponent_half and beyond_defender and beyond_ball,
-        margin_meters=round(margin_units * _UNITS_TO_METERS, 2),
+        margin_meters=round(margin_units * METERS_PER_UNIT, 2),
         offside_line_x=line_x,
         attacker_x=attacker.x,
         beyond_defender=beyond_defender,
         beyond_ball=beyond_ball,
+        reference_x=reference_x,
     )
