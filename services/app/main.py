@@ -142,6 +142,16 @@ def calibration() -> dict:
     return calibration_payload()
 
 
+@app.get("/multilingual")
+def multilingual() -> dict:
+    """The multilingual Terminology-Hit-Rate receipt: does the in-language narration use the
+    OFFICIAL IFAB term per language (offside -> hors-jeu / fuera de juego / ...)? Reference-free and
+    deterministic, no model call (runs the in-language floors). Read-only; never adjudicates."""
+    from verify.multilingual_eval import evaluate
+
+    return evaluate()
+
+
 @app.get("/decisions")
 def list_decisions() -> dict[str, list[dict]]:
     """The non-geometry VAR decisions the demo can explain (penalty, handball).

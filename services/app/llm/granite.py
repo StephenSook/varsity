@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from app.llm import _watsonx
 from app.llm.guardian import cites_law_clause
+from app.termbase import glossary_line
 from app.verification import TOO_CLOSE_HEDGE
 
 DEFAULT_MODEL = "ibm/granite-4-h-small"
@@ -23,10 +24,10 @@ _FALLBACKS: dict[str, tuple[str, str]] = {
         "second-to-last defender by {m:.2f} meters. That keeps the player onside under Law 11.",
     ),
     "es": (
-        "Según la Ley 11, el atacante más adelantado estaba por delante del penúltimo "
+        "Según la Regla 11, el atacante más adelantado estaba por delante del penúltimo "
         "defensor por {m:.2f} metros cuando se jugó el balón, por lo que estaba "
         "correctamente en posición de fuera de juego.",
-        "Según la Ley 11, el atacante más adelantado estaba a la altura o por detrás del "
+        "Según la Regla 11, el atacante más adelantado estaba a la altura o por detrás del "
         "penúltimo defensor por {m:.2f} metros, por lo que su posición era legal.",
     ),
     "fr": (
@@ -37,10 +38,10 @@ _FALLBACKS: dict[str, tuple[str, str]] = {
         "l'avant-dernier défenseur de {m:.2f} mètres, sa position était donc légale.",
     ),
     "pt": (
-        "Segundo a Lei 11, o atacante mais avançado estava à frente do penúltimo "
+        "Segundo a Regra 11, o atacante mais avançado estava à frente do penúltimo "
         "defensor por {m:.2f} metros quando a bola foi jogada, por isso foi corretamente "
         "marcado impedimento.",
-        "Segundo a Lei 11, o atacante mais avançado estava na linha ou atrás do penúltimo "
+        "Segundo a Regra 11, o atacante mais avançado estava na linha ou atrás do penúltimo "
         "defensor por {m:.2f} metros, por isso a posição era legal.",
     ),
     "de": (
@@ -67,9 +68,9 @@ _VERDICT_WORD: dict[str, tuple[str, str]] = {
 # describes the official decision. {v} is the verdict word.
 _FALLBACKS_TIGHT: dict[str, str] = {
     "en": "When the ball was played, the most advanced attacker and the second-to-last defender were level - a very close, Umpire's Call situation, too close for our freeze-frame data to resolve within the roughly 13 centimetres of measurement noise. Under Law 11, VARSITY describes the official decision: {v}.",  # noqa: E501
-    "es": "Cuando se jugó el balón, el atacante más adelantado y el penúltimo defensor estaban a la misma altura: una jugada muy ajustada, demasiado justa para resolverla con nuestros datos dentro de los aproximadamente 13 centímetros de ruido de medición. Según la Ley 11, VARSITY describe la decisión oficial: {v}.",  # noqa: E501
+    "es": "Cuando se jugó el balón, el atacante más adelantado y el penúltimo defensor estaban a la misma altura: una jugada muy ajustada, demasiado justa para resolverla con nuestros datos dentro de los aproximadamente 13 centímetros de ruido de medición. Según la Regla 11, VARSITY describe la decisión oficial: {v}.",  # noqa: E501
     "fr": "Au moment où le ballon a été joué, l'attaquant le plus avancé et l'avant-dernier défenseur étaient à la même hauteur : une action très serrée, trop juste pour être tranchée avec nos données dans la marge d'environ 13 centimètres de bruit de mesure. Selon la Loi 11, VARSITY décrit la décision officielle : {v}.",  # noqa: E501
-    "pt": "Quando a bola foi jogada, o atacante mais avançado e o penúltimo defensor estavam na mesma linha: um lance muito apertado, próximo demais para ser resolvido com os nossos dados dentro dos cerca de 13 centímetros de ruído de medição. Segundo a Lei 11, a VARSITY descreve a decisão oficial: {v}.",  # noqa: E501
+    "pt": "Quando a bola foi jogada, o atacante mais avançado e o penúltimo defensor estavam na mesma linha: um lance muito apertado, próximo demais para ser resolvido com os nossos dados dentro dos cerca de 13 centímetros de ruído de medição. Segundo a Regra 11, a VARSITY descreve a decisão oficial: {v}.",  # noqa: E501
     "de": "Beim Abspiel waren der vorderste Angreifer und der vorletzte Verteidiger auf gleicher Höhe - eine sehr knappe Szene, zu knapp, um sie mit unseren Daten innerhalb der etwa 13 Zentimeter Messrauschen aufzulösen. Nach Regel 11 beschreibt VARSITY die offizielle Entscheidung: {v}.",  # noqa: E501
 }
 
@@ -109,9 +110,9 @@ def _fallback_explanation(
 # returns no usable text; the live path produces the real in-language explanation.
 _DECISION_FALLBACKS: dict[str, str] = {
     "en": "Under Law {law}, the referee's decision was: {outcome}. The official applied that Law to the incident.",  # noqa: E501
-    "es": "Según la Ley {law}, la decisión del árbitro fue: {outcome}. El colegiado aplicó esa Ley a la jugada.",  # noqa: E501
+    "es": "Según la Regla {law}, la decisión del árbitro fue: {outcome}. El colegiado aplicó esa Ley a la jugada.",  # noqa: E501
     "fr": "Selon la Loi {law}, la décision de l'arbitre était : {outcome}. L'arbitre a appliqué cette Loi à l'action.",  # noqa: E501
-    "pt": "Segundo a Lei {law}, a decisão do árbitro foi: {outcome}. O árbitro aplicou essa Lei ao lance.",  # noqa: E501
+    "pt": "Segundo a Regra {law}, a decisão do árbitro foi: {outcome}. O árbitro aplicou essa Lei ao lance.",  # noqa: E501
     "de": "Nach Regel {law} lautete die Entscheidung des Schiedsrichters: {outcome}. Der Schiedsrichter wandte diese Regel an.",  # noqa: E501
 }
 
@@ -122,9 +123,9 @@ def _fallback_decision(*, law: str, outcome: str, language: str = "English") -> 
 
 _ORACLE_PREFIX = {
     "en": "Under Law",
-    "es": "Según la Ley",
+    "es": "Según la Regla",
     "fr": "Selon la Loi",
-    "pt": "Segundo a Lei",
+    "pt": "Segundo a Regra",
     "de": "Nach Regel",
 }
 
@@ -210,7 +211,8 @@ class GraniteClient:
         if within_noise:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, warm "
-                f"language. Reply in {language}, in 2 to 3 short sentences. This call is INSIDE "
+                f"language. Reply in {language}, in 2 to 3 short sentences. "
+                f"{glossary_line(language)}This call is INSIDE "
                 "the measurement noise of our coarse freeze-frame data (about 13 cm), so it is "
                 "too close for us to call independently. DO NOT quote a precise margin and DO NOT "
                 "sound certain. Say the players were level within that noise - an 'Umpire's "
@@ -225,7 +227,8 @@ class GraniteClient:
         else:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, "
-                f"warm language. Reply in {language}, in 2 to 3 short sentences. Lead with where "
+                f"warm language. Reply in {language}, in 2 to 3 short sentences. "
+                f"{glossary_line(language)}Lead with where "
                 "the players were, then state the verdict, then cite the Law that justifies it "
                 "(given-before-new order). A blind fan cannot see the line, so ALWAYS state the "
                 "margin in metres and refer to the second-to-last defender. Ground the explanation "
@@ -267,7 +270,8 @@ class GraniteClient:
         handball, ...) over the SAME retrieval + safety path as offside."""
         prompt = (
             "You are explaining a soccer VAR decision to a blind fan in plain, warm "
-            f"language. Reply in {language}, in 2 to 3 short sentences. Lead with the "
+            f"language. Reply in {language}, in 2 to 3 short sentences. {glossary_line(language)}"
+            "Lead with the "
             "incident, then state the decision, then cite the Law that justifies it "
             "(given-before-new order). Ground the explanation in the Law text below and cite "
             "the Law number. Do not invent any rule that is not in the Law text.\n\n"
@@ -296,7 +300,8 @@ class GraniteClient:
         prompt = (
             "You are a Laws-of-the-Game assistant for a blind soccer fan. Answer the "
             f"question in {language}, in 2 to 3 short sentences, grounded ONLY in the Law "
-            "text below, and cite the Law number. If the question is not about the Laws of "
+            f"text below, and cite the Law number. {glossary_line(language)}"
+            "If the question is not about the Laws of "
             "football, say you can only answer questions about the Laws of the Game. Do not "
             f"invent any rule not in the Law text.\n\nLaw text:\n{law_text}\n\n"
             f"Question: {question}\n\nAnswer:"

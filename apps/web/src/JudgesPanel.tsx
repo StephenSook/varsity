@@ -120,6 +120,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Multilingual IFAB termbase + Terminology-Hit-Rate eval (official terms per language: hors-jeu, fuera de juego, ...)',
+    w: 'services/app/termbase.py',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
@@ -259,6 +264,17 @@ export function JudgesPanel() {
           `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(2)}% · ` +
           `${j.samples.toLocaleString()} seeded draws`
         )
+      },
+    },
+    {
+      key: 'multilingual',
+      label: 'Run the multilingual term check',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/multilingual`)).json()
+        const rows = (j.rows as Record<string, unknown>[])
+          .map((r) => `${r.lang}: ${r.offside_term}`)
+          .join(' · ')
+        return `Terminology-Hit-Rate ${(Number(j.overall_term_hit_rate) * 100).toFixed(0)}% over ${j.languages} languages · ${rows}`
       },
     },
     {
