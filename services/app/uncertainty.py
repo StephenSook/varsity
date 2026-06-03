@@ -35,9 +35,13 @@ _IPCC: list[tuple[float, str]] = [
 ]
 
 
-def _phi(z: float) -> float:
+def normal_cdf(z: float) -> float:
     """Standard normal CDF via the error function (stdlib, no scipy)."""
     return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+
+# Internal alias for the band math below; calibration.py validates this exact function.
+_phi = normal_cdf
 
 
 def _verbal(p: float) -> str:

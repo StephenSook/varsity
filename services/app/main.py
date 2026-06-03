@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 from app import decisions, scenarios
+from app.calibration import calibration_payload
 from app.observability import setup_tracing
 from app.pipeline import decision_stages, explanation_stages, question_stages
 from app.rag.retriever import LawRetriever
@@ -130,6 +131,15 @@ def law_clause(q: str | None = None, law: str | None = None) -> dict:
         "text": chunk.text,
         "source": "IFAB Laws of the Game 2025/26",
     }
+
+
+@app.get("/calibration")
+def calibration() -> dict:
+    """The confidence-calibration receipt for the uncertainty band: a seeded Monte-Carlo
+    reliability diagram + ECE + Brier over P(verdict correct) = Phi(|M|/sigma), computed over the
+    SAME normal_cdf the live band uses. Read-only, deterministic, no model call. Describes the
+    honesty of the confidence VARSITY reports on a received decision; never adjudicates."""
+    return calibration_payload()
 
 
 @app.get("/decisions")
