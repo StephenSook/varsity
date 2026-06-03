@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
+import { verbalizeForSpeech } from './speech'
 import { useLang, type Lang } from './i18n'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
@@ -330,7 +331,7 @@ export function Demo() {
   // will not re-speak an unchanged string (WordPress core trac #36853).
   function announce(message: string) {
     nbspRef.current = !nbspRef.current
-    setLiveMessage(message + (nbspRef.current ? ' ' : ''))
+    setLiveMessage(verbalizeForSpeech(message, UI[lang].bcp47) + (nbspRef.current ?' ' : ''))
   }
 
   // Screen-reader language dual-path. Markup conformance (per-node + page `lang`, WCAG 3.1.2)

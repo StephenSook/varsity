@@ -105,6 +105,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'ClearSpeak-style number verbalizer (the spoken margin: "five point six nine metres", 5 languages)',
+    w: 'apps/web/src/speech.ts',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
