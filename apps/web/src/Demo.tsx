@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'law', 'granite', 'guardian', 'verification', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -139,6 +139,8 @@ function describe(s: Stage): string {
       return ` — camera parallax ~${String(s.apparent_shift_cm)} cm`
     case 'verification':
       return ` — ${String(s.passed)}/${String(s.total)} critics passed`
+    case 'provenance':
+      return ` — ${String(s.link_count)} grounded claims`
     default:
       return ''
   }
@@ -207,6 +209,13 @@ export function Demo() {
     angleDeg: number
     shiftCm: number
     note: string
+  } | null>(null)
+  const [provenance, setProvenance] = useState<{
+    hash: string
+    grounded: boolean
+    proofConsistent: boolean
+    verified: boolean
+    links: { claim: string; law_clause: string; source: string }[]
   } | null>(null)
   const [varsityCall, setVarsityCall] = useState<{
     marginM: number
@@ -306,6 +315,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setProvenance(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -369,6 +379,16 @@ export function Demo() {
             angleDeg: Number(data.residual_angle_deg ?? 0),
             shiftCm: Number(data.apparent_shift_cm ?? 0),
             note: String(data.note ?? ''),
+          })
+        }
+        if (name === 'provenance') {
+          setProvenance({
+            hash: String(data.manifest_hash ?? ''),
+            grounded: Boolean(data.grounded),
+            proofConsistent: Boolean(data.proof_consistent),
+            verified: Boolean(data.verified),
+            links:
+              (data.links as { claim: string; law_clause: string; source: string }[]) ?? [],
           })
         }
         if (name === 'verification') {
@@ -445,6 +465,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setProvenance(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -510,6 +531,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setProvenance(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -982,6 +1004,41 @@ export function Demo() {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {provenance && (
+        <section
+          aria-label="Chain of grounding: every claim traced to an IFAB clause and its source"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Provenance · chain of grounding · {provenance.links.length} claims
+          </p>
+          <p className="mt-1 text-sm text-slate-400">
+            Every claim traced to an IFAB clause and its evidence.{' '}
+            {provenance.grounded ? 'Grounded' : 'Not grounded'} ·{' '}
+            {provenance.proofConsistent ? 'proof-consistent' : 'proof conflict'} ·{' '}
+            {provenance.verified ? 'verified' : 'flagged'}.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {provenance.links.map((link, i) => (
+              <li key={i} className="flex items-start gap-2 text-slate-300">
+                <span aria-hidden="true" className="text-emerald-400">
+                  ▸
+                </span>
+                <span>
+                  {link.claim}{' '}
+                  <span className="font-mono text-xs text-emerald-300/80">{link.law_clause}</span>{' '}
+                  <span className="text-xs text-slate-500">· {link.source}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 font-mono text-xs text-slate-500" aria-label="Manifest hash">
+            <span className="sr-only">Tamper-evident manifest hash: </span>
+            {provenance.hash}
+          </p>
         </section>
       )}
 
