@@ -3,34 +3,66 @@ import type { Geometry } from './OffsidePitch'
 export type Voice = {
   role: 'defender' | 'attacker' | 'ball'
   freq: number
-  x: number
-  y: number
-  z: number
+  azimuthDeg: number // front-hemisphere azimuth: 0 = centre, + = right (beyond the line), - = left
 }
 
-// Listener-centred coordinate transform. The blind listener stands ON the offside
-// line facing the field: the second-to-last defender is the fixed near reference at
-// centre, and the attacker is placed by the REAL geometry margin so a clearly audible
-// left/right arc encodes how far beyond the line the attacker was. Mapping the literal
-// 120x80m pitch into PannerNode metres would put players ~60m away and inaudible, so
-// we normalise the margin into a small +/- arc the ear can resolve.
-const Z = -2 // a comfortable "in front" distance (Web Audio faces -Z)
-const METERS_PER_UNIT = 105 / 120
-const ARC = 1.6 // audio metres of pan per real metre of margin
-const MAX_X = 3
+// --- Spatial preamble: a cited, front-hemisphere azimuth transform ---------------------------
+// The blind listener stands ON the offside line facing the field. The second-to-last defender is
+// the fixed centre reference; the attacker is placed by the REAL geometry margin so a clearly
+// audible left/right arc encodes how far beyond the line they were. Generic (non-individualized)
+// HRTF is reliable for LEFT/RIGHT only, so the pan is constrained to the FRONT hemisphere with a
+// conservative azimuth ceiling, and we claim only binary left/right: the pan REINFORCES the verbal
+// and earcon cue, it is not a navigation-grade spatial map (Shafique et al., Front. Neurosci.
+// 19:1660373, 2025: binaural description alone did not improve a spatial-reconstruction task). It
+// encodes the GEOMETRY of a received decision; it never adjudicates. See docs/SPATIAL-AUDIO.md.
+//
+// Cited parameters:
+// - MAX_AZIMUTH_DEG 50 (hard ceiling 60): generic-HRTF speech stays intelligible and usefully
+//   localizable to this azimuth (Drullman & Bronkhorst 2000, JASA 107(4): no individualized-vs-
+//   general 3-D display difference for intelligibility/recognition/localization; Begault & Wenzel
+//   1993, Human Factors 35(2): usable azimuth from non-individualized-HRTF speech).
+// - FRONT hemisphere only: avoids the ~40.7% mean front-back confusion of non-individualized HRTF
+//   (Steadman et al., Sci. Rep. 9, 2019, doi:10.1038/s41598-019-54811-w).
+// - MIN_SEPARATION_DEG 8: above the minimum audible angle (~1 deg at the front, Mills 1958;
+//   ~5-10 deg practical floor for broadband generic-HRTF speech).
+// - POSITION_RAMP_MS 30: ramp the pan into place so an instant placement does not click.
+export const MAX_AZIMUTH_DEG = 50
+export const MIN_SEPARATION_DEG = 8
+export const POSITION_RAMP_MS = 30
+const RADIUS = 2 // "in front" distance for the HRTF circle (Web Audio faces -Z)
+const MARGIN_SPAN_M = 1.9 // |margin| in metres that maps to the full +/- MAX_AZIMUTH_DEG
+const METERS_PER_UNIT = 0.9144 // StatsBomb's 120x80 grid is in yards (see services/app/geometry.py)
 
-const clampX = (x: number): number => Math.max(-MAX_X, Math.min(MAX_X, x))
+const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v))
+
+// Map a normalized lateral position (-1 = full left, +1 = full right) to an azimuth in degrees,
+// clamped to the cited front-hemisphere ceiling. Pure + testable: the single source of truth for
+// "where" in the spatial preamble.
+export function pitchToAzimuth(normalized: number, maxAzimuthDeg = MAX_AZIMUTH_DEG): number {
+  return clamp(normalized, -1, 1) * maxAzimuthDeg
+}
+
+// The signed offside margin (metres beyond the line) as a normalized lateral position.
+export function marginToNormalized(marginMeters: number): number {
+  return clamp(marginMeters / MARGIN_SPAN_M, -1, 1)
+}
+
+const marginMeters = (geo: Geometry): number =>
+  (geo.attacker_x - geo.offside_line_x) * METERS_PER_UNIT
+
+const azToPan = (azDeg: number): number => Math.sin((azDeg * Math.PI) / 180)
+const azToX = (azDeg: number): number => Math.sin((azDeg * Math.PI) / 180) * RADIUS
+const azToZ = (azDeg: number): number => -Math.cos((azDeg * Math.PI) / 180) * RADIUS
 
 export function sonificationPlan(geo: Geometry): Voice[] {
   const lineX = geo.offside_line_x
   const actor = geo.players.find((p) => p.actor)
   const ballX = actor ? actor.x : lineX
-  const marginM = (geo.attacker_x - lineX) * METERS_PER_UNIT // signed: + = beyond the line
   const ballM = (ballX - lineX) * METERS_PER_UNIT
   return [
-    { role: 'defender', freq: 196, x: 0, y: 0, z: Z }, // the line: centred, low (G3)
-    { role: 'attacker', freq: 587, x: clampX(marginM * ARC), y: 0, z: Z }, // high (D5), right = beyond
-    { role: 'ball', freq: 392, x: clampX(ballM * ARC), y: 0, z: Z }, // mid (G4)
+    { role: 'defender', freq: 196, azimuthDeg: 0 }, // the line: centred, low (G3)
+    { role: 'attacker', freq: 587, azimuthDeg: pitchToAzimuth(marginToNormalized(marginMeters(geo))) },
+    { role: 'ball', freq: 392, azimuthDeg: pitchToAzimuth(marginToNormalized(ballM)) },
   ]
 }
 
@@ -38,31 +70,33 @@ export function sonificationPlan(geo: Geometry): Voice[] {
 // stereo (better on speakers), and mono (no spatialization, for the widest compatibility).
 export type SpatialMode = 'hrtf' | 'stereo' | 'mono'
 
-// The pan position of the line-proximity preamble blips: at the attacker's margin-based
-// position, so the proximity blips come from WHERE the attacker is. Pure + testable.
-export function preambleBlipPan(geo: Geometry): number {
-  const marginM = (geo.attacker_x - geo.offside_line_x) * METERS_PER_UNIT
-  return clampX(marginM * ARC)
+// The azimuth of the line-proximity preamble blips: the attacker's margin-based azimuth, so the
+// proximity blips come from WHERE the attacker is. Pure + testable.
+export function preambleBlipAzimuth(geo: Geometry): number {
+  return pitchToAzimuth(marginToNormalized(marginMeters(geo)))
 }
 
-// One spatializer abstraction for the three modes, so the preamble blips and the spatial chord
-// can be panned (or not) consistently with the listener's chosen mode.
+// One spatializer abstraction for the three modes, working in AZIMUTH degrees (front hemisphere),
+// so the preamble blips and the spatial chord are panned (or not) consistently with the mode.
 function makeSpatial(ctx: AudioContext, mode: SpatialMode) {
   if (mode === 'mono') {
     const node = ctx.createGain()
-    return { node, setX: (_x: number) => {}, rampX: (_a: number, _b: number, _t0: number, _t1: number) => {} }
+    return {
+      node,
+      setAz: (_az: number) => {},
+      rampAz: (_a: number, _b: number, _t0: number, _t1: number) => {},
+    }
   }
   if (mode === 'stereo') {
     const p = ctx.createStereoPanner()
-    const pan = (x: number): number => Math.max(-1, Math.min(1, x / MAX_X))
     return {
       node: p,
-      setX: (x: number) => {
-        p.pan.value = pan(x)
+      setAz: (az: number) => {
+        p.pan.value = azToPan(az)
       },
-      rampX: (a: number, b: number, t0: number, t1: number) => {
-        p.pan.setValueAtTime(pan(a), t0)
-        p.pan.linearRampToValueAtTime(pan(b), t1)
+      rampAz: (a: number, b: number, t0: number, t1: number) => {
+        p.pan.setValueAtTime(azToPan(a), t0)
+        p.pan.linearRampToValueAtTime(azToPan(b), t1)
       },
     }
   }
@@ -70,15 +104,17 @@ function makeSpatial(ctx: AudioContext, mode: SpatialMode) {
   p.panningModel = 'HRTF'
   p.distanceModel = 'inverse'
   p.positionY.value = 0
-  p.positionZ.value = Z
   return {
     node: p,
-    setX: (x: number) => {
-      p.positionX.value = x
+    setAz: (az: number) => {
+      p.positionX.value = azToX(az)
+      p.positionZ.value = azToZ(az)
     },
-    rampX: (a: number, b: number, t0: number, t1: number) => {
-      p.positionX.setValueAtTime(a, t0)
-      p.positionX.linearRampToValueAtTime(b, t1)
+    rampAz: (a: number, b: number, t0: number, t1: number) => {
+      p.positionX.setValueAtTime(azToX(a), t0)
+      p.positionZ.setValueAtTime(azToZ(a), t0)
+      p.positionX.linearRampToValueAtTime(azToX(b), t1)
+      p.positionZ.linearRampToValueAtTime(azToZ(b), t1)
     },
   }
 }
@@ -154,7 +190,7 @@ export type SonifyOptions = {
 }
 
 // Play a short HRTF-panned chord of the three key players, then a semantic verdict
-// earcon. The attacker tone is ANIMATED from the line outward to its final position,
+// earcon. The attacker tone is ANIMATED from the line outward to its final azimuth,
 // so the listener hears it cross (offside) or not cross (onside) the line as motion,
 // not a static pan. Must be called from a user gesture (the caller creates/resumes the
 // AudioContext). Returns the plan it played, so it can be asserted.
@@ -168,6 +204,7 @@ export async function playOffsideChord(
   const mode = opts.mode ?? 'hrtf'
   const plan = sonificationPlan(geo)
   const t0 = ctx.currentTime
+  const ramp = POSITION_RAMP_MS / 1000
 
   // Phase A: a centred line-sweep glissando ("the offside line is being drawn") before the blips.
   let phaseA = 0
@@ -195,7 +232,7 @@ export async function playOffsideChord(
       : lineProximityPreamble(opts.band, geo.is_offside)
   const blipGap = 0.12
   const blipDur = 0.07
-  const blipPan = preambleBlipPan(geo) // the blips come from where the attacker is
+  const blipAz = preambleBlipAzimuth(geo) // the blips come from where the attacker is
   for (let i = 0; i < pre.blips; i++) {
     const start = t0 + phaseA + i * blipGap
     const osc = ctx.createOscillator()
@@ -206,7 +243,7 @@ export async function playOffsideChord(
     g.gain.linearRampToValueAtTime(peak * 0.5, start + 0.01)
     g.gain.linearRampToValueAtTime(0, start + blipDur)
     const sp = makeSpatial(ctx, mode)
-    sp.setX(blipPan)
+    sp.rampAz(0, blipAz, start, start + ramp) // 30 ms ramp into place: no click on the jump
     osc.connect(g).connect(sp.node).connect(ctx.destination)
     osc.start(start)
     osc.stop(start + blipDur + 0.02)
@@ -223,10 +260,10 @@ export async function playOffsideChord(
 
     const sp = makeSpatial(ctx, mode)
     if (v.role === 'attacker') {
-      // Ramp from the line (x=0) out to the final position so the cross is heard.
-      sp.rampX(0, v.x, now, now + dur)
+      // Ramp from the line (azimuth 0) out to the final azimuth so the cross is heard as motion.
+      sp.rampAz(0, v.azimuthDeg, now, now + dur)
     } else {
-      sp.setX(v.x)
+      sp.setAz(v.azimuthDeg)
     }
 
     const gain = ctx.createGain()
@@ -271,7 +308,7 @@ export async function playOffsideChord(
   return plan
 }
 
-export type BuildUpStep = { t: number; gapMeters: number; x: number }
+export type BuildUpStep = { t: number; gapMeters: number; azimuthDeg: number }
 
 // The "gasp moment": sonify the seconds BEFORE the call, not just the verdict. We only
 // have the single freeze-frame, so this RECONSTRUCTS a plausible approach: the attacker
@@ -279,14 +316,14 @@ export type BuildUpStep = { t: number; gapMeters: number; x: number }
 // second-to-last defender holds the line. It is illustrative, grounded in the real final
 // margin (the end point is the measured value), not measured tracking data.
 export function buildUpTrajectory(geo: Geometry, steps = 24): BuildUpStep[] {
-  const finalGap = (geo.attacker_x - geo.offside_line_x) * METERS_PER_UNIT
+  const finalGap = marginMeters(geo)
   const startGap = Math.min(-6, finalGap - 6) // at least a 6 m run-up to the line
   const out: BuildUpStep[] = []
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     const eased = t * t // ease-in: the run accelerates toward the line
     const gapMeters = startGap + (finalGap - startGap) * eased
-    out.push({ t, gapMeters, x: clampX(gapMeters * ARC) })
+    out.push({ t, gapMeters, azimuthDeg: pitchToAzimuth(marginToNormalized(gapMeters)) })
   }
   return out
 }
@@ -319,16 +356,20 @@ export async function playBuildUp(
   ref.start(now)
   ref.stop(now + dur + 0.02)
 
-  // Rising attacker tone, panned along the reconstructed approach.
+  // Rising attacker tone, panned along the reconstructed approach (front-hemisphere azimuth).
   const att = ctx.createOscillator()
   att.type = 'sawtooth'
   att.frequency.setValueAtTime(300, now)
   att.frequency.linearRampToValueAtTime(680, now + dur)
   const attPan = ctx.createPanner()
   attPan.panningModel = 'HRTF'
-  attPan.positionZ.value = -2
-  attPan.positionX.setValueAtTime(traj[0].x, now)
-  for (const s of traj) attPan.positionX.linearRampToValueAtTime(s.x, now + s.t * dur)
+  attPan.positionY.value = 0
+  attPan.positionX.setValueAtTime(azToX(traj[0].azimuthDeg), now)
+  attPan.positionZ.setValueAtTime(azToZ(traj[0].azimuthDeg), now)
+  for (const s of traj) {
+    attPan.positionX.linearRampToValueAtTime(azToX(s.azimuthDeg), now + s.t * dur)
+    attPan.positionZ.linearRampToValueAtTime(azToZ(s.azimuthDeg), now + s.t * dur)
+  }
   const attGain = ctx.createGain()
   attGain.gain.setValueAtTime(0, now)
   attGain.gain.linearRampToValueAtTime(peak * 0.5, now + dur * 0.6)

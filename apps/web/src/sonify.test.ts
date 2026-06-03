@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  MAX_AZIMUTH_DEG,
   confidenceTexture,
   lineProximityPreamble,
   lineSweepSpec,
-  preambleBlipPan,
+  marginToNormalized,
+  pitchToAzimuth,
+  preambleBlipAzimuth,
   sonificationPlan,
   verdictChord,
   verdictTimbre,
@@ -64,23 +67,49 @@ describe('line-proximity preamble', () => {
   })
 })
 
+describe('cited front-hemisphere azimuth transform', () => {
+  it('maps a normalized position to a clamped azimuth, symmetric about centre', () => {
+    expect(pitchToAzimuth(0)).toBe(0)
+    expect(pitchToAzimuth(1)).toBe(MAX_AZIMUTH_DEG)
+    expect(pitchToAzimuth(-1)).toBe(-MAX_AZIMUTH_DEG)
+    expect(pitchToAzimuth(0.5)).toBeCloseTo(MAX_AZIMUTH_DEG / 2)
+  })
+
+  it('clamps beyond +/-1 to the front-hemisphere ceiling (never behind the listener)', () => {
+    expect(pitchToAzimuth(5)).toBe(MAX_AZIMUTH_DEG)
+    expect(pitchToAzimuth(-5)).toBe(-MAX_AZIMUTH_DEG)
+    expect(Math.abs(pitchToAzimuth(99))).toBeLessThanOrEqual(60) // within the hard ceiling
+  })
+
+  it('honours an explicit max azimuth argument', () => {
+    expect(pitchToAzimuth(1, 60)).toBe(60)
+  })
+
+  it('normalizes the offside margin into [-1, 1]', () => {
+    expect(marginToNormalized(0)).toBe(0)
+    expect(marginToNormalized(10)).toBe(1) // a large margin saturates, never wraps
+    expect(marginToNormalized(-10)).toBe(-1)
+  })
+})
+
 describe('spatial sonification plan', () => {
   it('centres the defender line and pans the attacker by the real margin', () => {
-    const plan = sonificationPlan(geo(100, 98)) // ~1.75 m beyond the line
+    const plan = sonificationPlan(geo(100, 98)) // beyond the line
     const defender = plan.find((v) => v.role === 'defender')!
     const attacker = plan.find((v) => v.role === 'attacker')!
-    expect(defender.x).toBe(0)
-    expect(attacker.x).toBeGreaterThan(0) // beyond the line -> panned to the right
+    expect(defender.azimuthDeg).toBe(0)
+    expect(attacker.azimuthDeg).toBeGreaterThan(0) // beyond the line -> azimuth to the right
+    expect(attacker.azimuthDeg).toBeLessThanOrEqual(MAX_AZIMUTH_DEG) // never past the ceiling
   })
 
   it('pans an onside attacker to the left of the line', () => {
     const plan = sonificationPlan(geo(95, 98))
     const attacker = plan.find((v) => v.role === 'attacker')!
-    expect(attacker.x).toBeLessThan(0)
+    expect(attacker.azimuthDeg).toBeLessThan(0)
   })
 
-  it('spatialises the preamble blips at the attacker position (right=beyond, left=behind)', () => {
-    expect(preambleBlipPan(geo(100, 98))).toBeGreaterThan(0)
-    expect(preambleBlipPan(geo(95, 98))).toBeLessThan(0)
+  it('spatialises the preamble blips at the attacker azimuth (right=beyond, left=behind)', () => {
+    expect(preambleBlipAzimuth(geo(100, 98))).toBeGreaterThan(0)
+    expect(preambleBlipAzimuth(geo(95, 98))).toBeLessThan(0)
   })
 })
