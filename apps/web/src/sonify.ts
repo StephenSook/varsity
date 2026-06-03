@@ -73,6 +73,28 @@ export function lineProximityPreamble(
   return { blips, freq }
 }
 
+// Phase A of the preamble: a short downward glissando = "the offside line is being drawn",
+// played centred BEFORE the proximity blips (a pitch glide is the strongest auditory-stream
+// "line" cue, Bregman ASA). Pure + testable.
+export function lineSweepSpec(): { fromHz: number; toHz: number; durMs: number } {
+  return { fromHz: 660, toHz: 440, durMs: 150 }
+}
+
+// Bouba/kiki verdict timbre: a CLEAR call is a rounded "bouba" (sine through a gentle lowpass);
+// a tight/very-tight call is a sharp "kiki" (sawtooth through a bright bandpass). The
+// rounded-vs-spiky sound-to-shape mapping is pre-linguistic and species-general (Loconsole,
+// Benavides-Varela & Regolin, Science 2026; Spence 2011). Pure + testable.
+export function verdictTimbre(band?: string): {
+  waveform: OscillatorType
+  filterType: BiquadFilterType
+  filterHz: number
+} {
+  const tight = band === 'tight' || band === 'very tight'
+  return tight
+    ? { waveform: 'sawtooth', filterType: 'bandpass', filterHz: 3000 } // kiki: sharp, spiky
+    : { waveform: 'sine', filterType: 'lowpass', filterHz: 800 } // bouba: rounded, gentle
+}
+
 export type SonifyOptions = {
   durationMs?: number
   gain?: number
@@ -96,7 +118,26 @@ export async function playOffsideChord(
   const plan = sonificationPlan(geo)
   const t0 = ctx.currentTime
 
-  // Line-proximity preamble: blip count = closeness to the line, pitch = beyond vs behind.
+  // Phase A: a centred line-sweep glissando ("the offside line is being drawn") before the blips.
+  let phaseA = 0
+  if (opts.preamble !== false) {
+    const sweep = lineSweepSpec()
+    const sweepDur = sweep.durMs / 1000
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(sweep.fromHz, t0)
+    osc.frequency.linearRampToValueAtTime(sweep.toHz, t0 + sweepDur)
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t0)
+    g.gain.linearRampToValueAtTime(peak * 0.6, t0 + 0.02)
+    g.gain.linearRampToValueAtTime(0, t0 + sweepDur)
+    osc.connect(g).connect(ctx.destination)
+    osc.start(t0)
+    osc.stop(t0 + sweepDur + 0.02)
+    phaseA = sweepDur + 0.05 // a small gap after the sweep
+  }
+
+  // Phase B: line-proximity preamble - blip count = closeness to the line, pitch = beyond/behind.
   const pre =
     opts.preamble === false
       ? { blips: 0, freq: 0 }
@@ -104,7 +145,7 @@ export async function playOffsideChord(
   const blipGap = 0.12
   const blipDur = 0.07
   for (let i = 0; i < pre.blips; i++) {
-    const start = t0 + i * blipGap
+    const start = t0 + phaseA + i * blipGap
     const osc = ctx.createOscillator()
     osc.type = 'square'
     osc.frequency.value = pre.freq
@@ -116,7 +157,7 @@ export async function playOffsideChord(
     osc.start(start)
     osc.stop(start + blipDur + 0.02)
   }
-  const preDur = pre.blips > 0 ? pre.blips * blipGap + 0.12 : 0
+  const preDur = phaseA + (pre.blips > 0 ? pre.blips * blipGap + 0.12 : 0)
 
   const now = t0 + preDur // the spatial sweep + verdict follow the preamble
   const dur = durationMs / 1000
@@ -153,15 +194,19 @@ export async function playOffsideChord(
     const vStart = now + dur + 0.06
     const vDur = 0.45
     const tex = confidenceTexture(opts.band)
+    const tim = verdictTimbre(opts.band) // bouba (clear) vs kiki (tight): waveform + filter
     const tone = (freq: number, g: number) => {
       const osc = ctx.createOscillator()
-      osc.type = 'triangle'
+      osc.type = tim.waveform
       osc.frequency.value = freq
+      const filter = ctx.createBiquadFilter()
+      filter.type = tim.filterType
+      filter.frequency.value = tim.filterHz
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, vStart)
       gain.gain.linearRampToValueAtTime(peak * g, vStart + 0.05)
       gain.gain.linearRampToValueAtTime(0, vStart + vDur)
-      osc.connect(gain).connect(ctx.destination)
+      osc.connect(filter).connect(gain).connect(ctx.destination)
       osc.start(vStart)
       osc.stop(vStart + vDur + 0.02)
     }
