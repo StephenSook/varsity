@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'law', 'granite', 'guardian', 'verification', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'law', 'granite', 'guardian', 'verification', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -135,6 +135,8 @@ function describe(s: Stage): string {
       return ` — referee signal (Law ${String(s.law)})`
     case 'proof':
       return ' — Law 11 rule proof'
+    case 'parallax':
+      return ` — camera parallax ~${String(s.apparent_shift_cm)} cm`
     case 'verification':
       return ` — ${String(s.passed)}/${String(s.total)} critics passed`
     default:
@@ -199,6 +201,12 @@ export function Demo() {
     passed: number
     total: number
     critics: { name: string; passed: boolean; detail: string }[]
+  } | null>(null)
+  const [parallax, setParallax] = useState<{
+    lateralM: number
+    angleDeg: number
+    shiftCm: number
+    note: string
   } | null>(null)
   const [varsityCall, setVarsityCall] = useState<{
     marginM: number
@@ -297,6 +305,7 @@ export function Demo() {
     setVarsityCall(null)
     setProof(null)
     setVerification(null)
+    setParallax(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -352,6 +361,14 @@ export function Demo() {
               }[]) ?? [],
             consistent: Boolean(data.consistent),
             conclusion: String(data.conclusion ?? ''),
+          })
+        }
+        if (name === 'parallax') {
+          setParallax({
+            lateralM: Number(data.lateral_separation_m ?? 0),
+            angleDeg: Number(data.camera_angle_deg ?? 0),
+            shiftCm: Number(data.apparent_shift_cm ?? 0),
+            note: String(data.note ?? ''),
           })
         }
         if (name === 'verification') {
@@ -427,6 +444,7 @@ export function Demo() {
     setVarsityCall(null)
     setProof(null)
     setVerification(null)
+    setParallax(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -491,6 +509,7 @@ export function Demo() {
     setVarsityCall(null)
     setProof(null)
     setVerification(null)
+    setParallax(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -898,6 +917,22 @@ export function Demo() {
             ))}
           </ul>
           <p className="mt-2 text-sm font-medium text-emerald-200">{proof.conclusion}</p>
+        </section>
+      )}
+
+      {parallax && (
+        <section
+          aria-label="Why broadcast offside can look wrong: camera parallax"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Why TV looks wrong · camera parallax
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            ~{parallax.lateralM} m sideways gap, seen at ~{parallax.angleDeg}° off line, looks like
+            ~{parallax.shiftCm} cm on screen.
+          </p>
+          <p className="mt-1 text-sm text-slate-400">{parallax.note}</p>
         </section>
       )}
 
