@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CHROME, useLang } from './i18n'
+import { ReliabilityDiagram, type CalibrationPayload } from './ReliabilityDiagram'
 
 // The honesty surface, made interactive: each claim carries a verifiability TIER and a
 // deep-link to the proving file, and the "Run it now" buttons call the LIVE deployed
@@ -79,6 +80,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Confidence calibration receipt (reliability diagram, ECE & Brier over the uncertainty band)',
+    w: 'services/app/calibration.py',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
@@ -149,6 +155,7 @@ function streamSummary(url: string): Promise<string> {
 export function JudgesPanel() {
   const [result, setResult] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [calib, setCalib] = useState<CalibrationPayload | null>(null)
   const { lang } = useLang()
   const c = CHROME[lang]
 
@@ -204,6 +211,19 @@ export function JudgesPanel() {
           .trim()
           .slice(0, 140)
         return `${String(j.citation_id)} (${String(j.title)}): "${text}…"`
+      },
+    },
+    {
+      key: 'calibration',
+      label: 'Run the calibration receipt',
+      fn: async () => {
+        const j = (await (await fetch(`${BACKEND}/calibration`)).json()) as CalibrationPayload
+        setCalib(j)
+        return (
+          `ECE ${(j.ece * 100).toFixed(1)}% (calibrated) · Brier ${j.brier.toFixed(4)} · ` +
+          `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(1)}% · ` +
+          `${j.samples.toLocaleString()} seeded draws`
+        )
       },
     },
     {
@@ -270,6 +290,7 @@ export function JudgesPanel() {
             </p>
           ))}
         </div>
+        {calib && <ReliabilityDiagram p={calib} />}
       </div>
 
       <div className="mt-8">
