@@ -28,6 +28,7 @@ const CLAIMS: { t: string; w: string }[] = [
   { t: 'Context Forge MCP + A2A federation', w: 'services/app/federation.py, docs/federation.md' },
   { t: 'On-device offline mode (Granite Nano, WebGPU)', w: 'apps/web/src/offline.ts' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py' },
+  { t: 'Any VAR call: penalty & handball (Law 12/14)', w: 'services/app/decisions.py' },
   { t: 'Spatial audio, haptics, 5 languages, read-aloud', w: 'apps/web/src/sonify.ts, tts.ts' },
 ]
 

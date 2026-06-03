@@ -50,7 +50,13 @@ test('the scenario picker exposes the three real World Cup frames (offside defau
     'aria-pressed',
     'true',
   )
-  for (const label of ['Offside scenario', 'Onside scenario', 'Tight call scenario']) {
+  for (const label of [
+    'Offside scenario',
+    'Onside scenario',
+    'Tight call scenario',
+    'Penalty scenario',
+    'Handball scenario',
+  ]) {
     await expect(group.getByRole('button', { name: label })).toBeVisible()
   }
 })
