@@ -47,6 +47,7 @@ def test_stages_order() -> None:
         "geometry",
         "signal",
         "proof",
+        "verbalizer",
         "parallax",
         "causal",
         "critical_questions",
@@ -56,6 +57,7 @@ def test_stages_order() -> None:
         "verification",
         "completeness",
         "provenance",
+        "citation_metrics",
         "verdict",
     ]
 
