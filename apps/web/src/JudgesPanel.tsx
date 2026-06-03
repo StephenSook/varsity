@@ -31,6 +31,7 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/pipeline.py',
     tier: 'live',
   },
+  { t: 'Referee-signal explainer (Law 5 / 6 + VAR)', w: 'services/app/signals.py', tier: 'live' },
   { t: 'Context Forge MCP + A2A federation', w: 'docs/federation.md', tier: 'integration' },
   {
     t: 'On-device offline mode (Granite Nano, WebGPU)',

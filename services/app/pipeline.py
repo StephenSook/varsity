@@ -16,6 +16,7 @@ from app.llm.granite import GraniteClient
 from app.llm.guardian import GuardianClient
 from app.observability import tracer
 from app.rag.retriever import LawRetriever
+from app.signals import referee_signal
 
 OFFSIDE_QUERY = "offside attacker nearer the goal line than the second-last defender and the ball"
 
@@ -80,6 +81,9 @@ def explanation_stages(
             for p in frame
         ],
     }
+
+    sig = referee_signal(is_offside=geo.is_offside)
+    yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(OFFSIDE_QUERY)
@@ -154,6 +158,9 @@ def decision_stages(
         "incident": d["incident"],
         "outcome": d["outcome"],
     }
+
+    sig = referee_signal(decision_type=d["decision_type"])
+    yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(d["law_query"])

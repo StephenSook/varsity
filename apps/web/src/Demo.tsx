@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'law', 'granite', 'guardian', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'law', 'granite', 'guardian', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -131,6 +131,8 @@ function describe(s: Stage): string {
       return ` — ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
     case 'decision':
       return ` — ${String(s.outcome)}`
+    case 'signal':
+      return ` — referee signal (Law ${String(s.law)})`
     default:
       return ''
   }
@@ -182,6 +184,7 @@ export function Demo() {
   const [scenario, setScenario] = useState<Scenario>('offside')
   const [moment, setMoment] = useState<Moment>(null)
   const [decision, setDecision] = useState<DecisionCard>(null)
+  const [signalCard, setSignalCard] = useState<{ text: string; law: string } | null>(null)
   const [question, setQuestion] = useState('')
   const [askedQuestion, setAskedQuestion] = useState('')
   const [soundOn, setSoundOn] = useState(true)
@@ -265,6 +268,7 @@ export function Demo() {
     setReviewing(null)
     setMoment(null)
     setDecision(null)
+    setSignalCard(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -304,6 +308,9 @@ export function Demo() {
             incident: String(data.incident ?? ''),
             outcome: String(data.outcome ?? ''),
           })
+        }
+        if (name === 'signal') {
+          setSignalCard({ text: String(data.text ?? ''), law: String(data.law ?? '') })
         }
         if (name === 'geometry') {
           const g = data as unknown as Geometry
@@ -353,6 +360,7 @@ export function Demo() {
     setOfflineStatus('')
     setMoment(null)
     setDecision(null)
+    setSignalCard(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -413,6 +421,7 @@ export function Demo() {
     setReviewing(null)
     setMoment(null)
     setDecision(null)
+    setSignalCard(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -772,6 +781,18 @@ export function Demo() {
           </p>
           <p className="mt-1 text-sm text-slate-300">{decision.incident}</p>
           <p className="mt-1 text-sm font-medium text-emerald-200">Outcome: {decision.outcome}</p>
+        </section>
+      )}
+
+      {signalCard && (
+        <section
+          aria-label="Referee signal"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-3 text-left ring-1 ring-sky-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-sky-300/80">
+            Referee signal · Law {signalCard.law}
+          </p>
+          <p className="mt-1 text-sm text-slate-300">{signalCard.text}</p>
         </section>
       )}
 
