@@ -25,7 +25,14 @@ def test_question_stages_order_and_grounding() -> None:
     stages = list(
         question_stages("why was the goal offside", granite=FakeGranite(), guardian=FakeGuardian())
     )
-    assert [s["stage"] for s in stages] == ["trigger", "law", "granite", "guardian", "verdict"]
+    assert [s["stage"] for s in stages] == [
+        "trigger",
+        "law",
+        "granite",
+        "guardian",
+        "verification",
+        "verdict",
+    ]
     by = {s["stage"]: s for s in stages}
     assert by["trigger"]["question"] == "why was the goal offside"
     assert by["law"]["law"] == "11"

@@ -50,6 +50,7 @@ def test_stages_order() -> None:
         "law",
         "granite",
         "guardian",
+        "verification",
         "verdict",
     ]
 

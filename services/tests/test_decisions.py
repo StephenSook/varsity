@@ -42,6 +42,7 @@ def test_decision_stages_order_and_content() -> None:
         "law",
         "granite",
         "guardian",
+        "verification",
         "verdict",
     ]
     by = {s["stage"]: s for s in stages}

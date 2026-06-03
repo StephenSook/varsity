@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import law11
+from app import law11, verification
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -138,6 +138,16 @@ def explanation_stages(
         "answer": verdict.model_answer,
     }
 
+    yield verification.verification_stage(
+        verification.verify(
+            explanation=explanation,
+            cites_law=verdict.cites_law,
+            grounded=verdict.grounded,
+            screen_reader_ok=verdict.screen_reader_ok,
+            proof_consistent=proof.consistent_with_decision,
+        )
+    )
+
     yield {
         "stage": "verdict",
         "text": explanation,
@@ -216,6 +226,15 @@ def decision_stages(
         "answer": verdict.model_answer,
     }
 
+    yield verification.verification_stage(
+        verification.verify(
+            explanation=explanation,
+            cites_law=verdict.cites_law,
+            grounded=verdict.grounded,
+            screen_reader_ok=verdict.screen_reader_ok,
+        )
+    )
+
     yield {
         "stage": "verdict",
         "text": explanation,
@@ -276,6 +295,15 @@ def question_stages(
         "screen_reader_ok": verdict.screen_reader_ok,
         "answer": verdict.model_answer,
     }
+
+    yield verification.verification_stage(
+        verification.verify(
+            explanation=answer,
+            cites_law=verdict.cites_law,
+            grounded=verdict.grounded,
+            screen_reader_ok=verdict.screen_reader_ok,
+        )
+    )
 
     yield {
         "stage": "verdict",
