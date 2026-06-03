@@ -1,0 +1,22 @@
+VARSITY
+Copyright 2026 Stephen Sookra
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes third-party software and data. The full list, with each
+component's license, is in THIRD_PARTY_LICENSES.md. Notable attributions:
+
+- IBM Granite, IBM Granite Guardian, and IBM Granite embedding models
+  (Apache-2.0), Copyright IBM Corp.
+- IBM Docling and IBM Context Forge (the MCP gateway), Copyright IBM Corp.
+- Match data: StatsBomb Open Data, used under the StatsBomb Public Data User
+  Agreement for non-commercial research and accessibility purposes, with
+  attribution. Data source: StatsBomb (https://github.com/statsbomb/open-data).
+- Laws of the Game: Copyright The International Football Association Board
+  (IFAB). VARSITY cites and paraphrases the Laws under fair-use principles for
+  a non-commercial educational and accessibility purpose. The full Laws of the
+  Game are published at https://theifab.com.
+
+VARSITY is an independent project. It is not affiliated with, sponsored by, or
+endorsed by FIFA, The IFAB, any football association, league, club,
+broadcaster, or player. See docs/LEGAL.md.

@@ -121,6 +121,10 @@ cd services && python -m venv .venv && source .venv/bin/activate && pip install 
 
 CI runs lint, typecheck, tests, and build on every push and pull request.
 
+## Legal, IP & deployment
+
+VARSITY is an independent project, not affiliated with FIFA, The IFAB, any league, club, or player. It **explains** decisions; it does not adjudicate them. Data is StatsBomb Open Data (non-commercial, attributed); the Laws are IFAB's, cited and paraphrased for an educational/accessibility purpose. The full treatment, including the honest path from this prototype to a partnership-first real deployment, is in [docs/LEGAL.md](docs/LEGAL.md).
+
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE), and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Every shipped model is Apache-2.0; the runtime dependency tree carries no copyleft.
