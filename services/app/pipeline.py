@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from app import law11
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -93,6 +94,17 @@ def explanation_stages(
 
     sig = referee_signal(is_offside=geo.is_offside)
     yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}
+
+    # Neuro-symbolic Law-11 proof tree: the auditable rule traversal of the decision.
+    proof = law11.prove(
+        is_offside=geo.is_offside,
+        margin_meters=geo.margin_meters,
+        beyond_defender=geo.beyond_defender,
+        beyond_ball=geo.beyond_ball,
+        attacker_x=geo.attacker_x,
+        within_noise=quantify(geo.margin_meters).band == "very tight",
+    )
+    yield law11.proof_payload(proof)
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(OFFSIDE_QUERY)

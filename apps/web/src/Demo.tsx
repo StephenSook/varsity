@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'law', 'granite', 'guardian', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'law', 'granite', 'guardian', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -133,6 +133,8 @@ function describe(s: Stage): string {
       return ` — ${String(s.outcome)}`
     case 'signal':
       return ` — referee signal (Law ${String(s.law)})`
+    case 'proof':
+      return ' — Law 11 rule proof'
     default:
       return ''
   }
@@ -185,6 +187,11 @@ export function Demo() {
   const [moment, setMoment] = useState<Moment>(null)
   const [decision, setDecision] = useState<DecisionCard>(null)
   const [signalCard, setSignalCard] = useState<{ text: string; law: string } | null>(null)
+  const [proof, setProof] = useState<{
+    steps: { key: string; claim: string; status: string; law: string; role: string }[]
+    consistent: boolean
+    conclusion: string
+  } | null>(null)
   const [varsityCall, setVarsityCall] = useState<{
     marginM: number
     sigmaM: number
@@ -280,6 +287,7 @@ export function Demo() {
     setDecision(null)
     setSignalCard(null)
     setVarsityCall(null)
+    setProof(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -322,6 +330,20 @@ export function Demo() {
         }
         if (name === 'signal') {
           setSignalCard({ text: String(data.text ?? ''), law: String(data.law ?? '') })
+        }
+        if (name === 'proof') {
+          setProof({
+            steps:
+              (data.steps as {
+                key: string
+                claim: string
+                status: string
+                law: string
+                role: string
+              }[]) ?? [],
+            consistent: Boolean(data.consistent),
+            conclusion: String(data.conclusion ?? ''),
+          })
         }
         if (name === 'geometry') {
           const g = data as unknown as Geometry
@@ -385,6 +407,7 @@ export function Demo() {
     setDecision(null)
     setSignalCard(null)
     setVarsityCall(null)
+    setProof(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -447,6 +470,7 @@ export function Demo() {
     setDecision(null)
     setSignalCard(null)
     setVarsityCall(null)
+    setProof(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -818,6 +842,42 @@ export function Demo() {
             Referee signal · Law {signalCard.law}
           </p>
           <p className="mt-1 text-sm text-slate-300">{signalCard.text}</p>
+        </section>
+      )}
+
+      {proof && (
+        <section
+          aria-label="Law 11 rule proof"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Rule proof · Law 11 {proof.consistent ? '· consistent' : '· official trusted'}
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {proof.steps.map((s) => (
+              <li key={s.key} className="flex items-start gap-2 text-slate-300">
+                <span
+                  aria-hidden="true"
+                  className={
+                    s.status === 'pass'
+                      ? 'text-emerald-400'
+                      : s.status === 'fail'
+                        ? 'text-amber-400'
+                        : 'text-slate-500'
+                  }
+                >
+                  {s.status === 'pass' ? '✓' : s.status === 'fail' ? '✗' : '○'}
+                </span>
+                <span>
+                  <span className="sr-only">
+                    {s.status === 'pass' ? 'Met. ' : s.status === 'fail' ? 'Not met. ' : 'Not applicable. '}
+                  </span>
+                  {s.claim} <span className="font-mono text-xs text-slate-500">Law {s.law}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm font-medium text-emerald-200">{proof.conclusion}</p>
         </section>
       )}
 

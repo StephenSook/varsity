@@ -23,6 +23,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/uncertainty.py',
     tier: 'live',
   },
+  {
+    t: 'Auditable Law-11 proof tree (neuro-symbolic rule traversal)',
+    w: 'services/app/law11.py',
+    tier: 'live',
+  },
   { t: 'IFAB-Laws RAG + IBM Granite reasoning', w: 'services/app/pipeline.py', tier: 'live' },
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py', tier: 'live' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py', tier: 'live' },
