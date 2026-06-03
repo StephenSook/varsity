@@ -103,5 +103,5 @@
     }
   ],
   "expected_is_offside": false,
-  "expected_margin_meters": -3.01
+  "expected_margin_meters": -3.14
 }

@@ -27,14 +27,19 @@ from __future__ import annotations
 
 import math
 
-from app.geometry import FreezeFramePlayer, most_advanced_attacker, second_last_opponent_x
+from app.geometry import (
+    HALFWAY_X,
+    METERS_PER_UNIT,
+    FreezeFramePlayer,
+    most_advanced_attacker,
+    second_last_opponent_x,
+)
 
-_X_UNITS_TO_METERS = 105.0 / 120.0  # StatsBomb pitch length -> metres
-_Y_UNITS_TO_METERS = 68.0 / 80.0  # StatsBomb pitch width -> metres
-
+# Single source of truth for the units conversion (StatsBomb yards -> metres), shared with the
+# margin geometry so the parallax distances and the narrated margin stay on one scale.
 # A typical main broadcast camera: at the halfway line, set back beyond the near touchline and
-# elevated (metres; x along the 105 m pitch, y across the 68 m pitch, z height).
-_CAMERA_M = (52.5, -25.0, 18.0)
+# elevated (metres; x along the pitch, y across it, z height).
+_CAMERA_M = (HALFWAY_X * METERS_PER_UNIT, -25.0, 18.0)
 # Residual pointing error a calibrated broadcast camera still carries (degrees). A fifth of a
 # degree is a conservative, illustrative figure, not a measured per-camera value.
 _RESIDUAL_ANGLE_DEG = 0.2
@@ -49,15 +54,15 @@ def estimate(frame: list[FreezeFramePlayer]) -> dict:
     """
     attacker = most_advanced_attacker(frame)
     line_x = second_last_opponent_x(frame)
-    ax_m = attacker.x * _X_UNITS_TO_METERS
-    ay_m = attacker.y * _Y_UNITS_TO_METERS
+    ax_m = attacker.x * METERS_PER_UNIT
+    ay_m = attacker.y * METERS_PER_UNIT
     cx, cy, cz = _CAMERA_M
     distance_m = round(math.sqrt((ax_m - cx) ** 2 + (ay_m - cy) ** 2 + cz**2), 1)
 
     shift_m = min(distance_m * math.tan(math.radians(_RESIDUAL_ANGLE_DEG)), _MAX_SHIFT_M)
     apparent_shift_cm = round(shift_m * 100)
     # depth of the offside line down the pitch (context only; never re-adjudicates)
-    line_x_m = round(line_x * _X_UNITS_TO_METERS, 1)
+    line_x_m = round(line_x * METERS_PER_UNIT, 1)
     note = (
         f"This incident is about {distance_m} m from a typical main camera. Even a calibrated "
         f"broadcast camera carries a small residual angle, and over that distance roughly a "

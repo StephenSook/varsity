@@ -1,11 +1,11 @@
 import math
 
 from app import parallax
-from app.geometry import FreezeFramePlayer
+from app.geometry import HALFWAY_X, METERS_PER_UNIT, FreezeFramePlayer
 
-_X = 105.0 / 120.0
-_Y = 68.0 / 80.0
-_CAM = (52.5, -25.0, 18.0)
+_X = METERS_PER_UNIT
+_Y = METERS_PER_UNIT
+_CAM = (HALFWAY_X * METERS_PER_UNIT, -25.0, 18.0)
 
 
 def _frame(ax=100.0, ay=40.0, def2_x=98.0):
