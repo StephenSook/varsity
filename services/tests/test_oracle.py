@@ -32,6 +32,7 @@ def test_question_stages_order_and_grounding() -> None:
         "guardian",
         "verification",
         "provenance",
+        "citation_metrics",
         "verdict",
     ]
     by = {s["stage"]: s for s in stages}

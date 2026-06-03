@@ -10,7 +10,17 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import causal, completeness, law11, parallax, provenance, verification, walton
+from app import (
+    causal,
+    citation_metrics,
+    completeness,
+    law11,
+    parallax,
+    provenance,
+    verbalizer,
+    verification,
+    walton,
+)
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -109,6 +119,10 @@ def explanation_stages(
     proof_dict = law11.proof_payload(proof)
     yield proof_dict
 
+    # Coqatoo-style verbalizer: a faithful-by-construction explanation rendered from the proof
+    # alone (no model), emitted alongside the Granite prose so the verdict words can be compared.
+    yield verbalizer.verbalize_stage(proof)
+
     # Camera-parallax explainer: why a correct call can LOOK wrong on a broadcast angle.
     yield parallax.parallax_stage(frame)
 
@@ -191,6 +205,9 @@ def explanation_stages(
         or "ibm/granite-guardian-3-8b",
     )
     yield provenance.provenance_stage(manifest)
+
+    # ALCE-style citation precision/recall over the manifest's grounding links.
+    yield citation_metrics.citation_metrics_stage(manifest.links)
 
     yield {
         "stage": "verdict",
@@ -278,20 +295,20 @@ def decision_stages(
     )
     yield verification.verification_stage(panel)
 
-    yield provenance.provenance_stage(
-        provenance.build_manifest(
-            decision_id=d["decision_type"],
-            source="Illustrative VAR incident",
-            law=law.law,
-            law_title=law.title,
-            model=model,
-            grounded=verdict.grounded,
-            verified=panel.verified,
-            links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
-            guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
-            or "ibm/granite-guardian-3-8b",
-        )
+    manifest = provenance.build_manifest(
+        decision_id=d["decision_type"],
+        source="Illustrative VAR incident",
+        law=law.law,
+        law_title=law.title,
+        model=model,
+        grounded=verdict.grounded,
+        verified=panel.verified,
+        links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
+        guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
+        or "ibm/granite-guardian-3-8b",
     )
+    yield provenance.provenance_stage(manifest)
+    yield citation_metrics.citation_metrics_stage(manifest.links)
 
     yield {
         "stage": "verdict",
@@ -362,20 +379,20 @@ def question_stages(
     )
     yield verification.verification_stage(panel)
 
-    yield provenance.provenance_stage(
-        provenance.build_manifest(
-            decision_id=f"ask: {question[:48]}",
-            source="Fan question",
-            law=law.law,
-            law_title=law.title,
-            model=model,
-            grounded=verdict.grounded,
-            verified=panel.verified,
-            links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
-            guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
-            or "ibm/granite-guardian-3-8b",
-        )
+    manifest = provenance.build_manifest(
+        decision_id=f"ask: {question[:48]}",
+        source="Fan question",
+        law=law.law,
+        law_title=law.title,
+        model=model,
+        grounded=verdict.grounded,
+        verified=panel.verified,
+        links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
+        guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
+        or "ibm/granite-guardian-3-8b",
     )
+    yield provenance.provenance_stage(manifest)
+    yield citation_metrics.citation_metrics_stage(manifest.links)
 
     yield {
         "stage": "verdict",

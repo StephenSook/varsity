@@ -85,6 +85,16 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Coqatoo-style proof-tree verbalizer (faithful-by-construction explanation, no model)',
+    w: 'services/app/verbalizer.py',
+    tier: 'live',
+  },
+  {
+    t: 'ALCE citation precision/recall over the provenance manifest (entailment proxy + controls)',
+    w: 'services/app/citation_metrics.py',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
