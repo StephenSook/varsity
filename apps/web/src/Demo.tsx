@@ -200,9 +200,11 @@ export function Demo() {
   } | null>(null)
   const [verification, setVerification] = useState<{
     verified: boolean
-    passed: number
-    total: number
-    critics: { name: string; passed: boolean; detail: string }[]
+    hardPassed: number
+    hardTotal: number
+    advisoryPassed: number
+    advisoryTotal: number
+    critics: { name: string; passed: boolean; detail: string; kind: string }[]
   } | null>(null)
   const [parallax, setParallax] = useState<{
     distanceM: number
@@ -281,7 +283,7 @@ export function Demo() {
   function sonifyGeometry(ctx: AudioContext, g: Geometry) {
     const w = window as unknown as { __varsitySonification?: unknown }
     const chord = () =>
-      playOffsideChord(ctx, g)
+      playOffsideChord(ctx, g, { band: g.confidence })
         .then((plan) => {
           w.__varsitySonification = plan
         })
@@ -394,10 +396,17 @@ export function Demo() {
         if (name === 'verification') {
           setVerification({
             verified: Boolean(data.verified),
-            passed: Number(data.passed ?? 0),
-            total: Number(data.total ?? 0),
+            hardPassed: Number(data.hard_passed ?? 0),
+            hardTotal: Number(data.hard_total ?? 0),
+            advisoryPassed: Number(data.advisory_passed ?? 0),
+            advisoryTotal: Number(data.advisory_total ?? 0),
             critics:
-              (data.critics as { name: string; passed: boolean; detail: string }[]) ?? [],
+              (data.critics as {
+                name: string
+                passed: boolean
+                detail: string
+                kind: string
+              }[]) ?? [],
           })
         }
         if (name === 'geometry') {
@@ -986,7 +995,9 @@ export function Demo() {
           className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
         >
           <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
-            Verification · {verification.passed}/{verification.total} critics passed
+            Verification · {verification.verified ? 'verified' : 'flagged'} ·{' '}
+            {verification.hardPassed}/{verification.hardTotal} hard checks ·{' '}
+            {verification.advisoryPassed}/{verification.advisoryTotal} advisory
           </p>
           <ul className="mt-2 space-y-1 text-sm">
             {verification.critics.map((critic) => (
@@ -1000,6 +1011,9 @@ export function Demo() {
                 <span>
                   <span className="sr-only">{critic.passed ? 'Passed. ' : 'Flagged. '}</span>
                   {critic.detail}
+                  {critic.kind === 'advisory' && (
+                    <span className="ml-1 font-mono text-xs text-slate-500">· advisory</span>
+                  )}
                 </span>
               </li>
             ))}

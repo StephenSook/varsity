@@ -44,7 +44,26 @@ export function verdictChord(isOffside: boolean): number[] {
     : [261.63, 329.63, 392.0] // C4 major triad (C, E, G) = onside
 }
 
-export type SonifyOptions = { durationMs?: number; gain?: number; verdict?: boolean }
+// Couple the verdict earcon's roughness to how clear-cut the call is (the uncertainty band).
+// A clear call is a pure triad; a tight call adds slow beating (a few Hz) from a detuned
+// partner tone; a very-tight ("VARSITY's Call" / umpire's-call) result adds stronger beating
+// plus one rough neighbour tone. A blind listener HEARS the uncertainty a sighted fan would
+// read off the margin. Beating-as-roughness is psychoacoustically grounded (Plomp & Levelt
+// critical-band roughness; the closer two tones, the rougher/less-resolved they sound).
+export function confidenceTexture(band?: string): { detuneCents: number; roughness: boolean } {
+  if (band === 'very tight') return { detuneCents: 35, roughness: true }
+  if (band === 'tight') return { detuneCents: 14, roughness: false }
+  return { detuneCents: 0, roughness: false } // clear (or unknown) = pure, confident
+}
+
+const detuneHz = (f: number, cents: number): number => f * Math.pow(2, cents / 1200)
+
+export type SonifyOptions = {
+  durationMs?: number
+  gain?: number
+  verdict?: boolean
+  band?: string
+}
 
 // Play a short HRTF-panned chord of the three key players, then a semantic verdict
 // earcon. The attacker tone is ANIMATED from the line outward to its final position,
@@ -93,18 +112,25 @@ export async function playOffsideChord(
   if (opts.verdict !== false) {
     const vStart = now + dur + 0.06
     const vDur = 0.45
-    for (const f of verdictChord(geo.is_offside)) {
+    const tex = confidenceTexture(opts.band)
+    const tone = (freq: number, g: number) => {
       const osc = ctx.createOscillator()
       osc.type = 'triangle'
-      osc.frequency.value = f
+      osc.frequency.value = freq
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, vStart)
-      gain.gain.linearRampToValueAtTime(peak * 0.9, vStart + 0.05)
+      gain.gain.linearRampToValueAtTime(peak * g, vStart + 0.05)
       gain.gain.linearRampToValueAtTime(0, vStart + vDur)
       osc.connect(gain).connect(ctx.destination)
       osc.start(vStart)
       osc.stop(vStart + vDur + 0.02)
     }
+    const freqs = verdictChord(geo.is_offside)
+    for (const f of freqs) {
+      tone(f, 0.9)
+      if (tex.detuneCents > 0) tone(detuneHz(f, tex.detuneCents), 0.5) // beating partner
+    }
+    if (tex.roughness) tone(detuneHz(freqs[0], 100), 0.4) // a rough neighbour (~semitone)
   }
 
   await new Promise((resolve) => setTimeout(resolve, durationMs + 600))
