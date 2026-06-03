@@ -11,7 +11,7 @@ class FakeGranite:
     def __init__(self) -> None:
         self.calls: list = []
 
-    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English"):
+    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English", **_):
         self.calls.append((margin_meters, is_offside, language))
         return f"[{language}] offside by {margin_meters} meters (Law 11)"
 

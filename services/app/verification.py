@@ -22,6 +22,7 @@ official.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 DETERMINISTIC = "deterministic"
@@ -107,6 +108,34 @@ def _grounded_in_law(explanation: str, law_text: str) -> bool:
     return all(_norm(p) in ll for p in used)
 
 
+# A too-close (within-noise) call must ACKNOWLEDGE the data limit, in any of the five languages.
+# Our freeze-frame margin is one-to-two orders noisier than SAOT, so over-precise/over-confident
+# narration of a knife-edge call is structurally disallowed (the calibration critic, the
+# deterministic analogue of the report's Granite Guardian BYOC calibration check).
+TOO_CLOSE_HEDGE = re.compile(
+    r"too close|within (?:the )?(?:measurement )?noise|measurement noise|umpire'?s call|"
+    r"very close|level with|to resolve|can'?not resolve|"
+    r"muy ajustad|demasiado just|ruido de medición|misma altura|"  # es
+    r"très serré|trop juste|bruit de mesure|même hauteur|"  # fr
+    r"muito apertad|próximo demais|ruído de medição|mesma linha|"  # pt
+    r"sehr knapp|zu knapp|messrauschen|gleicher höhe",  # de
+    re.IGNORECASE,
+)
+# Confident phrasings a too-close call must NOT use.
+_OVERCONFIDENT = re.compile(
+    r"clearly|well (?:past|beyond|ahead)|comfortabl|definitely|by a (?:clear|big|large) margin",
+    re.IGNORECASE,
+)
+
+
+def _calibrated(explanation: str, within_noise: bool) -> bool:
+    """Calibration: a too-close call must hedge (acknowledge the data limit) and never overclaim;
+    a clear call is unconstrained. The expressed confidence must not exceed the data band."""
+    if not within_noise:
+        return True
+    return bool(TOO_CLOSE_HEDGE.search(explanation)) and not _OVERCONFIDENT.search(explanation)
+
+
 @dataclass(frozen=True)
 class Critic:
     name: str
@@ -133,6 +162,7 @@ def verify(
     proof_consistent: bool = True,
     is_offside: bool | None = None,
     law_text: str = "",
+    within_noise: bool = False,
 ) -> VerificationPanel:
     """Run the critic panel. ``verified`` is the deterministic hard gate; the Guardian model
     critics are reported as advisory and never flip the hard gate on their own."""
@@ -163,6 +193,15 @@ def verify(
                 "verdict-consistent",
                 _asserts_offside(explanation) == bool(is_offside),
                 "Restates the same verdict the decision carried (round-trip re-parse).",
+                DETERMINISTIC,
+            )
+        )
+        critics.append(
+            Critic(
+                "calibration",
+                _calibrated(explanation, within_noise),
+                "Expresses no more confidence than the data band allows: a too-close call hedges "
+                "and never overclaims.",
                 DETERMINISTIC,
             )
         )

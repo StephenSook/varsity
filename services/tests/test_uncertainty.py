@@ -34,3 +34,13 @@ def test_onside_clear_is_also_virtually_certain() -> None:
     u = quantify(-3.01)
     assert u.band == "clear"
     assert u.p_verdict > 0.99
+
+
+def test_confidence_band_schema_and_defer_to_official() -> None:
+    # the honest three-band schema + the defer flag for a too-close call
+    assert quantify(5.69).confidence_band == "clear"
+    assert quantify(5.69).defer_to_official is False
+    assert quantify(1.5 * SIGMA_MARGIN_M).confidence_band == "marginal"
+    too_close = quantify(0.02)
+    assert too_close.confidence_band == "too_close_to_call"
+    assert too_close.defer_to_official is True

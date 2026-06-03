@@ -5,7 +5,7 @@ from app.signals import referee_signal
 
 
 class FakeGranite:
-    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English"):
+    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English", **_):
         return f"Under Law 11, the attacker was {'offside' if is_offside else 'onside'}."
 
     def explain_decision(self, *, incident, outcome, law, law_text, language="English"):

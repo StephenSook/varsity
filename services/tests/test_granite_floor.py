@@ -1,5 +1,6 @@
 from app.llm.granite import _fallback_decision, _fallback_explanation
 from app.llm.guardian import cites_law_clause
+from app.verification import TOO_CLOSE_HEDGE
 
 
 def test_en_offside_floor_is_given_new_and_cites_the_law() -> None:
@@ -15,6 +16,19 @@ def test_en_onside_floor_is_given_new_and_cites_the_law() -> None:
     assert txt.startswith("When the ball was played")
     assert "onside under Law 11" in txt
     assert cites_law_clause(txt)
+
+
+def test_too_close_floor_hedges_cites_the_law_and_quotes_no_number() -> None:
+    # A within-noise call must NOT quote a precise margin (false precision); it hedges and defers.
+    txt = _fallback_explanation(
+        margin_meters=0.02, is_offside=True, language="English", within_noise=True
+    )
+    assert cites_law_clause(txt)
+    assert TOO_CLOSE_HEDGE.search(txt)  # acknowledges the data limit
+    assert "offside" in txt
+    # no precise metre/centimetre margin (only Law 11 and the ~13 cm noise figure may appear)
+    digits = txt.replace("11", "").replace("13", "")
+    assert not any(ch.isdigit() for ch in digits)
 
 
 def test_decision_floor_still_cites_the_law() -> None:

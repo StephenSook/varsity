@@ -11,9 +11,43 @@ def test_all_deterministic_pass_offside() -> None:
         is_offside=True,
     )
     assert p.verified is True
-    assert len(p.of_kind(DETERMINISTIC)) == 5  # +verdict-consistent on the offside path
+    # cites-law, no-re-adjudication, neutral, substantive, verdict-consistent, calibration
+    assert len(p.of_kind(DETERMINISTIC)) == 6
     assert len(p.of_kind(ADVISORY)) == 2
     assert all(c.passed for c in p.critics)
+
+
+def _calib(explanation: str, within_noise: bool):
+    p = verify(
+        explanation=explanation,
+        cites_law=True,
+        grounded=True,
+        screen_reader_ok=True,
+        is_offside=True,
+        within_noise=within_noise,
+    )
+    return next(c for c in p.critics if c.name == "calibration")
+
+
+def test_calibration_passes_a_clear_call_with_a_confident_number() -> None:
+    assert _calib("Under Law 11, the attacker was clearly offside by 5.69 metres.", False).passed
+
+
+def test_calibration_requires_a_hedge_on_a_too_close_call() -> None:
+    # A too-close call that quotes a confident precise number with no hedge fails calibration.
+    assert not _calib("Under Law 11, the attacker was offside by 0.02 metres.", True).passed
+    # The same call, hedged as too close to resolve, passes.
+    assert _calib(
+        "Under Law 11, this was too close for our freeze-frame data to resolve - an Umpire's "
+        "Call - so VARSITY describes the official decision: offside.",
+        True,
+    ).passed
+
+
+def test_calibration_rejects_overconfidence_on_a_too_close_call() -> None:
+    assert not _calib(
+        "Under Law 11, the attacker was clearly offside, within the measurement noise.", True
+    ).passed
 
 
 def test_guardian_false_positive_does_not_flip_the_hard_gate() -> None:
