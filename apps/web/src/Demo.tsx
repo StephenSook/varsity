@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
 
 // Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
 const LAW11_SPEARCONS = [
@@ -157,6 +157,8 @@ function describe(s: Stage): string {
       return ' — critical questions answered'
     case 'verification':
       return ` — ${String(s.passed)}/${String(s.total)} critics passed`
+    case 'completeness':
+      return ` — ${String(s.disclosed)}/${String(s.total)} disclosures`
     case 'provenance':
       return ` — ${String(s.link_count)} grounded claims`
     default:
@@ -238,6 +240,11 @@ export function Demo() {
   const [criticalQuestions, setCriticalQuestions] = useState<{
     scheme: string
     questions: { q: string; a: string }[]
+  } | null>(null)
+  const [completeness, setCompleteness] = useState<{
+    score: number
+    complete: boolean
+    disclosures: { name: string; disclosed: boolean; detail: string }[]
   } | null>(null)
   const [provenance, setProvenance] = useState<{
     hash: string
@@ -346,6 +353,7 @@ export function Demo() {
     setParallax(null)
     setCausal(null)
     setCriticalQuestions(null)
+    setCompleteness(null)
     setProvenance(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -423,6 +431,18 @@ export function Demo() {
           setCriticalQuestions({
             scheme: String(data.scheme ?? ''),
             questions: (data.questions as { q: string; a: string }[]) ?? [],
+          })
+        }
+        if (name === 'completeness') {
+          setCompleteness({
+            score: Number(data.score ?? 0),
+            complete: Boolean(data.complete),
+            disclosures:
+              (data.disclosures as {
+                name: string
+                disclosed: boolean
+                detail: string
+              }[]) ?? [],
           })
         }
         if (name === 'provenance') {
@@ -518,6 +538,7 @@ export function Demo() {
     setParallax(null)
     setCausal(null)
     setCriticalQuestions(null)
+    setCompleteness(null)
     setProvenance(null)
     setLatencyMs(null)
     startRef.current = performance.now()
@@ -586,6 +607,7 @@ export function Demo() {
     setParallax(null)
     setCausal(null)
     setCriticalQuestions(null)
+    setCompleteness(null)
     setProvenance(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
@@ -1115,6 +1137,34 @@ export function Demo() {
                   {critic.kind === 'advisory' && (
                     <span className="ml-1 font-mono text-xs text-slate-500">· advisory</span>
                   )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {completeness && (
+        <section
+          aria-label="Argumentative completeness: does the explanation disclose enough for a blind fan"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Completeness · {completeness.complete ? 'complete' : 'partial'} ·{' '}
+            {Math.round(completeness.score * 100)}% disclosed
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {completeness.disclosures.map((d) => (
+              <li key={d.name} className="flex items-start gap-2 text-slate-300">
+                <span
+                  aria-hidden="true"
+                  className={d.disclosed ? 'text-emerald-400' : 'text-amber-400'}
+                >
+                  {d.disclosed ? '✓' : '✗'}
+                </span>
+                <span>
+                  <span className="sr-only">{d.disclosed ? 'Disclosed. ' : 'Missing. '}</span>
+                  {d.detail}
                 </span>
               </li>
             ))}
