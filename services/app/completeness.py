@@ -30,7 +30,8 @@ _VERDICT = re.compile(
 )
 _LAW = re.compile(r"\b(?:law|ley|loi|lei|gesetz|regel|regra)\b.{0,12}?\d", re.IGNORECASE)
 _REFERENCE = re.compile(
-    r"second-to-last|second last|2nd-last|penúltim|avant-dernier|vorletzt|offside line|defender",
+    r"second-?to-?last|second-?last|2nd-?last|penúltim|avant-dernier|vorletzt|"
+    r"offside line|defender|last opponent|opponent",
     re.IGNORECASE,
 )
 _TIGHT = re.compile(
