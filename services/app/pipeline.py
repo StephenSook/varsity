@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import law11, parallax, provenance, verification
+from app import causal, law11, parallax, provenance, verification
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -95,6 +95,8 @@ def explanation_stages(
     sig = referee_signal(is_offside=geo.is_offside)
     yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}
 
+    within_noise = quantify(geo.margin_meters).band == "very tight"
+
     # Neuro-symbolic Law-11 proof tree: the auditable rule traversal of the decision.
     proof = law11.prove(
         is_offside=geo.is_offside,
@@ -102,13 +104,18 @@ def explanation_stages(
         beyond_defender=geo.beyond_defender,
         beyond_ball=geo.beyond_ball,
         attacker_x=geo.attacker_x,
-        within_noise=quantify(geo.margin_meters).band == "very tight",
+        within_noise=within_noise,
     )
     proof_dict = law11.proof_payload(proof)
     yield proof_dict
 
     # Camera-parallax explainer: why a correct call can LOOK wrong on a broadcast angle.
     yield parallax.parallax_stage(frame)
+
+    # Halpern-Pearl contrastive opener: why offside RATHER THAN onside, and the decisive cause.
+    yield causal.contrastive(
+        is_offside=geo.is_offside, margin_meters=geo.margin_meters, within_noise=within_noise
+    )
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(OFFSIDE_QUERY)

@@ -48,6 +48,7 @@ def test_stages_order() -> None:
         "signal",
         "proof",
         "parallax",
+        "causal",
         "law",
         "granite",
         "guardian",
