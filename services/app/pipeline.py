@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import causal, law11, parallax, provenance, verification
+from app import causal, law11, parallax, provenance, verification, walton
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -114,6 +114,11 @@ def explanation_stages(
 
     # Halpern-Pearl contrastive opener: why offside RATHER THAN onside, and the decisive cause.
     yield causal.contrastive(
+        is_offside=geo.is_offside, margin_meters=geo.margin_meters, within_noise=within_noise
+    )
+
+    # Walton critical-questions: the questions a skeptic would ask, answered from the evidence.
+    yield walton.critical_questions(
         is_offside=geo.is_offside, margin_meters=geo.margin_meters, within_noise=within_noise
     )
 

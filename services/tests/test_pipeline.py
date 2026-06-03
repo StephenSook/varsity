@@ -49,6 +49,7 @@ def test_stages_order() -> None:
         "proof",
         "parallax",
         "causal",
+        "critical_questions",
         "law",
         "granite",
         "guardian",

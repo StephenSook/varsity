@@ -13,14 +13,28 @@ const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
 import { playBuildUp, playOffsideChord } from './sonify'
 import { StageScrubber } from './StageScrubber'
-import { readAloud, synthesizeClip } from './tts'
+import { playSpearcon, readAloud, synthesizeClip } from './tts'
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
+
+// Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
+const LAW11_SPEARCONS = [
+  'In the opponents half',
+  'Beyond the second-to-last defender',
+  'Nearer the goal line than the ball',
+  'Interfering with play',
+  'Interfering with an opponent',
+  'Gaining an advantage',
+  'Deliberate play by a defender',
+  'Received from a goal kick',
+  'Received from a throw-in',
+  'Received from a corner',
+] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -139,6 +153,8 @@ function describe(s: Stage): string {
       return ` — camera parallax ~${String(s.apparent_shift_cm)} cm`
     case 'causal':
       return ` — ${String(s.fact)} rather than ${String(s.foil)}`
+    case 'critical_questions':
+      return ' — critical questions answered'
     case 'verification':
       return ` — ${String(s.passed)}/${String(s.total)} critics passed`
     case 'provenance':
@@ -218,6 +234,10 @@ export function Demo() {
     fact: string
     foil: string
     narration: string
+  } | null>(null)
+  const [criticalQuestions, setCriticalQuestions] = useState<{
+    scheme: string
+    questions: { q: string; a: string }[]
   } | null>(null)
   const [provenance, setProvenance] = useState<{
     hash: string
@@ -325,6 +345,7 @@ export function Demo() {
     setVerification(null)
     setParallax(null)
     setCausal(null)
+    setCriticalQuestions(null)
     setProvenance(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -396,6 +417,12 @@ export function Demo() {
             fact: String(data.fact ?? ''),
             foil: String(data.foil ?? ''),
             narration: String(data.narration ?? ''),
+          })
+        }
+        if (name === 'critical_questions') {
+          setCriticalQuestions({
+            scheme: String(data.scheme ?? ''),
+            questions: (data.questions as { q: string; a: string }[]) ?? [],
           })
         }
         if (name === 'provenance') {
@@ -490,6 +517,7 @@ export function Demo() {
     setVerification(null)
     setParallax(null)
     setCausal(null)
+    setCriticalQuestions(null)
     setProvenance(null)
     setLatencyMs(null)
     startRef.current = performance.now()
@@ -557,6 +585,7 @@ export function Demo() {
     setVerification(null)
     setParallax(null)
     setCausal(null)
+    setCriticalQuestions(null)
     setProvenance(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
@@ -870,6 +899,30 @@ export function Demo() {
         </p>
       )}
 
+      {/* Spearcon rule shortcuts: fast time-compressed speech of each Law-11 sub-clause, an
+          audible glossary a power screen-reader user can learn by ear (Walker et al. 2013). */}
+      <section
+        aria-label="Law 11 rule shortcuts, spoken fast"
+        className="w-full max-w-2xl rounded-xl bg-slate-900/40 p-3 text-left ring-1 ring-slate-700/40"
+      >
+        <p className="font-mono text-xs uppercase tracking-wider text-slate-400">
+          Rule shortcuts · spearcons
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {LAW11_SPEARCONS.map((fragment) => (
+            <button
+              key={fragment}
+              type="button"
+              aria-label={`Play rule shortcut: ${fragment}`}
+              onClick={() => playSpearcon(fragment, { lang: UI[lang].bcp47 })}
+              className="rounded-full border border-slate-600/60 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-600/20"
+            >
+              {fragment}
+            </button>
+          ))}
+        </div>
+      </section>
+
       {reviewing && (
         <div
           role="status"
@@ -993,6 +1046,25 @@ export function Demo() {
             Why {causal.fact} · rather than {causal.foil}
           </p>
           <p className="mt-1 text-sm text-slate-200">{causal.narration}</p>
+        </section>
+      )}
+
+      {criticalQuestions && (
+        <section
+          aria-label="Critical questions a skeptic would ask, answered from the evidence"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Critical questions · {criticalQuestions.scheme}
+          </p>
+          <dl className="mt-2 space-y-2 text-sm">
+            {criticalQuestions.questions.map((item) => (
+              <div key={item.q}>
+                <dt className="font-medium text-slate-200">{item.q}</dt>
+                <dd className="text-slate-400">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
       )}
 
