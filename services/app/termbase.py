@@ -119,8 +119,10 @@ def language_count() -> int:
     return len(TERMS["offside"])
 
 
-# Concepts injected into the Granite prompt as a glossary (the load-bearing offside vocabulary).
-_GLOSSARY_CONCEPTS = ("offside", "second-to-last opponent")
+# Concepts injected into the Granite prompt as a glossary (the load-bearing offside vocabulary +
+# the localised word for "Law", so the live narration cites e.g. "Regla 11", not the colloquial
+# "Ley 11", matching the official termbase and the /multilingual receipt).
+_GLOSSARY_CONCEPTS = ("offside", "second-to-last opponent", "Law")
 # Concepts the Terminology-Hit-Rate checks verbatim (present exactly in our narration + floors):
 # the official offside term and the localised word for "Law".
 _HIT_CONCEPTS = ("offside", "Law")
