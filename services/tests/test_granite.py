@@ -36,13 +36,18 @@ def test_explain_offside_spanish_fallback(monkeypatch) -> None:
     out = GraniteClient().explain_offside(
         margin_meters=5.45, is_offside=True, law_text="Law 11", language="Spanish"
     )
-    assert "Ley 11" in out  # Spanish fallback cites the Law (Ley)
+    assert "Regla 11" in out  # Spanish fallback cites the Law (official IFAB Spanish: Regla)
     assert "5.45" in out
 
 
 @pytest.mark.parametrize(
     ("language", "needle"),
-    [("French", "Loi 11"), ("Portuguese", "Lei 11"), ("German", "Regel 11"), ("English", "Law 11")],
+    [
+        ("French", "Loi 11"),
+        ("Portuguese", "Regra 11"),
+        ("German", "Regel 11"),
+        ("English", "Law 11"),
+    ],
 )
 def test_multilingual_fallbacks_cite_the_law(language, needle) -> None:
     out = _fallback_explanation(margin_meters=5.45, is_offside=True, language=language)
@@ -61,7 +66,7 @@ def test_prompt_leak_is_rejected_then_falls_back(monkeypatch) -> None:
         margin_meters=5.45, is_offside=True, law_text="Law 11", language="Portuguese"
     )
     assert not _looks_like_prompt_leak(out)
-    assert "Lei 11" in out  # fell back to the clean Portuguese floor
+    assert "Regra 11" in out  # fell back to the clean Portuguese floor (pt-BR: Regra)
 
 
 def test_leak_detector_passes_clean_text() -> None:

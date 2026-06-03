@@ -28,7 +28,7 @@ _MARGIN = re.compile(r"\d+(?:\.\d+)?\s*(?:m\b|metre|meter|cm|centimet|centímet)
 _VERDICT = re.compile(
     r"\boffside\b|\bonside\b|fuera de juego|hors-?jeu|impedimento|abseits", re.IGNORECASE
 )
-_LAW = re.compile(r"\b(?:law|ley|loi|lei|gesetz|regel|regra)\b.{0,12}?\d", re.IGNORECASE)
+_LAW = re.compile(r"\b(?:law|ley|loi|lei|gesetz|regel|regla|regra)\b.{0,12}?\d", re.IGNORECASE)
 _REFERENCE = re.compile(
     r"second-?to-?last|second-?last|2nd-?last|penúltim|avant-dernier|vorletzt|"
     r"offside line|defender|last opponent|opponent",

@@ -23,9 +23,10 @@ from app.llm import _watsonx
 
 DEFAULT_GUARDIAN = "ibm/granite-guardian-3-8b"
 # Match a Law-number citation in any supported language (EN/ES/FR/PT/DE), so a
-# Spanish "Ley 11" explanation is not wrongly flagged as not citing a clause.
+# Spanish "Regla 11" explanation is not wrongly flagged as not citing a clause. The official
+# IFAB Spanish word is "Regla" (not "Ley"); Brazilian Portuguese uses "Regra".
 _LAW_CITATION = re.compile(
-    r"\b(?:law|ley|loi|lei|gesetz|regel|regra)\b.{0,12}?\d{1,2}\b", re.IGNORECASE
+    r"\b(?:law|ley|loi|lei|gesetz|regel|regla|regra)\b.{0,12}?\d{1,2}\b", re.IGNORECASE
 )
 
 # Granite Guardian's native output tokens: "Yes" = risk present, "No" = safe.
