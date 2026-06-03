@@ -95,6 +95,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Screen-reader language dual-path + NVDA focus-trick (re-announce in the chosen voice)',
+    w: 'docs/ACCESSIBILITY-SR-LANG.md',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
