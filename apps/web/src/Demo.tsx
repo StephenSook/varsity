@@ -185,6 +185,16 @@ export function Demo() {
   const [moment, setMoment] = useState<Moment>(null)
   const [decision, setDecision] = useState<DecisionCard>(null)
   const [signalCard, setSignalCard] = useState<{ text: string; law: string } | null>(null)
+  const [varsityCall, setVarsityCall] = useState<{
+    marginM: number
+    sigmaM: number
+    band: string
+    p: number
+    likelihood: string
+    note: string
+    counterfactualM: number
+    isOffside: boolean
+  } | null>(null)
   const [question, setQuestion] = useState('')
   const [askedQuestion, setAskedQuestion] = useState('')
   const [soundOn, setSoundOn] = useState(true)
@@ -269,6 +279,7 @@ export function Demo() {
     setMoment(null)
     setDecision(null)
     setSignalCard(null)
+    setVarsityCall(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -336,7 +347,19 @@ export function Demo() {
                 }),
           )
           if (data.law_text) setLawText(String(data.law_text))
-          if (!isDecision) triggerHaptic(data as unknown as Geometry)
+          if (!isDecision) {
+            triggerHaptic(data as unknown as Geometry)
+            setVarsityCall({
+              marginM: Number(data.margin_meters ?? 0),
+              sigmaM: Number(data.sigma_meters ?? 0),
+              band: String(data.confidence ?? ''),
+              p: Number(data.p_verdict ?? 0),
+              likelihood: String(data.likelihood ?? ''),
+              note: String(data.uncertainty_note ?? ''),
+              counterfactualM: Number(data.counterfactual_meters ?? 0),
+              isOffside: Boolean(data.is_offside),
+            })
+          }
           setLatencyMs(performance.now() - startRef.current)
           setStreaming(false)
           source.close()
@@ -361,6 +384,7 @@ export function Demo() {
     setMoment(null)
     setDecision(null)
     setSignalCard(null)
+    setVarsityCall(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -422,6 +446,7 @@ export function Demo() {
     setMoment(null)
     setDecision(null)
     setSignalCard(null)
+    setVarsityCall(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -793,6 +818,28 @@ export function Demo() {
             Referee signal · Law {signalCard.law}
           </p>
           <p className="mt-1 text-sm text-slate-300">{signalCard.text}</p>
+        </section>
+      )}
+
+      {varsityCall && (
+        <section
+          aria-label="VARSITY's Call: how clear-cut, with measurement uncertainty"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            VARSITY&apos;s Call · {varsityCall.band}
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            {Math.abs(varsityCall.marginM).toFixed(2)} m ± {varsityCall.sigmaM.toFixed(2)} m ·{' '}
+            {varsityCall.likelihood} {varsityCall.isOffside ? 'offside' : 'onside'} (
+            {Math.round(varsityCall.p * 100)}% on the geometry)
+          </p>
+          <p className="mt-1 text-sm text-slate-400">{varsityCall.note}</p>
+          <p className="mt-1 text-sm text-slate-400">
+            {varsityCall.isOffside
+              ? `Onside if the attacker had been about ${varsityCall.counterfactualM} m further back.`
+              : `Offside if the attacker had been about ${varsityCall.counterfactualM} m further forward.`}
+          </p>
         </section>
       )}
 

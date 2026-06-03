@@ -18,6 +18,11 @@ const TIER: Record<Tier, { label: string; cls: string }> = {
 
 const CLAIMS: { t: string; w: string; tier: Tier }[] = [
   { t: 'Offside geometry from StatsBomb 360', w: 'services/app/geometry.py', tier: 'live' },
+  {
+    t: "Uncertainty band + 'VARSITY's Call' (±13 cm, IPCC likelihood)",
+    w: 'services/app/uncertainty.py',
+    tier: 'live',
+  },
   { t: 'IFAB-Laws RAG + IBM Granite reasoning', w: 'services/app/pipeline.py', tier: 'live' },
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py', tier: 'live' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py', tier: 'live' },

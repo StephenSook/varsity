@@ -73,6 +73,6 @@ def test_law_stage_carries_full_text_and_verdict_confidence() -> None:
 
 def test_confidence_thresholds() -> None:
     assert _confidence(5.45) == "clear"
-    assert _confidence(0.3) == "tight"
-    assert _confidence(0.1) == "very tight"
+    assert _confidence(0.2) == "tight"  # between sigma (~0.13 m) and 2 sigma (~0.25 m)
+    assert _confidence(0.1) == "very tight"  # within the measurement-noise sigma
     assert _confidence(-0.05) == "very tight"  # absolute value, onside-but-tight

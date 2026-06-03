@@ -17,18 +17,27 @@ from app.llm.guardian import GuardianClient
 from app.observability import tracer
 from app.rag.retriever import LawRetriever
 from app.signals import referee_signal
+from app.uncertainty import quantify
 
 OFFSIDE_QUERY = "offside attacker nearer the goal line than the second-last defender and the ball"
 
 
 def _confidence(margin_meters: float) -> str:
-    """How clear-cut the call is, from the geometry margin. Honest about marginal calls."""
-    m = abs(margin_meters)
-    if m >= 0.5:
-        return "clear"
-    if m >= 0.2:
-        return "tight"
-    return "very tight"
+    """How clear-cut the call is, grounded in the ~13 cm measurement-noise band (uncertainty)."""
+    return quantify(margin_meters).band
+
+
+def _uncertainty_fields(margin_meters: float) -> dict:
+    """The 'VARSITY's Call' uncertainty payload shared by the geometry + verdict stages."""
+    unc = quantify(margin_meters)
+    return {
+        "confidence": unc.band,
+        "sigma_meters": unc.sigma_meters,
+        "p_verdict": unc.p_verdict,
+        "likelihood": unc.likelihood,
+        "counterfactual_meters": unc.counterfactual_meters,
+        "uncertainty_note": unc.note,
+    }
 
 
 @dataclass
@@ -66,7 +75,7 @@ def explanation_stages(
         "stage": "geometry",
         "margin_meters": geo.margin_meters,
         "is_offside": geo.is_offside,
-        "confidence": _confidence(geo.margin_meters),
+        **_uncertainty_fields(geo.margin_meters),
         "offside_line_x": geo.offside_line_x,
         "attacker_x": geo.attacker_x,
         "pitch": {"length": 120, "width": 80},
@@ -124,7 +133,7 @@ def explanation_stages(
         "law": law.law,
         "law_text": law.text,
         "margin_meters": geo.margin_meters,
-        "confidence": _confidence(geo.margin_meters),
+        **_uncertainty_fields(geo.margin_meters),
         "safe": verdict.safe,
     }
 
