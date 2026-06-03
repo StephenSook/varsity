@@ -92,7 +92,8 @@ _RULE_PHRASES = (
 
 
 def _norm(s: str) -> str:
-    return s.lower().replace("-", " ")
+    # canonicalize so a narration's "second-to-last" matches the IFAB "second-last"
+    return s.lower().replace("-", " ").replace("second to last", "second last")
 
 
 def _grounded_in_law(explanation: str, law_text: str) -> bool:
