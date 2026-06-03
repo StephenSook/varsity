@@ -110,6 +110,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Cited front-hemisphere azimuth transform for the spatial preamble (±50°, no front-back confusion)',
+    w: 'docs/SPATIAL-AUDIO.md',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
