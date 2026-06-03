@@ -76,7 +76,7 @@ jobs:
             python -m pip install --upgrade pip
             [ -f requirements.txt ] && pip install -r requirements.txt || true
             [ -f pyproject.toml ] && pip install -e . || true
-            pip install ruff pytest
+            pip install ruff pytest hypothesis z3-solver
             ruff check .
             pytest -q
           else

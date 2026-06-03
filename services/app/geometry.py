@@ -24,6 +24,10 @@ PITCH_LENGTH_UNITS = 120.0
 PITCH_LENGTH_METERS = 105.0
 _UNITS_TO_METERS = PITCH_LENGTH_METERS / PITCH_LENGTH_UNITS
 
+# Attack is always left-to-right, so the opponents' half is x > the midline (Law 11.1:
+# an offside position requires being in the opponents' half, excluding the halfway line).
+HALFWAY_X = PITCH_LENGTH_UNITS / 2.0  # 60.0
+
 
 @dataclass(frozen=True)
 class FreezeFramePlayer:
@@ -92,8 +96,9 @@ def compute_offside(
     margin_units = attacker.x - line_x
     beyond_defender = margin_units > 0
     beyond_ball = True if ball_x is None else attacker.x > ball_x
+    in_opponent_half = attacker.x > HALFWAY_X
     return OffsideResult(
-        is_offside=beyond_defender and beyond_ball,
+        is_offside=in_opponent_half and beyond_defender and beyond_ball,
         margin_meters=round(margin_units * _UNITS_TO_METERS, 2),
         offside_line_x=line_x,
         attacker_x=attacker.x,

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-HALFWAY_X = 60.0  # StatsBomb attack left-to-right: opponents' half is x > 60.
+from app.geometry import HALFWAY_X  # single source of truth for the midline (x > 60)
 
 
 @dataclass(frozen=True)
