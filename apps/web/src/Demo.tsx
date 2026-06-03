@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'law', 'granite', 'guardian', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'law', 'granite', 'guardian', 'verification', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -135,6 +135,8 @@ function describe(s: Stage): string {
       return ` — referee signal (Law ${String(s.law)})`
     case 'proof':
       return ' — Law 11 rule proof'
+    case 'verification':
+      return ` — ${String(s.passed)}/${String(s.total)} critics passed`
     default:
       return ''
   }
@@ -191,6 +193,12 @@ export function Demo() {
     steps: { key: string; claim: string; status: string; law: string; role: string }[]
     consistent: boolean
     conclusion: string
+  } | null>(null)
+  const [verification, setVerification] = useState<{
+    verified: boolean
+    passed: number
+    total: number
+    critics: { name: string; passed: boolean; detail: string }[]
   } | null>(null)
   const [varsityCall, setVarsityCall] = useState<{
     marginM: number
@@ -288,6 +296,7 @@ export function Demo() {
     setSignalCard(null)
     setVarsityCall(null)
     setProof(null)
+    setVerification(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Geometry scenarios (offside/onside/tight) stream /stream/{canned,live}; rule
@@ -343,6 +352,15 @@ export function Demo() {
               }[]) ?? [],
             consistent: Boolean(data.consistent),
             conclusion: String(data.conclusion ?? ''),
+          })
+        }
+        if (name === 'verification') {
+          setVerification({
+            verified: Boolean(data.verified),
+            passed: Number(data.passed ?? 0),
+            total: Number(data.total ?? 0),
+            critics:
+              (data.critics as { name: string; passed: boolean; detail: string }[]) ?? [],
           })
         }
         if (name === 'geometry') {
@@ -408,6 +426,7 @@ export function Demo() {
     setSignalCard(null)
     setVarsityCall(null)
     setProof(null)
+    setVerification(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -471,6 +490,7 @@ export function Demo() {
     setSignalCard(null)
     setVarsityCall(null)
     setProof(null)
+    setVerification(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
     setStreaming(true)
@@ -900,6 +920,33 @@ export function Demo() {
               ? `Onside if the attacker had been about ${varsityCall.counterfactualM} m further back.`
               : `Offside if the attacker had been about ${varsityCall.counterfactualM} m further forward.`}
           </p>
+        </section>
+      )}
+
+      {verification && (
+        <section
+          aria-label="Faithfulness verification"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Verification · {verification.passed}/{verification.total} critics passed
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {verification.critics.map((critic) => (
+              <li key={critic.name} className="flex items-start gap-2 text-slate-300">
+                <span
+                  aria-hidden="true"
+                  className={critic.passed ? 'text-emerald-400' : 'text-amber-400'}
+                >
+                  {critic.passed ? '✓' : '✗'}
+                </span>
+                <span>
+                  <span className="sr-only">{critic.passed ? 'Passed. ' : 'Flagged. '}</span>
+                  {critic.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

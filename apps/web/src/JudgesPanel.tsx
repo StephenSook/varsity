@@ -28,6 +28,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/law11.py',
     tier: 'live',
   },
+  {
+    t: 'Multi-critic verification panel (generator + 5 critics)',
+    w: 'services/app/verification.py',
+    tier: 'live',
+  },
   { t: 'IFAB-Laws RAG + IBM Granite reasoning', w: 'services/app/pipeline.py', tier: 'live' },
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py', tier: 'live' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py', tier: 'live' },
