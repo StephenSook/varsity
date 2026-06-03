@@ -203,7 +203,7 @@ export function Demo() {
     critics: { name: string; passed: boolean; detail: string }[]
   } | null>(null)
   const [parallax, setParallax] = useState<{
-    lateralM: number
+    distanceM: number
     angleDeg: number
     shiftCm: number
     note: string
@@ -365,8 +365,8 @@ export function Demo() {
         }
         if (name === 'parallax') {
           setParallax({
-            lateralM: Number(data.lateral_separation_m ?? 0),
-            angleDeg: Number(data.camera_angle_deg ?? 0),
+            distanceM: Number(data.camera_distance_m ?? 0),
+            angleDeg: Number(data.residual_angle_deg ?? 0),
             shiftCm: Number(data.apparent_shift_cm ?? 0),
             note: String(data.note ?? ''),
           })
@@ -929,8 +929,8 @@ export function Demo() {
             Why TV looks wrong · camera parallax
           </p>
           <p className="mt-1 text-sm text-slate-200">
-            ~{parallax.lateralM} m sideways gap, seen at ~{parallax.angleDeg}° off line, looks like
-            ~{parallax.shiftCm} cm on screen.
+            A ~{parallax.angleDeg}° residual camera angle, ~{parallax.distanceM} m from this
+            incident, moves the apparent offside line by ~{parallax.shiftCm} cm.
           </p>
           <p className="mt-1 text-sm text-slate-400">{parallax.note}</p>
         </section>
