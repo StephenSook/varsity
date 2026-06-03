@@ -29,6 +29,8 @@ const HI = 1.0
 const sx = (c: number) => PAD + ((c - LO) / (HI - LO)) * (W - 2 * PAD)
 const sy = (a: number) => H - PAD - ((a - LO) / (HI - LO)) * (H - 2 * PAD)
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`
+// ECE figures are sub-1%, so show two decimals to match docs/CALIBRATION.md (e.g. 0.35%).
+const pctFine = (x: number) => `${(x * 100).toFixed(2)}%`
 
 export function ReliabilityDiagram({ p }: { p: CalibrationPayload }) {
   const populated = p.bins.filter((b) => b.count > 0)
@@ -40,10 +42,10 @@ export function ReliabilityDiagram({ p }: { p: CalibrationPayload }) {
         <span className="font-semibold text-emerald-300">Reliability diagram</span> — predicted
         confidence vs empirical accuracy over {p.samples.toLocaleString()} seeded draws. Points on
         the diagonal are perfectly calibrated. ECE{' '}
-        <span className="font-mono text-emerald-300">{pct(p.ece)}</span>, Brier{' '}
+        <span className="font-mono text-emerald-300">{pctFine(p.ece)}</span>, Brier{' '}
         <span className="font-mono text-emerald-300">{p.brier.toFixed(4)}</span>. Overconfident
         control (σ halved): ECE{' '}
-        <span className="font-mono text-sky-300">{pct(p.overconfident_ece)}</span>.
+        <span className="font-mono text-sky-300">{pctFine(p.overconfident_ece)}</span>.
       </figcaption>
 
       <div className="mt-3 flex flex-wrap items-start gap-4">

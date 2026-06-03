@@ -220,8 +220,8 @@ export function JudgesPanel() {
         const j = (await (await fetch(`${BACKEND}/calibration`)).json()) as CalibrationPayload
         setCalib(j)
         return (
-          `ECE ${(j.ece * 100).toFixed(1)}% (calibrated) · Brier ${j.brier.toFixed(4)} · ` +
-          `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(1)}% · ` +
+          `ECE ${(j.ece * 100).toFixed(2)}% (calibrated) · Brier ${j.brier.toFixed(4)} · ` +
+          `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(2)}% · ` +
           `${j.samples.toLocaleString()} seeded draws`
         )
       },
