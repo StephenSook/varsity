@@ -69,6 +69,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'Argumentative-completeness scorer (does the narration disclose enough?)',
+    w: 'services/app/completeness.py',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',

@@ -54,6 +54,7 @@ def test_stages_order() -> None:
         "granite",
         "guardian",
         "verification",
+        "completeness",
         "provenance",
         "verdict",
     ]

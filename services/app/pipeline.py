@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import causal, law11, parallax, provenance, verification, walton
+from app import causal, completeness, law11, parallax, provenance, verification, walton
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -163,6 +163,12 @@ def explanation_stages(
         is_offside=geo.is_offside,
     )
     yield verification.verification_stage(panel)
+
+    # Argumentative completeness: does the narration DISCLOSE enough for a blind fan (the
+    # complement to faithfulness - what it says, not just whether what it says is true).
+    yield completeness.completeness_stage(
+        completeness.score_offside(explanation, within_noise=within_noise)
+    )
 
     unc = quantify(geo.margin_meters)
     state = "offside" if geo.is_offside else "onside"
