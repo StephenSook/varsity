@@ -141,6 +141,29 @@ export function confidenceTexture(band?: string): { detuneCents: number; roughne
   return { detuneCents: 0, roughness: false } // clear (or unknown) = pure, confident
 }
 
+// Richer confidence-earcon parameters, layered on the beating texture above. Two cited cross-modal
+// findings drive them: LOUDNESS is the audio channel listeners most prefer for probability, so
+// confidence scales loudness (Vriend, Hagele & Weiskopf, Audio Mostly 2025, arXiv 2505.14379); and
+// ROUGHNESS / broadband NOISE maps to visual BLUR - a pure clean tone reads as sharp/certain,
+// broadband noise as blurry/uncertain (Ferguson & Brewster, CHI 2018 doi:10.1145/3173574.3174185;
+// ICMI 2017 doi:10.1145/3136755.3136783). So a clear call is LOUD, PURE, SHARP-attack; a too-close
+// call is QUIETER, NOISIER, TREMOLO'd, SOFT-attack. Pure + testable. See docs/SPATIAL-AUDIO.md.
+export type ConfidenceEarcon = {
+  loudnessScale: number // confidence up -> louder (Vriend 2025: loudness most-preferred for probability)
+  noiseMix: number // confidence down -> more broadband noise / blur (Ferguson & Brewster)
+  tremoloDepth: number // confidence down -> deeper amplitude tremolo
+  tremoloHz: number
+  attackMs: number // confidence down -> softer attack
+}
+
+export function confidenceEarcon(band?: string): ConfidenceEarcon {
+  if (band === 'very tight')
+    return { loudnessScale: 0.5, noiseMix: 0.3, tremoloDepth: 0.3, tremoloHz: 4, attackMs: 80 }
+  if (band === 'tight')
+    return { loudnessScale: 0.71, noiseMix: 0.1, tremoloDepth: 0.1, tremoloHz: 4, attackMs: 30 }
+  return { loudnessScale: 1, noiseMix: 0, tremoloDepth: 0, tremoloHz: 0, attackMs: 5 } // clear/unknown
+}
+
 const detuneHz = (f: number, cents: number): number => f * Math.pow(2, cents / 1200)
 
 // Pre-verbal line-proximity preamble (the Action Audio pattern): BEFORE the verdict, a short
@@ -281,6 +304,9 @@ export async function playOffsideChord(
     const vDur = 0.45
     const tex = confidenceTexture(opts.band)
     const tim = verdictTimbre(opts.band) // bouba (clear) vs kiki (tight): waveform + filter
+    const ce = confidenceEarcon(opts.band) // loudness + noise + tremolo + attack, cited
+    const ePeak = peak * ce.loudnessScale // confidence -> loudness (Vriend 2025)
+    const attack = ce.attackMs / 1000
     const tone = (freq: number, g: number) => {
       const osc = ctx.createOscillator()
       osc.type = tim.waveform
@@ -290,9 +316,26 @@ export async function playOffsideChord(
       filter.frequency.value = tim.filterHz
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, vStart)
-      gain.gain.linearRampToValueAtTime(peak * g, vStart + 0.05)
+      gain.gain.linearRampToValueAtTime(ePeak * g, vStart + attack)
       gain.gain.linearRampToValueAtTime(0, vStart + vDur)
-      osc.connect(filter).connect(gain).connect(ctx.destination)
+      osc.connect(filter).connect(gain)
+      let out: AudioNode = gain
+      if (ce.tremoloDepth > 0) {
+        // amplitude tremolo: an LFO oscillates the gain between (1 - 2*depth) and 1.
+        const trem = ctx.createGain()
+        trem.gain.value = 1 - ce.tremoloDepth
+        const lfo = ctx.createOscillator()
+        lfo.type = 'sine'
+        lfo.frequency.value = ce.tremoloHz
+        const lfoGain = ctx.createGain()
+        lfoGain.gain.value = ce.tremoloDepth
+        lfo.connect(lfoGain).connect(trem.gain)
+        lfo.start(vStart)
+        lfo.stop(vStart + vDur + 0.02)
+        gain.connect(trem)
+        out = trem
+      }
+      out.connect(ctx.destination)
       osc.start(vStart)
       osc.stop(vStart + vDur + 0.02)
     }
@@ -302,6 +345,27 @@ export async function playOffsideChord(
       if (tex.detuneCents > 0) tone(detuneHz(f, tex.detuneCents), 0.5) // beating partner
     }
     if (tex.roughness) tone(detuneHz(freqs[0], 100), 0.4) // a rough neighbour (~semitone)
+
+    // Broadband-noise "blur" layer: confidence down -> audible noise (Ferguson & Brewster).
+    if (ce.noiseMix > 0) {
+      const len = Math.max(1, Math.ceil(vDur * ctx.sampleRate))
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+      const data = buf.getChannelData(0)
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+      const src = ctx.createBufferSource()
+      src.buffer = buf
+      const bp = ctx.createBiquadFilter()
+      bp.type = 'bandpass'
+      bp.frequency.value = 1500
+      bp.Q.value = 0.5 // a gentle band so it reads as roughness/blur, not harsh hiss
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(0, vStart)
+      ng.gain.linearRampToValueAtTime(ePeak * ce.noiseMix, vStart + attack)
+      ng.gain.linearRampToValueAtTime(0, vStart + vDur)
+      src.connect(bp).connect(ng).connect(ctx.destination)
+      src.start(vStart)
+      src.stop(vStart + vDur + 0.02)
+    }
   }
 
   await new Promise((resolve) => setTimeout(resolve, durationMs + 600 + Math.round(preDur * 1000)))

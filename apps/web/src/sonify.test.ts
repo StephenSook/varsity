@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   MAX_AZIMUTH_DEG,
+  confidenceEarcon,
   confidenceTexture,
   lineProximityPreamble,
   lineSweepSpec,
@@ -34,6 +35,22 @@ describe('verdict earcon', () => {
     expect(confidenceTexture('tight')).toEqual({ detuneCents: 14, roughness: false })
     expect(confidenceTexture('clear')).toEqual({ detuneCents: 0, roughness: false })
     expect(confidenceTexture(undefined)).toEqual({ detuneCents: 0, roughness: false })
+  })
+
+  it('couples loudness, noise, tremolo and attack to confidence (Vriend; Ferguson & Brewster)', () => {
+    const clear = confidenceEarcon('clear')
+    const tight = confidenceEarcon('tight')
+    const veryTight = confidenceEarcon('very tight')
+    // a clear call is loud, pure, sharp; an unknown band defaults to clear
+    expect(clear).toEqual({ loudnessScale: 1, noiseMix: 0, tremoloDepth: 0, tremoloHz: 0, attackMs: 5 })
+    expect(confidenceEarcon(undefined).loudnessScale).toBe(1)
+    // confidence down -> quieter, noisier (blur), deeper tremolo, softer attack
+    expect(veryTight.loudnessScale).toBeLessThan(tight.loudnessScale)
+    expect(tight.loudnessScale).toBeLessThan(clear.loudnessScale)
+    expect(veryTight.noiseMix).toBeGreaterThan(tight.noiseMix)
+    expect(tight.noiseMix).toBeGreaterThan(clear.noiseMix)
+    expect(veryTight.attackMs).toBeGreaterThan(clear.attackMs)
+    expect(veryTight.tremoloDepth).toBeGreaterThan(0)
   })
 
   it('uses a bouba timbre for clear calls and a kiki timbre for tight ones', () => {
