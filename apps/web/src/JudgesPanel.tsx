@@ -63,6 +63,16 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/causal.py',
     tier: 'live',
   },
+  {
+    t: 'Walton critical-questions surface (argument from expert opinion)',
+    w: 'services/app/walton.py',
+    tier: 'live',
+  },
+  {
+    t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
+    w: 'apps/web/src/tts.ts',
+    tier: 'live',
+  },
   { t: 'IFAB-Laws RAG + IBM Granite reasoning', w: 'services/app/pipeline.py', tier: 'live' },
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py', tier: 'live' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py', tier: 'live' },
