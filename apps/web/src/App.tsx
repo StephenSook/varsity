@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { Demo } from './Demo'
+import { CHROME, useLang } from './i18n'
 import { JudgesPanel } from './JudgesPanel'
 import { OnlineBadge } from './OnlineBadge'
 import { Reveal } from './Reveal'
@@ -12,15 +13,6 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 const Hero3D = lazy(() => import('./Hero3D'))
 
 const serif = { fontFamily: "'Instrument Serif', Georgia, serif" } as const
-
-const PIPELINE = [
-  { k: 'Trigger', d: 'A VAR review fires (live feed or a StatsBomb 360 frame).' },
-  { k: 'Geometry', d: 'The real offside margin in meters, from the freeze-frame.' },
-  { k: 'IFAB Law', d: 'The governing Law of the Game, retrieved from the corpus.' },
-  { k: 'IBM Granite', d: 'A plain explanation, coordinated through Context Forge.' },
-  { k: 'Guardian', d: 'Granite Guardian checks it stays grounded in the Law.' },
-  { k: 'Screen reader', d: 'Spoken in your language through your own screen reader.' },
-]
 
 function Section({
   id,
@@ -45,6 +37,8 @@ function Section({
 export default function App() {
   const reducedMotion = usePrefersReducedMotion()
   const heroRef = useRef<HTMLDivElement>(null)
+  const { lang } = useLang()
+  const c = CHROME[lang]
   useLenis()
 
   // Warm the free-tier backend on page load so a judge's first Explain / ask / Run-it-now
@@ -68,7 +62,7 @@ export default function App() {
       <OnlineBadge />
       {/* HERO */}
       <section
-        aria-label="Introduction"
+        aria-label={c.heroKicker}
         className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
       >
         {!reducedMotion && (
@@ -80,88 +74,66 @@ export default function App() {
         )}
         <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#0a0f1c]/40 via-transparent to-[#0a0f1c]" />
         <div ref={heroRef} className="relative z-10 flex flex-col items-center gap-6">
-          <p
-            data-hero-item
-            className="font-mono text-xs uppercase tracking-[0.34em] text-emerald-400"
-          >
-            IFAB-grounded · screen-reader-native
+          <p data-hero-item className="font-mono text-xs uppercase tracking-[0.34em] text-emerald-400">
+            {c.heroKicker}
           </p>
           <h1 data-hero-item style={serif} className="text-6xl leading-none text-slate-50 sm:text-8xl">
             VARSITY
           </h1>
           <p data-hero-item className="max-w-xl text-balance text-lg text-slate-300 sm:text-2xl">
-            Hear the why behind every VAR call.
+            {c.tagline}
           </p>
           <div data-hero-item className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <a
               href="#demo"
               className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400"
             >
-              Hear it explain a call
+              {c.ctaHear}
             </a>
             <a
               href="#problem"
               className="rounded-full border border-slate-500/60 px-6 py-3 font-medium text-slate-200 transition-colors hover:bg-slate-500/10"
             >
-              Why it matters
+              {c.ctaWhy}
             </a>
           </div>
         </div>
         <a
           href="#problem"
-          aria-label="Scroll to learn more"
+          aria-label={c.ctaWhy}
           className="absolute bottom-8 z-10 font-mono text-xs uppercase tracking-widest text-slate-400 hover:text-emerald-300"
         >
-          scroll
+          {c.scroll}
         </a>
       </section>
 
       {/* THE PROBLEM */}
-      <Section id="problem" label="The problem">
+      <Section id="problem" label={c.problemEyebrow}>
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">The problem</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">{c.problemEyebrow}</p>
           <h2 style={serif} className="mt-3 text-4xl text-slate-50 sm:text-6xl">
-            The last to know
+            {c.problemH2}
           </h2>
-          <p className="mt-5 max-w-2xl text-lg text-slate-300">
-            When a VAR review stops the match, a blind fan is often the last person in the room to
-            understand the call. The decision data exists. It just never reaches them in real time.
-          </p>
+          <p className="mt-5 max-w-2xl text-lg text-slate-300">{c.problemIntro}</p>
         </Reveal>
         <div className="mt-12 grid gap-5 sm:grid-cols-3">
-          {[
-            {
-              h: 'The moment',
-              p: 'The stadium goes quiet. Everyone stares at the big screen. You wait for someone to explain what just happened.',
-            },
-            {
-              h: 'What fans told us',
-              p: 'A blind supporter who follows the A-League told us the TV commentary leaves him with no idea what is happening on the pitch.',
-            },
-            {
-              h: 'The gap',
-              p: 'Audio description is improving, but even great commentary rarely gives the rule-grounded reason behind a contested call.',
-            },
-          ].map((c) => (
-            <Reveal key={c.h} className="glass rounded-2xl p-6 text-left">
-              <h3 className="text-sm font-semibold text-emerald-300">{c.h}</h3>
-              <p className="mt-2 text-slate-300">{c.p}</p>
+          {c.cards.map((card) => (
+            <Reveal key={card.h} className="glass rounded-2xl p-6 text-left">
+              <h3 className="text-sm font-semibold text-emerald-300">{card.h}</h3>
+              <p className="mt-2 text-slate-300">{card.p}</p>
             </Reveal>
           ))}
         </div>
       </Section>
 
       {/* THE DEMO */}
-      <Section id="demo" label="Live demo">
+      <Section id="demo" label={c.demoEyebrow}>
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">Live</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">{c.demoEyebrow}</p>
           <h2 style={serif} className="mt-3 text-center text-4xl text-slate-50 sm:text-6xl">
-            Hear the call
+            {c.demoH2}
           </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-slate-300">
-            A real 2022 World Cup offside, explained end to end. Press play and listen, or cut the
-            network and run it on your own device.
-          </p>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-lg text-slate-300">{c.demoIntro}</p>
         </Reveal>
         <div className="mt-12">
           <Demo />
@@ -169,20 +141,16 @@ export default function App() {
       </Section>
 
       {/* THE PIPELINE */}
-      <Section id="pipeline" label="How it works">
+      <Section id="pipeline" label={c.pipelineEyebrow}>
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">Under the hood</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">{c.pipelineEyebrow}</p>
           <h2 style={serif} className="mt-3 text-4xl text-slate-50 sm:text-6xl">
-            One event, fanned out
+            {c.pipelineH2}
           </h2>
-          <p className="mt-5 max-w-2xl text-lg text-slate-300">
-            Four backends coordinate through the IBM Context Forge gateway with Granite on top. One
-            VAR event fans out across the services and returns a single, safe, rule-grounded answer.
-            The live gateway recorded those tool calls at 100% success.
-          </p>
+          <p className="mt-5 max-w-2xl text-lg text-slate-300">{c.pipelineIntro}</p>
         </Reveal>
         <ol className="mt-12 grid list-none gap-4 sm:grid-cols-3">
-          {PIPELINE.map((s, i) => (
+          {c.pipeline.map((s, i) => (
             <li key={s.k}>
               <Reveal className="glass h-full rounded-2xl p-5 text-left">
                 <div className="flex items-baseline gap-3">
@@ -199,16 +167,13 @@ export default function App() {
       </Section>
 
       {/* VERIFY / JUDGES */}
-      <Section id="judges" label="Verify every claim">
+      <Section id="judges" label={c.judgesEyebrow}>
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">For judges</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">{c.judgesEyebrow}</p>
           <h2 style={serif} className="mt-3 text-4xl text-slate-50 sm:text-6xl">
-            Every claim is verifiable
+            {c.judgesH2}
           </h2>
-          <p className="mt-5 max-w-2xl text-lg text-slate-300">
-            No theater. Each capability below runs in this repository and is pointed at the exact
-            file that proves it. Built on IBM Granite, Granite Guardian, Context Forge, and Docling.
-          </p>
+          <p className="mt-5 max-w-2xl text-lg text-slate-300">{c.judgesIntro}</p>
         </Reveal>
         <JudgesPanel />
       </Section>
@@ -217,14 +182,11 @@ export default function App() {
       <footer className="relative z-10 mx-auto w-full max-w-5xl px-6 py-20 text-center">
         <Reveal>
           <h2 style={serif} className="text-3xl text-slate-100 sm:text-4xl">
-            For the fan who needs it most.
+            {c.footerH2}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-slate-400">
-            VARSITY turns officials-only decision data into the first rule-grounded, accessible why.
-            It complements the commentary you love, it does not replace it.
-          </p>
+          <p className="mx-auto mt-4 max-w-xl text-slate-400">{c.footerP}</p>
           <p className="mt-8 font-mono text-xs uppercase tracking-[0.3em] text-slate-400">
-            IBM Granite · Granite Guardian · Context Forge · World Cup 2026
+            IBM Granite · Granite Guardian · Context Forge · {c.footerWC}
           </p>
         </Reveal>
       </footer>
