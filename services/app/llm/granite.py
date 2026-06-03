@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 
 from app.llm import _watsonx
+from app.llm.guardian import cites_law_clause
 
 DEFAULT_MODEL = "ibm/granite-4-h-small"
 
@@ -184,12 +185,14 @@ class GraniteClient:
             f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
             f"the ball was played. Verdict: {verdict}.\n\nExplanation:"
         )
-        # watsonx greedy occasionally returns empty text, or (seen on some non-English
-        # runs) echoes the prompt scaffolding. Retry on either, then fall back to the
-        # in-language deterministic floor so the demo never shows nothing or leaked prompt.
+        # watsonx greedy occasionally returns empty text, echoes the prompt scaffolding, or
+        # (the fail-closed-to-floor case) produces a valid sentence that never cites the Law
+        # number. Accept only a substantive, non-leaked, LAW-CITING reply; otherwise fall back
+        # to the in-language deterministic floor, which always quotes the Law. This guarantees
+        # every spoken explanation provably cites the Law (faithfulness by construction).
         for _ in range(3):
             text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
-            if len(text) >= 20 and not _looks_like_prompt_leak(text):
+            if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
                 return text
         return _fallback_explanation(
             margin_meters=margin_meters, is_offside=is_offside, language=language
@@ -214,9 +217,11 @@ class GraniteClient:
             f"Law text:\n{law_text}\n\n"
             f"Incident: {incident} Verdict: {outcome}.\n\nExplanation:"
         )
+        # Fail closed to the deterministic floor unless the reply is substantive, non-leaked,
+        # and cites the Law number (every decision explanation must cite its Law).
         for _ in range(3):
             text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
-            if len(text) >= 20 and not _looks_like_prompt_leak(text):
+            if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
                 return text
         return _fallback_decision(law=law, outcome=outcome, language=language)
 

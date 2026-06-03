@@ -4,19 +4,20 @@ panel (MADR / SAVER style), scoped strictly to VERIFICATION, never adjudication.
 The generator is Granite. Each critic independently checks one faithfulness property. Critics
 come in two kinds:
 
-- **deterministic** (dispositive): cites-law, no-re-adjudication, substantive. These are
-  faithfulness-by-construction checks - the explanation cites the governing Law clause the proof
-  traversed, never contradicts the Law-11 proof, and is non-empty. The headline ``verified`` gate
-  is these and only these: a stable, deterministic guarantee.
+- **deterministic** (dispositive): cites-law, no-re-adjudication, substantive, neutral, and (on
+  the offside path) verdict-consistent. These are faithfulness-by-construction checks - the
+  explanation cites the governing Law, never contradicts the Law-11 proof, is non-empty, does not
+  editorialize about the official, and (a lite round-trip re-parse) restates the same verdict the
+  decision carried. The headline ``verified`` gate is these and only these: a stable, deterministic
+  guarantee.
 - **advisory** (defense-in-depth): the Granite Guardian model judgements (groundedness +
-  screen-reader-prose). Guardian is a probabilistic judge (REVEAL #1, but ~82% balanced accuracy,
-  not infallible), so it can false-positive on a genuinely-grounded explanation. We therefore
-  REPORT its verdict (a real grounding failure stays visible) but do not let a single model flake
-  flip the deterministic gate. This is the standard "deterministic hard gate + model judge as
-  defense-in-depth, fail-closed only on the hard checks" composition.
+  screen-reader-prose). Guardian is a probabilistic judge (REVEAL #1, but not infallible), so it can
+  false-positive on a genuinely-grounded explanation. We REPORT its verdict but never let a single
+  model flake flip the deterministic gate.
 
-The no-re-adjudication critic is a CODED SECURITY PROPERTY and stays deterministic/dispositive:
-the explanation must agree with the Law-11 proof and must not re-adjudicate the RECEIVED decision.
+The no-re-adjudication and neutral critics are CODED SECURITY PROPERTIES: the explanation must
+agree with the Law-11 proof and must never re-adjudicate, second-guess, or editorialize about the
+official.
 """
 
 from __future__ import annotations
@@ -25,6 +26,51 @@ from dataclasses import dataclass
 
 DETERMINISTIC = "deterministic"
 ADVISORY = "advisory"
+
+# Phrases that editorialize about the official or the call (never about the rule itself).
+_EDITORIAL = (
+    "poor call",
+    "bad call",
+    "wrong call",
+    "should have",
+    "got it wrong",
+    "mistake by",
+    "blunder",
+    "howler",
+    "robbed",
+    "cheated",
+    "disgrace",
+    "biased",
+    "incompetent",
+    "terrible decision",
+    "harsh decision",
+    "unfair decision",
+    "controversial",
+    "the referee was wrong",
+    "the official was wrong",
+)
+
+# Offside is verbalized in five languages; a verdict re-parse must recognize each.
+_OFFSIDE_TERMS = ("offside", "fuera de juego", "hors-jeu", "hors jeu", "impedimento", "abseits")
+
+
+def _is_neutral(explanation: str) -> bool:
+    low = explanation.lower()
+    return not any(phrase in low for phrase in _EDITORIAL)
+
+
+def _asserts_offside(explanation: str) -> bool:
+    """Lite round-trip re-parse: does the narration assert OFFSIDE (vs onside/legal)?"""
+    low = explanation.lower()
+    onside = (
+        ("onside" in low and "not onside" not in low)
+        or "not offside" in low
+        or "no offence" in low
+        or "no offense" in low
+    )
+    if onside:
+        return False
+    return any(term in low for term in _OFFSIDE_TERMS)
 
 
 @dataclass(frozen=True)
@@ -51,6 +97,7 @@ def verify(
     grounded: bool,
     screen_reader_ok: bool,
     proof_consistent: bool = True,
+    is_offside: bool | None = None,
 ) -> VerificationPanel:
     """Run the critic panel. ``verified`` is the deterministic hard gate; the Guardian model
     critics are reported as advisory and never flip the hard gate on their own."""
@@ -63,11 +110,28 @@ def verify(
             DETERMINISTIC,
         ),
         Critic(
+            "neutral",
+            _is_neutral(explanation),
+            "Explains the Law without editorializing about the official or the call.",
+            DETERMINISTIC,
+        ),
+        Critic(
             "substantive",
             len(explanation.strip()) >= 20,
             "A substantive explanation, not empty or a leaked prompt.",
             DETERMINISTIC,
         ),
+    ]
+    if is_offside is not None:
+        critics.append(
+            Critic(
+                "verdict-consistent",
+                _asserts_offside(explanation) == bool(is_offside),
+                "Restates the same verdict the decision carried (round-trip re-parse).",
+                DETERMINISTIC,
+            )
+        )
+    critics += [
         Critic(
             "grounded",
             bool(grounded),

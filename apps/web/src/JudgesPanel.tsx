@@ -53,6 +53,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'docs/SAFETY_CASE.md',
     tier: 'live',
   },
+  {
+    t: 'Injected-error faithfulness gold-eval (structural injections: 0 leakage)',
+    w: 'services/verify/faithfulness_eval.py',
+    tier: 'live',
+  },
   { t: 'IFAB-Laws RAG + IBM Granite reasoning', w: 'services/app/pipeline.py', tier: 'live' },
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py', tier: 'live' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py', tier: 'live' },
