@@ -4,6 +4,7 @@ import {
   confidenceTexture,
   lineProximityPreamble,
   lineSweepSpec,
+  preambleBlipPan,
   sonificationPlan,
   verdictChord,
   verdictTimbre,
@@ -76,5 +77,10 @@ describe('spatial sonification plan', () => {
     const plan = sonificationPlan(geo(95, 98))
     const attacker = plan.find((v) => v.role === 'attacker')!
     expect(attacker.x).toBeLessThan(0)
+  })
+
+  it('spatialises the preamble blips at the attacker position (right=beyond, left=behind)', () => {
+    expect(preambleBlipPan(geo(100, 98))).toBeGreaterThan(0)
+    expect(preambleBlipPan(geo(95, 98))).toBeLessThan(0)
   })
 })

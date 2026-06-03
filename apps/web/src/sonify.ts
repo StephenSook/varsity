@@ -34,6 +34,55 @@ export function sonificationPlan(geo: Geometry): Voice[] {
   ]
 }
 
+// The three accessibility audio modes the listener can choose: HRTF (best with headphones),
+// stereo (better on speakers), and mono (no spatialization, for the widest compatibility).
+export type SpatialMode = 'hrtf' | 'stereo' | 'mono'
+
+// The pan position of the line-proximity preamble blips: at the attacker's margin-based
+// position, so the proximity blips come from WHERE the attacker is. Pure + testable.
+export function preambleBlipPan(geo: Geometry): number {
+  const marginM = (geo.attacker_x - geo.offside_line_x) * METERS_PER_UNIT
+  return clampX(marginM * ARC)
+}
+
+// One spatializer abstraction for the three modes, so the preamble blips and the spatial chord
+// can be panned (or not) consistently with the listener's chosen mode.
+function makeSpatial(ctx: AudioContext, mode: SpatialMode) {
+  if (mode === 'mono') {
+    const node = ctx.createGain()
+    return { node, setX: (_x: number) => {}, rampX: (_a: number, _b: number, _t0: number, _t1: number) => {} }
+  }
+  if (mode === 'stereo') {
+    const p = ctx.createStereoPanner()
+    const pan = (x: number): number => Math.max(-1, Math.min(1, x / MAX_X))
+    return {
+      node: p,
+      setX: (x: number) => {
+        p.pan.value = pan(x)
+      },
+      rampX: (a: number, b: number, t0: number, t1: number) => {
+        p.pan.setValueAtTime(pan(a), t0)
+        p.pan.linearRampToValueAtTime(pan(b), t1)
+      },
+    }
+  }
+  const p = ctx.createPanner()
+  p.panningModel = 'HRTF'
+  p.distanceModel = 'inverse'
+  p.positionY.value = 0
+  p.positionZ.value = Z
+  return {
+    node: p,
+    setX: (x: number) => {
+      p.positionX.value = x
+    },
+    rampX: (a: number, b: number, t0: number, t1: number) => {
+      p.positionX.setValueAtTime(a, t0)
+      p.positionX.linearRampToValueAtTime(b, t1)
+    },
+  }
+}
+
 // Verdict earcon: a consonant major triad reads as "allowed / onside"; a minor triad
 // with a tritone reads as "denied / wrong / offside" (Brewster & Blattner earcon
 // theory; Western listeners decode the tritone as tension/negation). Played centred
@@ -101,6 +150,7 @@ export type SonifyOptions = {
   verdict?: boolean
   band?: string
   preamble?: boolean
+  mode?: SpatialMode
 }
 
 // Play a short HRTF-panned chord of the three key players, then a semantic verdict
@@ -115,6 +165,7 @@ export async function playOffsideChord(
 ): Promise<Voice[]> {
   const durationMs = opts.durationMs ?? 500
   const peak = opts.gain ?? 0.12
+  const mode = opts.mode ?? 'hrtf'
   const plan = sonificationPlan(geo)
   const t0 = ctx.currentTime
 
@@ -144,6 +195,7 @@ export async function playOffsideChord(
       : lineProximityPreamble(opts.band, geo.is_offside)
   const blipGap = 0.12
   const blipDur = 0.07
+  const blipPan = preambleBlipPan(geo) // the blips come from where the attacker is
   for (let i = 0; i < pre.blips; i++) {
     const start = t0 + phaseA + i * blipGap
     const osc = ctx.createOscillator()
@@ -153,7 +205,9 @@ export async function playOffsideChord(
     g.gain.setValueAtTime(0, start)
     g.gain.linearRampToValueAtTime(peak * 0.5, start + 0.01)
     g.gain.linearRampToValueAtTime(0, start + blipDur)
-    osc.connect(g).connect(ctx.destination)
+    const sp = makeSpatial(ctx, mode)
+    sp.setX(blipPan)
+    osc.connect(g).connect(sp.node).connect(ctx.destination)
     osc.start(start)
     osc.stop(start + blipDur + 0.02)
   }
@@ -167,17 +221,12 @@ export async function playOffsideChord(
     osc.type = 'sine'
     osc.frequency.value = v.freq
 
-    const panner = ctx.createPanner()
-    panner.panningModel = 'HRTF'
-    panner.distanceModel = 'inverse'
-    panner.positionY.value = v.y
-    panner.positionZ.value = v.z
+    const sp = makeSpatial(ctx, mode)
     if (v.role === 'attacker') {
       // Ramp from the line (x=0) out to the final position so the cross is heard.
-      panner.positionX.setValueAtTime(0, now)
-      panner.positionX.linearRampToValueAtTime(v.x, now + dur)
+      sp.rampX(0, v.x, now, now + dur)
     } else {
-      panner.positionX.value = v.x
+      sp.setX(v.x)
     }
 
     const gain = ctx.createGain()
@@ -185,7 +234,7 @@ export async function playOffsideChord(
     gain.gain.linearRampToValueAtTime(peak, now + 0.04)
     gain.gain.linearRampToValueAtTime(0, now + dur)
 
-    osc.connect(gain).connect(panner).connect(ctx.destination)
+    osc.connect(gain).connect(sp.node).connect(ctx.destination)
     osc.start(now)
     osc.stop(now + dur + 0.02)
   }
