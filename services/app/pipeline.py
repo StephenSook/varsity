@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from app import law11, verification
+from app import law11, parallax, verification
 from app.decisions import get_decision
 from app.geometry import FreezeFramePlayer, compute_offside
 from app.llm.granite import GraniteClient
@@ -105,6 +105,9 @@ def explanation_stages(
         within_noise=quantify(geo.margin_meters).band == "very tight",
     )
     yield law11.proof_payload(proof)
+
+    # Camera-parallax explainer: why a correct call can LOOK wrong on a broadcast angle.
+    yield parallax.parallax_stage(frame)
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(OFFSIDE_QUERY)

@@ -52,13 +52,17 @@ def _defenders(frame: list[FreezeFramePlayer]) -> list[FreezeFramePlayer]:
     return [p for p in frame if not p.teammate]
 
 
-def second_last_opponent_x(frame: list[FreezeFramePlayer]) -> float:
-    """X of the second-to-last opponent (the offside line), attack left-to-right."""
+def second_last_opponent(frame: list[FreezeFramePlayer]) -> FreezeFramePlayer:
+    """The second-to-last opponent (the offside line), attack left-to-right."""
     defenders = _defenders(frame)
     if len(defenders) < 2:
         raise ValueError("need at least two opponents to define an offside line")
-    xs = sorted((p.x for p in defenders), reverse=True)
-    return xs[1]
+    return sorted(defenders, key=lambda p: p.x, reverse=True)[1]
+
+
+def second_last_opponent_x(frame: list[FreezeFramePlayer]) -> float:
+    """X of the second-to-last opponent (the offside line), attack left-to-right."""
+    return second_last_opponent(frame).x
 
 
 def most_advanced_attacker(
