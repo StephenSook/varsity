@@ -69,7 +69,7 @@ test('the ask-any-rule oracle exposes a labelled question input and Ask button',
   await expect(
     form.getByRole('textbox', { name: 'Ask any question about the Laws of the Game' }),
   ).toBeVisible()
-  await expect(form.getByRole('button', { name: 'Ask' })).toBeDisabled()
+  await expect(form.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled()
 })
 
 test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
