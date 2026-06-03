@@ -13,7 +13,7 @@ FIX = pathlib.Path(__file__).parent / "fixtures"
 
 
 class FakeGranite:
-    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English"):
+    def explain_offside(self, *, margin_meters, is_offside, law_text, language="English", **_):
         state = "offside" if is_offside else "onside"
         return f"Under Law 11, the attacker was {state} by {abs(margin_meters):.2f} meters."
 

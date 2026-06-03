@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from app.llm import _watsonx
 from app.llm.guardian import cites_law_clause
+from app.verification import TOO_CLOSE_HEDGE
 
 DEFAULT_MODEL = "ibm/granite-4-h-small"
 
@@ -51,6 +52,28 @@ _FALLBACKS: dict[str, tuple[str, str]] = {
 }
 
 
+# Verdict words per language (offside, onside-equivalent), filled into the too-close floor.
+_VERDICT_WORD: dict[str, tuple[str, str]] = {
+    "en": ("offside", "onside"),
+    "es": ("fuera de juego", "en posición legal"),
+    "fr": ("hors-jeu", "en position régulière"),
+    "pt": ("impedimento", "em posição legal"),
+    "de": ("Abseits", "in regulärer Position"),
+}
+
+# Too-close (within-noise) floors: a knife-edge call is INSIDE the ~13 cm our coarse freeze-frame
+# data can resolve, so a precise margin would be false precision. These hedge (Umpire's Call /
+# within the measurement noise), cite the Law, reference the line, and quote NO number - VARSITY
+# describes the official decision. {v} is the verdict word.
+_FALLBACKS_TIGHT: dict[str, str] = {
+    "en": "When the ball was played, the most advanced attacker and the second-to-last defender were level - a very close, Umpire's Call situation, too close for our freeze-frame data to resolve within the roughly 13 centimetres of measurement noise. Under Law 11, VARSITY describes the official decision: {v}.",  # noqa: E501
+    "es": "Cuando se jugó el balón, el atacante más adelantado y el penúltimo defensor estaban a la misma altura: una jugada muy ajustada, demasiado justa para resolverla con nuestros datos dentro de los aproximadamente 13 centímetros de ruido de medición. Según la Ley 11, VARSITY describe la decisión oficial: {v}.",  # noqa: E501
+    "fr": "Au moment où le ballon a été joué, l'attaquant le plus avancé et l'avant-dernier défenseur étaient à la même hauteur : une action très serrée, trop juste pour être tranchée avec nos données dans la marge d'environ 13 centimètres de bruit de mesure. Selon la Loi 11, VARSITY décrit la décision officielle : {v}.",  # noqa: E501
+    "pt": "Quando a bola foi jogada, o atacante mais avançado e o penúltimo defensor estavam na mesma linha: um lance muito apertado, próximo demais para ser resolvido com os nossos dados dentro dos cerca de 13 centímetros de ruído de medição. Segundo a Lei 11, a VARSITY descreve a decisão oficial: {v}.",  # noqa: E501
+    "de": "Beim Abspiel waren der vorderste Angreifer und der vorletzte Verteidiger auf gleicher Höhe - eine sehr knappe Szene, zu knapp, um sie mit unseren Daten innerhalb der etwa 13 Zentimeter Messrauschen aufzulösen. Nach Regel 11 beschreibt VARSITY die offizielle Entscheidung: {v}.",  # noqa: E501
+}
+
+
 def _lang_key(language: str) -> str:
     """Map a language name or code to a fallback key (English if unknown)."""
     low = language.lower()
@@ -68,10 +91,15 @@ def _lang_key(language: str) -> str:
 
 
 def _fallback_explanation(
-    *, margin_meters: float, is_offside: bool, language: str = "English"
+    *, margin_meters: float, is_offside: bool, language: str = "English", within_noise: bool = False
 ) -> str:
-    """Deterministic Law-11-grounded floor when watsonx returns no usable text."""
-    offside_tpl, onside_tpl = _FALLBACKS[_lang_key(language)]
+    """Deterministic Law-11-grounded floor when watsonx returns no usable text. For a too-close
+    (within-noise) call, the floor hedges and quotes no number (calibrated by construction)."""
+    key = _lang_key(language)
+    if within_noise:
+        verdict_word = _VERDICT_WORD[key][0 if is_offside else 1]
+        return _FALLBACKS_TIGHT[key].format(v=verdict_word)
+    offside_tpl, onside_tpl = _FALLBACKS[key]
     tpl = offside_tpl if is_offside else onside_tpl
     return tpl.format(m=abs(margin_meters))
 
@@ -170,34 +198,60 @@ class GraniteClient:
         is_offside: bool,
         law_text: str,
         language: str = "English",
+        within_noise: bool = False,
     ) -> str:
-        """Generate a plain-language, Law-grounded explanation of an offside decision."""
+        """Generate a plain-language, Law-grounded explanation of an offside decision.
+
+        For a too-close (within-noise) call the precise margin is WITHHELD from the prompt, so the
+        model structurally cannot leak false precision (it can only hedge and describe the official
+        decision). For a clear call the margin is stated. The accept-gate enforces it either way."""
         verdict = "offside" if is_offside else "onside"
         relation = "ahead of" if is_offside else "behind"
-        prompt = (
-            "You are explaining a soccer VAR offside decision to a blind fan in plain, "
-            f"warm language. Reply in {language}, in 2 to 3 short sentences. Lead with where "
-            "the players were, then state the verdict, then cite the Law that justifies it "
-            "(given-before-new order). A blind fan cannot see the line, so ALWAYS state the "
-            "margin in metres and refer to the second-to-last defender. Ground the explanation "
-            "in the Law text below and cite the Law number. Do not invent any rule that is not "
-            "in the Law text.\n\n"
-            f"Law text:\n{law_text}\n\n"
-            "Decision data: the most advanced attacker was "
-            f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
-            f"the ball was played. Verdict: {verdict}.\n\nExplanation:"
-        )
+        if within_noise:
+            prompt = (
+                "You are explaining a soccer VAR offside decision to a blind fan in plain, warm "
+                f"language. Reply in {language}, in 2 to 3 short sentences. This call is INSIDE "
+                "the measurement noise of our coarse freeze-frame data (about 13 cm), so it is "
+                "too close for us to call independently. DO NOT quote a precise margin and DO NOT "
+                "sound certain. Say the players were level within that noise - an 'Umpire's "
+                "Call' situation - and that VARSITY describes the official decision. Refer to "
+                "the second-to-last defender, ground it in the Law text below, and cite the Law "
+                "number. Do not invent any rule that is not in the Law text.\n\n"
+                f"Law text:\n{law_text}\n\n"
+                "Decision data: the most advanced attacker was level with the second-to-last "
+                f"defender within the measurement noise when the ball was played. Official "
+                f"verdict: {verdict}.\n\nExplanation:"
+            )
+        else:
+            prompt = (
+                "You are explaining a soccer VAR offside decision to a blind fan in plain, "
+                f"warm language. Reply in {language}, in 2 to 3 short sentences. Lead with where "
+                "the players were, then state the verdict, then cite the Law that justifies it "
+                "(given-before-new order). A blind fan cannot see the line, so ALWAYS state the "
+                "margin in metres and refer to the second-to-last defender. Ground the explanation "
+                "in the Law text below and cite the Law number. Do not invent any rule that is not "
+                "in the Law text.\n\n"
+                f"Law text:\n{law_text}\n\n"
+                "Decision data: the most advanced attacker was "
+                f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
+                f"the ball was played. Verdict: {verdict}.\n\nExplanation:"
+            )
         # watsonx greedy occasionally returns empty text, echoes the prompt scaffolding, or
         # (the fail-closed-to-floor case) produces a valid sentence that never cites the Law
-        # number. Accept only a substantive, non-leaked, LAW-CITING reply; otherwise fall back
-        # to the in-language deterministic floor, which always quotes the Law. This guarantees
-        # every spoken explanation provably cites the Law (faithfulness by construction).
+        # number. Accept only a substantive, non-leaked, LAW-CITING reply (and, for a too-close
+        # call, one that actually hedges); otherwise fall back to the in-language deterministic
+        # floor, which always quotes the Law and, when too-close, always hedges. Faithfulness +
+        # calibration by construction.
         for _ in range(3):
             text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
             if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
-                return text
+                if not within_noise or TOO_CLOSE_HEDGE.search(text):
+                    return text
         return _fallback_explanation(
-            margin_meters=margin_meters, is_offside=is_offside, language=language
+            margin_meters=margin_meters,
+            is_offside=is_offside,
+            language=language,
+            within_noise=within_noise,
         )
 
     def explain_decision(

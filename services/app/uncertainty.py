@@ -51,11 +51,18 @@ def _verbal(p: float) -> str:
     return "very unlikely"
 
 
+# The honest three-band confidence schema: our coarse freeze-frame margin is one-to-two orders
+# noisier than SAOT's ~5 cm tolerance, so a too-close call defers to the official decision.
+_CONFIDENCE_BAND = {"clear": "clear", "tight": "marginal", "very tight": "too_close_to_call"}
+
+
 @dataclass(frozen=True)
 class MarginUncertainty:
     margin_meters: float
     sigma_meters: float
     band: str  # "clear" | "tight" | "very tight"
+    confidence_band: str  # "clear" | "marginal" | "too_close_to_call" (the honest schema)
+    defer_to_official: bool  # too-close: VARSITY describes the official decision, no precise claim
     p_verdict: float  # P(the verdict is correct) = Phi(|M| / sigma)
     likelihood: str  # the IPCC verbal hedge for p_verdict
     counterfactual_meters: float  # how far the player would move to flip the call (= |M|)
@@ -90,6 +97,8 @@ def quantify(margin_meters: float, *, sigma_meters: float = SIGMA_MARGIN_M) -> M
         margin_meters=round(margin_meters, 2),
         sigma_meters=sigma_meters,
         band=band,
+        confidence_band=_CONFIDENCE_BAND[band],
+        defer_to_official=band == "very tight",
         p_verdict=round(p, 3),
         likelihood=likelihood,
         counterfactual_meters=round(m, 2),

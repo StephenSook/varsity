@@ -28,6 +28,18 @@ def test_within_noise_adds_a_tightness_disclosure() -> None:
     assert "tightness" not in r2.dangling and r2.complete is True
 
 
+def test_within_noise_does_not_require_a_numeric_margin() -> None:
+    # Report A: a too-close call should not quote a false-precise number; tightness substitutes.
+    txt = (
+        "When the ball was played the attacker and the second-to-last defender were level - too "
+        "close to resolve, an Umpire's Call. Under Law 11, VARSITY describes the official "
+        "decision: offside."
+    )
+    r = completeness.score_offside(txt, within_noise=True)
+    assert "margin" not in r.dangling  # the numeric margin is intentionally absent
+    assert r.complete is True
+
+
 def test_is_disclosure_not_judgment() -> None:
     # the scorer only checks what the narration STATES; it never asserts the call was right/wrong
     r = completeness.score_offside("Offside by 5 m, Law 11, past the second-to-last defender.")

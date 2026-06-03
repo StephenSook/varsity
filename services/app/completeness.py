@@ -35,8 +35,8 @@ _REFERENCE = re.compile(
     re.IGNORECASE,
 )
 _TIGHT = re.compile(
-    r"tight|marginal|knife-edge|within (?:the )?(?:measurement )?noise|borderline|very close|"
-    r"by (?:a )?few centimet|fine margin",
+    r"tight|marginal|knife-edge|within (?:the )?(?:measurement )?noise|measurement noise|"
+    r"borderline|very close|by (?:a )?few centimet|fine margin|umpire'?s call|too close|\blevel\b",
     re.IGNORECASE,
 )
 
@@ -63,9 +63,6 @@ def score_offside(
     """Score how completely an offside narration discloses what a blind fan needs."""
     checks = [
         Disclosure("verdict", bool(_VERDICT.search(explanation)), 1.0, "states the verdict"),
-        Disclosure(
-            "margin", bool(_MARGIN.search(explanation)), 1.0, "states the margin to the line"
-        ),
         Disclosure("law", bool(_LAW.search(explanation)), 0.9, "cites the governing Law"),
         Disclosure(
             "reference",
@@ -75,12 +72,20 @@ def score_offside(
         ),
     ]
     if within_noise:
+        # Too close to call: a precise margin would be false precision, so disclosing the
+        # TIGHTNESS (not a number) is what calibrates a blind fan's trust.
         checks.append(
             Disclosure(
                 "tightness",
                 bool(_TIGHT.search(explanation)),
                 1.0,
                 "acknowledges the call is tight (within measurement noise)",
+            )
+        )
+    else:
+        checks.append(
+            Disclosure(
+                "margin", bool(_MARGIN.search(explanation)), 1.0, "states the margin to the line"
             )
         )
     total = sum(c.weight for c in checks)

@@ -43,6 +43,8 @@ def _uncertainty_fields(margin_meters: float) -> dict:
     unc = quantify(margin_meters)
     return {
         "confidence": unc.band,
+        "confidence_band": unc.confidence_band,
+        "defer_to_official": unc.defer_to_official,
         "sigma_meters": unc.sigma_meters,
         "p_verdict": unc.p_verdict,
         "likelihood": unc.likelihood,
@@ -148,6 +150,7 @@ def explanation_stages(
             is_offside=geo.is_offside,
             law_text=law.text,
             language=language,
+            within_noise=within_noise,
         )
         model = getattr(getattr(granite, "config", None), "model_id", "granite")
         span.set_attribute("varsity.model", model)
@@ -176,6 +179,7 @@ def explanation_stages(
         proof_consistent=proof.consistent_with_decision,
         is_offside=geo.is_offside,
         law_text=law.text,
+        within_noise=within_noise,
     )
     yield verification.verification_stage(panel)
 
