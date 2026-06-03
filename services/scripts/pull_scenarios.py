@@ -78,7 +78,11 @@ def main() -> int:
     threesixty = _get(f"{BASE}/three-sixty/{MATCH_ID}.json")
     events = _get(f"{BASE}/events/{MATCH_ID}.json")
     emeta = {
-        e["id"]: (e.get("minute"), (e.get("player") or {}).get("name"), (e.get("type") or {}).get("name"))
+        e["id"]: (
+            e.get("minute"),
+            (e.get("player") or {}).get("name"),
+            (e.get("type") or {}).get("name"),
+        )
         for e in events
     }
 
@@ -108,8 +112,15 @@ def main() -> int:
 
     # ONSIDE: a clear Pass where the attacker is comfortably behind the line.
     onside = sorted(
-        [r for r in recs if (not r[2].is_offside) and -5.0 <= r[2].margin_meters <= -1.5 and r[5] == "Pass"],
-        key=lambda r: (abs(r[2].margin_meters + 3.0), -len(r[1])),  # prefer ~3m behind, fuller frames
+        [
+            r
+            for r in recs
+            if (not r[2].is_offside) and -5.0 <= r[2].margin_meters <= -1.5 and r[5] == "Pass"
+        ],
+        key=lambda r: (
+            abs(r[2].margin_meters + 3.0),
+            -len(r[1]),
+        ),  # prefer ~3m behind, fuller frames
     )
     # TIGHT: the razor-thin VAR call (smallest absolute margin), Pass frame.
     tight = sorted(
@@ -133,18 +144,43 @@ def main() -> int:
         }
     )
     off_path.write_text(json.dumps(off, indent=2) + "\n")
-    print(f"enriched offside: {match_name} min {o_min} {o_player} -> {off['expected_margin_meters']}m offside")
+    margin = off["expected_margin_meters"]
+    print(f"enriched offside: {match_name} min {o_min} {o_player} -> {margin}m offside")
 
     if not onside or not tight:
         print("WARN: missing onside or tight candidate")
         return 2
 
     e_on, p_on, r_on, min_on, pl_on, _ = onside[0]
-    _dump(p_on, r_on, {**base_meta, "event_id": e_on, "event_type": "Pass", "minute": min_on, "player": pl_on, "scenario": "onside"}, FIXTURES / "wc2022_onside_frame.json")
+    _dump(
+        p_on,
+        r_on,
+        {
+            **base_meta,
+            "event_id": e_on,
+            "event_type": "Pass",
+            "minute": min_on,
+            "player": pl_on,
+            "scenario": "onside",
+        },
+        FIXTURES / "wc2022_onside_frame.json",
+    )
     print(f"  onside: min {min_on} {pl_on}")
 
     e_t, p_t, r_t, min_t, pl_t, _ = tight[0]
-    _dump(p_t, r_t, {**base_meta, "event_id": e_t, "event_type": "Pass", "minute": min_t, "player": pl_t, "scenario": "tight"}, FIXTURES / "wc2022_tight_frame.json")
+    _dump(
+        p_t,
+        r_t,
+        {
+            **base_meta,
+            "event_id": e_t,
+            "event_type": "Pass",
+            "minute": min_t,
+            "player": pl_t,
+            "scenario": "tight",
+        },
+        FIXTURES / "wc2022_tight_frame.json",
+    )
     print(f"  tight: min {min_t} {pl_t} (off={r_t.is_offside})")
     return 0
 
