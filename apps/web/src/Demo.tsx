@@ -47,6 +47,7 @@ const UI: Record<
     langLabel: string
     explain: string
     explaining: string
+    reannounce: string
     caption: (m: string, off: boolean) => string
   }
 > = {
@@ -56,6 +57,7 @@ const UI: Record<
     langLabel: 'Explanation language',
     explain: 'Explain the call',
     explaining: 'Explaining…',
+    reannounce: 'Re-announce in English',
     caption: (m, off) =>
       `Offside line at the second-to-last defender · attacker ${m} m ${off ? 'ahead' : 'behind'}`,
   },
@@ -65,6 +67,7 @@ const UI: Record<
     langLabel: 'Idioma de la explicación',
     explain: 'Explicar la jugada',
     explaining: 'Explicando…',
+    reannounce: 'Volver a anunciar en español',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
   },
@@ -74,6 +77,7 @@ const UI: Record<
     langLabel: "Langue de l'explication",
     explain: "Expliquer l'action",
     explaining: 'Explication…',
+    reannounce: 'Réannoncer en français',
     caption: (m, off) =>
       `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
   },
@@ -83,6 +87,7 @@ const UI: Record<
     langLabel: 'Idioma da explicação',
     explain: 'Explicar o lance',
     explaining: 'Explicando…',
+    reannounce: 'Anunciar novamente em português',
     caption: (m, off) =>
       `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
   },
@@ -92,6 +97,7 @@ const UI: Record<
     langLabel: 'Sprache der Erklärung',
     explain: 'Die Szene erklären',
     explaining: 'Erkläre…',
+    reannounce: 'Erneut auf Deutsch ansagen',
     caption: (m, off) =>
       `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
   },
@@ -326,6 +332,23 @@ export function Demo() {
     nbspRef.current = !nbspRef.current
     setLiveMessage(message + (nbspRef.current ? ' ' : ''))
   }
+
+  // Screen-reader language dual-path. Markup conformance (per-node + page `lang`, WCAG 3.1.2)
+  // does NOT guarantee the AT switches voice on a live update: NVDA #4396 (open since 2014)
+  // does not speak an aria-live change in the node's `lang`, and macOS VoiceOver ignores `lang`
+  // entirely (it language-detects). The documented NVDA fix is to FOCUS the node, which makes it
+  // re-pronounce correctly. We expose that as a button so a language switch is actually heard in
+  // the new voice; the bundled Read-aloud (tts.ts) is the only hard cross-AT guarantee.
+  function reAnnounce() {
+    announce(liveMessage.replace(/\s+$/, ''))
+    liveRef.current?.focus()
+  }
+
+  // Keep the page language in sync so the whole UI is programmatically the chosen language
+  // (WCAG 3.1.1 Language of Page); the English IFAB Law text keeps its own lang="en".
+  useEffect(() => {
+    if (typeof document !== 'undefined') document.documentElement.lang = UI[lang].bcp47
+  }, [lang])
 
   function applyVerbosity(next: Verbosity) {
     if (typeof localStorage !== 'undefined') localStorage.setItem('varsity-verbosity', next)
@@ -819,6 +842,18 @@ export function Demo() {
             </button>
           ))}
         </div>
+        {(explanation || liveMessage) && (
+          <button
+            type="button"
+            lang={t.bcp47}
+            aria-label={t.reannounce}
+            title={t.reannounce}
+            onClick={reAnnounce}
+            className="rounded-full bg-slate-800/60 px-4 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:text-white"
+          >
+            🔊 {t.code}
+          </button>
+        )}
         <button
           type="button"
           aria-pressed={soundOn}
@@ -1044,7 +1079,7 @@ export function Demo() {
 
       {/* Pre-registered aria-live region: the screen reader speaks the verdict in place,
           at the chosen verbosity, with a re-announce-safe trailing space. */}
-      <div ref={liveRef} aria-live="assertive" aria-atomic="true" role="status" lang={t.bcp47} className="sr-only">
+      <div ref={liveRef} tabIndex={-1} aria-live="assertive" aria-atomic="true" role="status" lang={t.bcp47} className="sr-only">
         {liveMessage}
       </div>
 
