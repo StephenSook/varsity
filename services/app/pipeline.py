@@ -161,6 +161,7 @@ def explanation_stages(
         screen_reader_ok=verdict.screen_reader_ok,
         proof_consistent=proof.consistent_with_decision,
         is_offside=geo.is_offside,
+        law_text=law.text,
     )
     yield verification.verification_stage(panel)
 

@@ -67,6 +67,35 @@ def test_verdict_consistent_absent_without_is_offside() -> None:
     assert p.verified is True
 
 
+def test_grounded_in_law_passes_when_rule_phrases_are_in_the_law() -> None:
+    p = verify(
+        explanation="The attacker was in an offside position, nearer the goal line than the "
+        "second-to-last opponent.",
+        cites_law=True,
+        grounded=True,
+        screen_reader_ok=True,
+        is_offside=True,
+        law_text="A player is in an offside position if nearer to the goal line than the "
+        "second-to-last opponent. Offside position is judged at the moment the ball is played.",
+    )
+    critic = next(c for c in p.critics if c.name == "grounded-in-law")
+    assert critic.kind == DETERMINISTIC and critic.passed is True
+
+
+def test_grounded_in_law_flags_a_rule_phrase_absent_from_the_retrieved_law() -> None:
+    # the narration asserts "gaining an advantage" but the retrieved Law text lacks it
+    p = verify(
+        explanation="The attacker was offside, gaining an advantage from the rebound.",
+        cites_law=True,
+        grounded=True,
+        screen_reader_ok=True,
+        is_offside=True,
+        law_text="A player is in an offside position if nearer the goal line than the ball.",
+    )
+    assert p.verified is False
+    assert next(c for c in p.critics if c.name == "grounded-in-law").passed is False
+
+
 def test_non_adjudication_critic_flips_the_gate() -> None:
     p = verify(
         explanation="Under Law 11, offside.",
