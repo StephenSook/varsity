@@ -74,6 +74,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'get_law_clause tool + mechanical quote-grounding critic (resolves to the official text)',
+    w: 'services/app/main.py',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
@@ -184,6 +189,21 @@ export function JudgesPanel() {
         return (j.decisions as Record<string, unknown>[])
           .map((d) => `${d.decision_type}: ${d.outcome}`)
           .join(' · ')
+      },
+    },
+    {
+      key: 'law_clause',
+      label: 'Resolve a rule to the official text',
+      fn: async () => {
+        const j = await (
+          await fetch(`${BACKEND}/law_clause?q=${encodeURIComponent('gaining an advantage offside')}`)
+        ).json()
+        const text = String(j.text ?? '')
+          .replace(/[#*]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 140)
+        return `${String(j.citation_id)} (${String(j.title)}): "${text}…"`
       },
     },
     {

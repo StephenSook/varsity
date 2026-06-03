@@ -73,6 +73,39 @@ def _asserts_offside(explanation: str) -> bool:
     return any(term in low for term in _OFFSIDE_TERMS)
 
 
+# Offside rule-vocabulary the narration might assert. The mechanical quote-grounding check is
+# precise: every one of these the narration USES must appear verbatim in the retrieved Law text.
+_RULE_PHRASES = (
+    "goal line",
+    "offside position",
+    "second-last",
+    "second-to-last",
+    "interfering with play",
+    "interfering with an opponent",
+    "active play",
+    "gaining an advantage",
+    "goal kick",
+    "throw-in",
+    "corner",
+    "deliberate",
+)
+
+
+def _norm(s: str) -> str:
+    return s.lower().replace("-", " ")
+
+
+def _grounded_in_law(explanation: str, law_text: str) -> bool:
+    """Mechanical quote-grounding: every offside rule phrase the narration uses must appear in
+    the retrieved Law text. Catches a fabricated/mismatched rule claim deterministically, the
+    complement to the advisory Guardian groundedness. The IFAB corpus is English, so this is an
+    English-path floor: a narration that asserts no English rule phrase (terse or non-English)
+    has nothing to ground here and passes (Guardian still checks it)."""
+    le, ll = _norm(explanation), _norm(law_text)
+    used = [p for p in _RULE_PHRASES if _norm(p) in le]
+    return all(_norm(p) in ll for p in used)
+
+
 @dataclass(frozen=True)
 class Critic:
     name: str
@@ -98,6 +131,7 @@ def verify(
     screen_reader_ok: bool,
     proof_consistent: bool = True,
     is_offside: bool | None = None,
+    law_text: str = "",
 ) -> VerificationPanel:
     """Run the critic panel. ``verified`` is the deterministic hard gate; the Guardian model
     critics are reported as advisory and never flip the hard gate on their own."""
@@ -128,6 +162,16 @@ def verify(
                 "verdict-consistent",
                 _asserts_offside(explanation) == bool(is_offside),
                 "Restates the same verdict the decision carried (round-trip re-parse).",
+                DETERMINISTIC,
+            )
+        )
+    if law_text:
+        critics.append(
+            Critic(
+                "grounded-in-law",
+                _grounded_in_law(explanation, law_text),
+                "Every rule phrase it uses appears in the retrieved Law text (mechanical quote "
+                "grounding).",
                 DETERMINISTIC,
             )
         )
