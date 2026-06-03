@@ -11,7 +11,7 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 // the chunk loads).
 const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
-import { playBuildUp, playOffsideChord } from './sonify'
+import { playBuildUp, playOffsideChord, type SpatialMode } from './sonify'
 import { StageScrubber } from './StageScrubber'
 import { playSpearcon, readAloud, synthesizeClip } from './tts'
 
@@ -284,6 +284,36 @@ export function Demo() {
     const v = typeof localStorage !== 'undefined' && localStorage.getItem('varsity-verbosity')
     return v === 'minimal' || v === 'coach' ? v : 'standard'
   })
+  const [audioPrefs, setAudioPrefs] = useState<{
+    preamble: boolean
+    volume: number
+    mode: SpatialMode
+  }>(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('varsity-audio')
+      if (raw) {
+        const p = JSON.parse(raw)
+        return {
+          preamble: p.preamble !== false,
+          volume: typeof p.volume === 'number' ? p.volume : 1,
+          mode: p.mode === 'stereo' || p.mode === 'mono' ? p.mode : 'hrtf',
+        }
+      }
+    } catch {
+      // ignore a malformed pref
+    }
+    return { preamble: true, volume: 1, mode: 'hrtf' }
+  })
+  const updateAudioPrefs = (patch: Partial<typeof audioPrefs>) =>
+    setAudioPrefs((p) => {
+      const next = { ...p, ...patch }
+      try {
+        localStorage.setItem('varsity-audio', JSON.stringify(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -314,10 +344,17 @@ export function Demo() {
 
   // Sonify the geometry: optionally the "gasp moment" build-up (the approach to the
   // line) first, then the spatial chord + verdict earcon.
+  const audioOpts = (band?: string) => ({
+    band,
+    preamble: audioPrefs.preamble,
+    gain: 0.12 * audioPrefs.volume,
+    mode: audioPrefs.mode,
+  })
+
   function sonifyGeometry(ctx: AudioContext, g: Geometry) {
     const w = window as unknown as { __varsitySonification?: unknown }
     const chord = () =>
-      playOffsideChord(ctx, g, { band: g.confidence })
+      playOffsideChord(ctx, g, audioOpts(g.confidence))
         .then((plan) => {
           w.__varsitySonification = plan
         })
@@ -329,6 +366,35 @@ export function Demo() {
     } else {
       void chord()
     }
+  }
+
+  // Onboarding tutorial: walk a blind listener through the earcon vocabulary, one labelled
+  // sound at a time, so the spatial + bouba/kiki cues are learnable before a live call.
+  async function runTutorial() {
+    audioCtxRef.current ??= new AudioContext()
+    const ctx = audioCtxRef.current
+    await ctx.resume()
+    const tGeo = (attacker_x: number, offside_line_x: number, is_offside: boolean): Geometry =>
+      ({
+        attacker_x,
+        offside_line_x,
+        is_offside,
+        players: [{ x: offside_line_x - 8, y: 40, teammate: true, actor: true }],
+      }) as unknown as Geometry
+    const steps: { label: string; geo: Geometry; band: string }[] = [
+      { label: 'A clear offside, well beyond the line.', geo: tGeo(112, 100, true), band: 'clear' },
+      {
+        label: 'A tight, knife-edge offside, right on the line.',
+        geo: tGeo(100.3, 100, true),
+        band: 'very tight',
+      },
+      { label: 'An onside call, behind the line.', geo: tGeo(96, 100, false), band: 'clear' },
+    ]
+    for (const s of steps) {
+      announce(s.label)
+      await playOffsideChord(ctx, s.geo, audioOpts(s.band)).catch(() => {})
+    }
+    announce('End of sound tutorial.')
   }
 
   function explainTheCall(language: Lang, scenarioOverride?: Scenario) {
@@ -1286,6 +1352,54 @@ export function Demo() {
           {showDiag ? 'Hide diagnostics' : 'On-device diagnostics'}
         </button>
       </div>
+
+      <section
+        aria-label="Audio settings and sound tutorial"
+        className="flex w-full max-w-2xl flex-wrap items-center justify-center gap-4 rounded-xl bg-slate-900/40 p-3 ring-1 ring-slate-700/40"
+      >
+        <p className="font-mono text-xs uppercase tracking-wider text-slate-400">Audio</p>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          <input
+            type="checkbox"
+            checked={audioPrefs.preamble}
+            onChange={(e) => updateAudioPrefs({ preamble: e.target.checked })}
+          />
+          Preamble cue
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          Volume
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.1}
+            value={audioPrefs.volume}
+            aria-label="Sound volume"
+            onChange={(e) => updateAudioPrefs({ volume: Number(e.target.value) })}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          Spatial
+          <select
+            value={audioPrefs.mode}
+            aria-label="Spatial audio mode"
+            onChange={(e) => updateAudioPrefs({ mode: e.target.value as SpatialMode })}
+            className="rounded bg-slate-800/60 px-2 py-1 text-slate-100 ring-1 ring-slate-700/50"
+          >
+            <option value="hrtf">3D (headphones)</option>
+            <option value="stereo">Stereo (speakers)</option>
+            <option value="mono">Mono</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => void runTutorial()}
+          disabled={streaming}
+          className="rounded-full border border-emerald-500/50 px-4 py-1.5 text-xs text-emerald-200 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
+        >
+          Sound tutorial
+        </button>
+      </section>
       <KeyboardHelp open={showHelp} />
       {showDiag && <DiagnosticsPanel />}
     </div>
