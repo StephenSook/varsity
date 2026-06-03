@@ -1,0 +1,142 @@
+{
+  "source": "StatsBomb 360 open data, FIFA World Cup 2022",
+  "match_id": 3857276,
+  "match_name": "Canada vs Morocco",
+  "match_date": "2022-12-01",
+  "competition_stage": "Group Stage",
+  "event_id": "8f1d38b9-058f-4c71-ad9c-ce00cdab1ea4",
+  "event_type": "Pass",
+  "minute": 27,
+  "player": "Steven de Sousa Vitoria",
+  "scenario": "tight",
+  "players": [
+    {
+      "x": 68.60233183746006,
+      "y": 49.0279348657519,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 70.27722350172169,
+      "y": 62.23307845560163,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 70.36748550404408,
+      "y": 56.442200967214504,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 72.26124889652544,
+      "y": 23.022710192436456,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 74.5,
+      "y": 56.0,
+      "teammate": true,
+      "actor": true,
+      "keeper": false
+    },
+    {
+      "x": 76.54117389471448,
+      "y": 56.42985276467542,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 76.96311045034619,
+      "y": 63.31105422068485,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 81.77687460188105,
+      "y": 44.59868617257191,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 82.98738213191987,
+      "y": 49.46364072771435,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 83.11895037926774,
+      "y": 66.74316862168222,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 84.51647060229016,
+      "y": 70.79520169197919,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 85.25321882745504,
+      "y": 50.44710706126702,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 88.67250549466704,
+      "y": 60.78774250708787,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 88.76776983463853,
+      "y": 21.598155951369723,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 90.07320903185786,
+      "y": 53.532270269223,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 90.13958346768655,
+      "y": 43.68137244610439,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 90.16223294165935,
+      "y": 44.66794569090865,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 91.35267772325327,
+      "y": 28.9662314972511,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    }
+  ],
+  "expected_is_offside": true,
+  "expected_margin_meters": 0.02
+}

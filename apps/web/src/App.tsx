@@ -27,7 +27,8 @@ const CLAIMS: { t: string; w: string }[] = [
   { t: 'Granite Guardian groundedness safety', w: 'services/app/llm/guardian.py' },
   { t: 'Context Forge MCP + A2A federation', w: 'services/app/federation.py, docs/federation.md' },
   { t: 'On-device offline mode (Granite Nano, WebGPU)', w: 'apps/web/src/offline.ts' },
-  { t: 'Spatial audio, haptics, EN/ES, read-aloud', w: 'apps/web/src/sonify.ts, tts.ts' },
+  { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py' },
+  { t: 'Spatial audio, haptics, 5 languages, read-aloud', w: 'apps/web/src/sonify.ts, tts.ts' },
 ]
 
 function Section({

@@ -125,5 +125,11 @@
     }
   ],
   "expected_is_offside": true,
-  "expected_margin_meters": 5.45
+  "expected_margin_meters": 5.45,
+  "match_name": "Canada vs Morocco",
+  "match_date": "2022-12-01",
+  "competition_stage": "Group Stage",
+  "minute": 0,
+  "player": "Nayef Aguerd",
+  "scenario": "offside"
 }

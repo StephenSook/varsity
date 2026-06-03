@@ -41,6 +41,20 @@ test('single h1 and the cinematic sections render with the demo reachable', asyn
   await expect(page.getByRole('button', { name: 'Explain the call' })).toBeVisible()
 })
 
+test('the scenario picker exposes the three real World Cup frames (offside default)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const group = page.getByRole('group', { name: /Decision scenario/ })
+  await expect(group.getByRole('button', { name: 'Offside scenario' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  for (const label of ['Offside scenario', 'Onside scenario', 'Tight call scenario']) {
+    await expect(group.getByRole('button', { name: label })).toBeVisible()
+  }
+})
+
 test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
   await page.goto('/')
   const canvas = page.locator('canvas')

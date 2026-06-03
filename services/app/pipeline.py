@@ -48,12 +48,13 @@ def explanation_stages(
     retriever: LawRetriever | None = None,
     granite: object | None = None,
     guardian: object | None = None,
+    trigger_meta: dict | None = None,
 ) -> Iterator[dict]:
     retriever = retriever or LawRetriever()
     granite = granite or GraniteClient()
     guardian = guardian or GuardianClient()
 
-    yield {"stage": "trigger", "source": "StatsBomb 360 (canned)"}
+    yield {"stage": "trigger", **(trigger_meta or {"source": "StatsBomb 360 (canned)"})}
 
     with tracer.start_as_current_span("geometry") as span:
         geo = compute_offside(frame)

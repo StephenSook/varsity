@@ -1,0 +1,107 @@
+{
+  "source": "StatsBomb 360 open data, FIFA World Cup 2022",
+  "match_id": 3857276,
+  "match_name": "Canada vs Morocco",
+  "match_date": "2022-12-01",
+  "competition_stage": "Group Stage",
+  "event_id": "be2d11a3-9bc4-471b-9558-5f92975eea05",
+  "event_type": "Pass",
+  "minute": 1,
+  "player": "Cyle Larin",
+  "scenario": "onside",
+  "players": [
+    {
+      "x": 70.00672202558339,
+      "y": 21.968042721029335,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 71.25404532458577,
+      "y": 33.40628061520066,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 73.803040912645,
+      "y": 40.08398532143279,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 74.55935059746727,
+      "y": 32.02736076954983,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 77.30000305175781,
+      "y": 35.900001525878906,
+      "teammate": true,
+      "actor": true,
+      "keeper": false
+    },
+    {
+      "x": 78.47013175664578,
+      "y": 29.144242177375222,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 79.07545226551755,
+      "y": 30.927920353861833,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 79.74346219806122,
+      "y": 58.473626249117146,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 83.5907740894252,
+      "y": 10.94120581396572,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 84.52482127904378,
+      "y": 53.11519758974282,
+      "teammate": true,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 87.73139162388952,
+      "y": 22.19387787913851,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 87.95948472087355,
+      "y": 32.86681581889643,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    },
+    {
+      "x": 90.97198868940072,
+      "y": 43.01805439371539,
+      "teammate": false,
+      "actor": false,
+      "keeper": false
+    }
+  ],
+  "expected_is_offside": false,
+  "expected_margin_meters": -3.01
+}

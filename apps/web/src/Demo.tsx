@@ -83,6 +83,23 @@ const UI: Record<
   },
 }
 
+type Scenario = 'offside' | 'onside' | 'tight'
+
+// Real World Cup 2022 freeze-frames (Canada vs Morocco). Picking one re-streams that
+// frame; the verdict word, the offside line, the verdict earcon and the haptic all flip
+// from the geometry, proving the engine DECIDES rather than replaying one fixed offside.
+const SCENARIOS: { id: Scenario; label: string }[] = [
+  { id: 'offside', label: 'Offside' },
+  { id: 'onside', label: 'Onside' },
+  { id: 'tight', label: 'Tight call' },
+]
+
+type Moment = {
+  competition?: string
+  matchName?: string
+  minute?: number
+} | null
+
 function describe(s: Stage): string {
   switch (s.stage) {
     case 'trigger':
@@ -143,6 +160,8 @@ export function Demo() {
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
   const [lang, setLang] = useState<Lang>('English')
+  const [scenario, setScenario] = useState<Scenario>('offside')
+  const [moment, setMoment] = useState<Moment>(null)
   const [soundOn, setSoundOn] = useState(true)
   const [buildUp, setBuildUp] = useState(false)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
@@ -209,7 +228,7 @@ export function Demo() {
     }
   }
 
-  function explainTheCall(language: Lang) {
+  function explainTheCall(language: Lang, scenarioOverride?: Scenario) {
     if (soundOn) {
       audioCtxRef.current ??= new AudioContext()
       void audioCtxRef.current.resume()
@@ -222,13 +241,14 @@ export function Demo() {
     setOfflineSource(null)
     setLatencyMs(null)
     setReviewing(null)
+    setMoment(null)
     startRef.current = performance.now()
     setStreaming(true)
     // Live mode hits /stream/live, which first emits the transitional "VAR is
     // reviewing" announcement (from Sportmonks / API-Football, or the replay buffer
     // when there is no live match), then the same explanation pipeline.
     const endpoint = live ? 'live' : 'canned'
-    const url = `${BACKEND}/stream/${endpoint}?language=${encodeURIComponent(language)}`
+    const url = `${BACKEND}/stream/${endpoint}?language=${encodeURIComponent(language)}&scenario=${scenarioOverride ?? scenario}`
     const source = new EventSource(url)
     sourceRef.current = source
     source.addEventListener('reviewing', (event) => {
@@ -243,6 +263,13 @@ export function Demo() {
       source.addEventListener(name, (event) => {
         const data = JSON.parse((event as MessageEvent).data) as Stage
         setStages((prev) => [...prev, data])
+        if (name === 'trigger') {
+          setMoment({
+            competition: data.competition ? String(data.competition) : undefined,
+            matchName: data.match_name ? String(data.match_name) : undefined,
+            minute: typeof data.minute === 'number' ? data.minute : undefined,
+          })
+        }
         if (name === 'geometry') {
           const g = data as unknown as Geometry
           setGeo(g)
@@ -286,6 +313,7 @@ export function Demo() {
     setLawText('')
     setOfflineSource(null)
     setOfflineStatus('')
+    setMoment(null)
     setLatencyMs(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -313,6 +341,11 @@ export function Demo() {
     setOfflineSource(res.source)
     setOfflineRetrieval(res.retrieval)
     setStreaming(false)
+  }
+
+  function selectScenario(s: Scenario) {
+    setScenario(s)
+    explainTheCall(lang, s)
   }
 
   function selectLang(l: Lang) {
@@ -376,7 +409,7 @@ export function Demo() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lang, streaming, explanation, live])
+  }, [lang, streaming, explanation, live, scenario])
 
   // Re-announce the current verdict at the new level when verbosity changes.
   useEffect(() => {
@@ -473,6 +506,33 @@ export function Demo() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2">
+        <div
+          role="group"
+          aria-label="Decision scenario (real World Cup 2022 frames)"
+          className="inline-flex rounded-full bg-slate-800/60 p-1"
+        >
+          {SCENARIOS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-pressed={scenario === s.id}
+              aria-label={`${s.label} scenario`}
+              onClick={() => selectScenario(s.id)}
+              className={segBtn(scenario === s.id)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        {moment?.matchName && (
+          <p data-testid="moment-byline" className="text-xs text-slate-400">
+            {moment.competition ?? 'FIFA World Cup 2022'} · {moment.matchName}
+            {typeof moment.minute === 'number' ? ` · ${moment.minute}'` : ''}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
