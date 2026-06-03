@@ -58,11 +58,27 @@ export function confidenceTexture(band?: string): { detuneCents: number; roughne
 
 const detuneHz = (f: number, cents: number): number => f * Math.pow(2, cents / 1200)
 
+// Pre-verbal line-proximity preamble (the Action Audio pattern): BEFORE the verdict, a short
+// burst of blips whose COUNT encodes how close the attacker was to the offside line (3 = right on
+// the line / very tight, 1 = clear), and whose PITCH encodes beyond-the-line (offside = high) vs
+// behind-the-line (onside = low). The pitch-height cross-modal correspondence is universal and
+// pre-linguistic (Spence 2011; Loconsole et al., Science 2026). It gives a blind fan a ~600 ms
+// spatial cue before any words, in a distinct timbre with a gap before the speech (Bregman ASA).
+export function lineProximityPreamble(
+  band: string | undefined,
+  isOffside: boolean,
+): { blips: number; freq: number } {
+  const blips = band === 'very tight' ? 3 : band === 'tight' ? 2 : 1
+  const freq = isOffside ? 880 : 330 // beyond the line = high (A5); behind = low (E4)
+  return { blips, freq }
+}
+
 export type SonifyOptions = {
   durationMs?: number
   gain?: number
   verdict?: boolean
   band?: string
+  preamble?: boolean
 }
 
 // Play a short HRTF-panned chord of the three key players, then a semantic verdict
@@ -78,7 +94,31 @@ export async function playOffsideChord(
   const durationMs = opts.durationMs ?? 500
   const peak = opts.gain ?? 0.12
   const plan = sonificationPlan(geo)
-  const now = ctx.currentTime
+  const t0 = ctx.currentTime
+
+  // Line-proximity preamble: blip count = closeness to the line, pitch = beyond vs behind.
+  const pre =
+    opts.preamble === false
+      ? { blips: 0, freq: 0 }
+      : lineProximityPreamble(opts.band, geo.is_offside)
+  const blipGap = 0.12
+  const blipDur = 0.07
+  for (let i = 0; i < pre.blips; i++) {
+    const start = t0 + i * blipGap
+    const osc = ctx.createOscillator()
+    osc.type = 'square'
+    osc.frequency.value = pre.freq
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, start)
+    g.gain.linearRampToValueAtTime(peak * 0.5, start + 0.01)
+    g.gain.linearRampToValueAtTime(0, start + blipDur)
+    osc.connect(g).connect(ctx.destination)
+    osc.start(start)
+    osc.stop(start + blipDur + 0.02)
+  }
+  const preDur = pre.blips > 0 ? pre.blips * blipGap + 0.12 : 0
+
+  const now = t0 + preDur // the spatial sweep + verdict follow the preamble
   const dur = durationMs / 1000
 
   for (const v of plan) {
@@ -133,7 +173,7 @@ export async function playOffsideChord(
     if (tex.roughness) tone(detuneHz(freqs[0], 100), 0.4) // a rough neighbour (~semitone)
   }
 
-  await new Promise((resolve) => setTimeout(resolve, durationMs + 600))
+  await new Promise((resolve) => setTimeout(resolve, durationMs + 600 + Math.round(preDur * 1000)))
   return plan
 }
 

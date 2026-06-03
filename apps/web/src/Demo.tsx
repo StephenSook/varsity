@@ -20,7 +20,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'law', 'granite', 'guardian', 'verification', 'provenance', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
 
@@ -137,6 +137,8 @@ function describe(s: Stage): string {
       return ' — Law 11 rule proof'
     case 'parallax':
       return ` — camera parallax ~${String(s.apparent_shift_cm)} cm`
+    case 'causal':
+      return ` — ${String(s.fact)} rather than ${String(s.foil)}`
     case 'verification':
       return ` — ${String(s.passed)}/${String(s.total)} critics passed`
     case 'provenance':
@@ -211,6 +213,11 @@ export function Demo() {
     angleDeg: number
     shiftCm: number
     note: string
+  } | null>(null)
+  const [causal, setCausal] = useState<{
+    fact: string
+    foil: string
+    narration: string
   } | null>(null)
   const [provenance, setProvenance] = useState<{
     hash: string
@@ -317,6 +324,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setCausal(null)
     setProvenance(null)
     startRef.current = performance.now()
     setStreaming(true)
@@ -381,6 +389,13 @@ export function Demo() {
             angleDeg: Number(data.residual_angle_deg ?? 0),
             shiftCm: Number(data.apparent_shift_cm ?? 0),
             note: String(data.note ?? ''),
+          })
+        }
+        if (name === 'causal') {
+          setCausal({
+            fact: String(data.fact ?? ''),
+            foil: String(data.foil ?? ''),
+            narration: String(data.narration ?? ''),
           })
         }
         if (name === 'provenance') {
@@ -474,6 +489,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setCausal(null)
     setProvenance(null)
     setLatencyMs(null)
     startRef.current = performance.now()
@@ -540,6 +556,7 @@ export function Demo() {
     setProof(null)
     setVerification(null)
     setParallax(null)
+    setCausal(null)
     setProvenance(null)
     setAskedQuestion(asked)
     startRef.current = performance.now()
@@ -964,6 +981,18 @@ export function Demo() {
             incident, moves the apparent offside line by ~{parallax.shiftCm} cm.
           </p>
           <p className="mt-1 text-sm text-slate-400">{parallax.note}</p>
+        </section>
+      )}
+
+      {causal && (
+        <section
+          aria-label={`Why ${causal.fact} rather than ${causal.foil}: the decisive cause`}
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-emerald-500/20"
+        >
+          <p className="font-mono text-xs uppercase tracking-wider text-emerald-300/80">
+            Why {causal.fact} · rather than {causal.foil}
+          </p>
+          <p className="mt-1 text-sm text-slate-200">{causal.narration}</p>
         </section>
       )}
 
