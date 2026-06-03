@@ -29,6 +29,7 @@ const CLAIMS: { t: string; w: string }[] = [
   { t: 'On-device offline mode (Granite Nano, WebGPU)', w: 'apps/web/src/offline.ts' },
   { t: 'Real offside / onside / tight World Cup frames', w: 'services/app/scenarios.py' },
   { t: 'Any VAR call: penalty & handball (Law 12/14)', w: 'services/app/decisions.py' },
+  { t: 'Ask-any-rule oracle, grounded + Guardian-checked', w: 'services/app/pipeline.py' },
   { t: 'Spatial audio, haptics, 5 languages, read-aloud', w: 'apps/web/src/sonify.ts, tts.ts' },
 ]
 

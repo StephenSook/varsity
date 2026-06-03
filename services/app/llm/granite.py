@@ -92,6 +92,30 @@ def _fallback_decision(*, law: str, outcome: str, language: str = "English") -> 
     return _DECISION_FALLBACKS[_lang_key(language)].format(law=law, outcome=outcome)
 
 
+_ORACLE_PREFIX = {
+    "en": "Under Law",
+    "es": "Según la Ley",
+    "fr": "Selon la Loi",
+    "pt": "Segundo a Lei",
+    "de": "Nach Regel",
+}
+
+
+def _first_sentence(law_text: str) -> str:
+    """First real sentence of a Law (skipping the Docling markdown headers/comments)."""
+    for line in law_text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or line.startswith("<!--"):
+            continue
+        return line.split(". ")[0].strip().rstrip(".") + "."
+    return law_text.strip()[:160]
+
+
+def _fallback_answer(*, law: str, title: str, law_text: str, language: str = "English") -> str:
+    """Grounded floor for the rule oracle: quote the retrieved Law, citing its number."""
+    return f"{_ORACLE_PREFIX[_lang_key(language)]} {law} ({title}): {_first_sentence(law_text)}"
+
+
 # Markers that mean the model echoed the prompt instructions instead of answering.
 _LEAK_MARKERS = (
     "<explanation",
@@ -195,3 +219,28 @@ class GraniteClient:
             if len(text) >= 20 and not _looks_like_prompt_leak(text):
                 return text
         return _fallback_decision(law=law, outcome=outcome, language=language)
+
+    def answer_question(
+        self,
+        *,
+        question: str,
+        law: str,
+        title: str,
+        law_text: str,
+        language: str = "English",
+    ) -> str:
+        """Answer a free-text fan question grounded ONLY in the retrieved Law (the rule
+        oracle). Off-topic questions are declined; the Guardian still checks groundedness."""
+        prompt = (
+            "You are a Laws-of-the-Game assistant for a blind soccer fan. Answer the "
+            f"question in {language}, in 2 to 3 short sentences, grounded ONLY in the Law "
+            "text below, and cite the Law number. If the question is not about the Laws of "
+            "football, say you can only answer questions about the Laws of the Game. Do not "
+            f"invent any rule not in the Law text.\n\nLaw text:\n{law_text}\n\n"
+            f"Question: {question}\n\nAnswer:"
+        )
+        for _ in range(3):
+            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            if len(text) >= 20 and not _looks_like_prompt_leak(text):
+                return text
+        return _fallback_answer(law=law, title=title, law_text=law_text, language=language)

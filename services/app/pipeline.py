@@ -199,6 +199,67 @@ def decision_stages(
     }
 
 
+def question_stages(
+    question: str,
+    *,
+    language: str = "English",
+    retriever: LawRetriever | None = None,
+    granite: object | None = None,
+    guardian: object | None = None,
+) -> Iterator[dict]:
+    """Stream a free-text fan question through retrieve -> Granite (grounded) -> Guardian
+    -> verdict: the 'ask any rule' oracle. The retrieved Law is the grounding; Granite
+    answers within it and Guardian checks the answer stays grounded."""
+    retriever = retriever or LawRetriever()
+    granite = granite or GraniteClient()
+    guardian = guardian or GuardianClient()
+
+    yield {"stage": "trigger", "source": "Fan question", "question": question}
+
+    with tracer.start_as_current_span("law") as span:
+        law = retriever.retrieve(question)
+        span.set_attribute("varsity.law", law.law)
+        span.set_attribute("varsity.law_title", law.title)
+    yield {"stage": "law", "law": law.law, "title": law.title, "text": law.text}
+
+    with tracer.start_as_current_span("granite") as span:
+        answer = granite.answer_question(
+            question=question,
+            law=law.law,
+            title=law.title,
+            law_text=law.text,
+            language=language,
+        )
+        model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.language", language)
+    yield {"stage": "granite", "model": model}
+
+    with tracer.start_as_current_span("guardian") as span:
+        verdict = guardian.check(answer, law_context=law.text)
+        span.set_attribute("varsity.safe", verdict.safe)
+        span.set_attribute("varsity.grounded", verdict.grounded)
+        span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
+    yield {
+        "stage": "guardian",
+        "safe": verdict.safe,
+        "cites_law": verdict.cites_law,
+        "grounded": verdict.grounded,
+        "screen_reader_ok": verdict.screen_reader_ok,
+        "answer": verdict.model_answer,
+    }
+
+    yield {
+        "stage": "verdict",
+        "text": answer,
+        "question": question,
+        "law": law.law,
+        "law_title": law.title,
+        "law_text": law.text,
+        "safe": verdict.safe,
+    }
+
+
 def explain_offside_decision(frame: list[FreezeFramePlayer], **kwargs) -> PipelineResult:
     stages = {s["stage"]: s for s in explanation_stages(frame, **kwargs)}
     geo, law, guard, verdict = (
