@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CHROME, useLang } from './i18n'
 
 // The honesty surface, made interactive: each claim carries a verifiability TIER and a
 // deep-link to the proving file, and the "Run it now" buttons call the LIVE deployed
@@ -72,6 +73,8 @@ function streamSummary(url: string): Promise<string> {
 export function JudgesPanel() {
   const [result, setResult] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const { lang } = useLang()
+  const c = CHROME[lang]
 
   async function run(key: string, fn: () => Promise<string>) {
     setBusy(key)
@@ -154,11 +157,8 @@ export function JudgesPanel() {
       </ul>
 
       <div className="mt-8 rounded-2xl bg-slate-900/60 p-5 text-left ring-1 ring-slate-700/50">
-        <h3 className="text-sm font-semibold text-emerald-300">Run it now, against the live backend</h3>
-        <p className="mt-1 text-xs text-slate-400">
-          These buttons call the deployed API from your browser and show the real response. The free
-          backend can cold-start on the first call (about 30 seconds).
-        </p>
+        <h3 className="text-sm font-semibold text-emerald-300">{c.runHeading}</h3>
+        <p className="mt-1 text-xs text-slate-400">{c.runHelper}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {RUNS.map((r) => (
             <button

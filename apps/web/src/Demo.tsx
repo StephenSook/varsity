@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
+import { useLang, type Lang } from './i18n'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
@@ -22,7 +23,6 @@ const BACKEND =
 const STAGES = ['trigger', 'decision', 'geometry', 'law', 'granite', 'guardian', 'verdict'] as const
 
 type Stage = { stage: string; [key: string]: unknown }
-type Lang = 'English' | 'Spanish' | 'French' | 'Portuguese' | 'German'
 
 // Granite is multilingual (EN/DE/ES/FR/PT); VARSITY ships all five World Cup languages.
 const UI: Record<
@@ -178,7 +178,7 @@ export function Demo() {
   const [lawText, setLawText] = useState('')
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
-  const [lang, setLang] = useState<Lang>('English')
+  const { lang, setLang } = useLang()
   const [scenario, setScenario] = useState<Scenario>('offside')
   const [moment, setMoment] = useState<Moment>(null)
   const [decision, setDecision] = useState<DecisionCard>(null)

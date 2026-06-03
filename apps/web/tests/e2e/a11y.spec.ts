@@ -79,6 +79,13 @@ test('the /judges surface shows verifiability tiers and live run buttons', async
   await expect(judges.getByRole('button', { name: 'Run the geometry engine' })).toBeVisible()
 })
 
+test('toggling the language localizes the whole page chrome', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'The last to know' })).toBeVisible()
+  await page.getByRole('button', { name: 'Spanish', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'El último en enterarse' })).toBeVisible()
+})
+
 test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
   await page.goto('/')
   const canvas = page.locator('canvas')
