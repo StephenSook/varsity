@@ -10,13 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
-from app.geometry import FreezeFramePlayer
+from app import scenarios
 from app.observability import setup_tracing
 from app.pipeline import explanation_stages
 from app.triggers.resolver import pick_transitional, resolve_live_var_events, reviewing_stage
@@ -31,7 +30,6 @@ app.add_middleware(
 # Emit an OpenTelemetry span tree per request (HTTP span + nested pipeline stages).
 setup_tracing(app)
 
-FIXTURE = Path(__file__).resolve().parent.parent / "tests/fixtures/wc2022_offside_frame.json"
 _SENTINEL = object()
 
 
@@ -40,17 +38,25 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "varsity-backend"}
 
 
-def _canned_frame() -> list[FreezeFramePlayer]:
-    data = json.loads(FIXTURE.read_text())
-    return [FreezeFramePlayer(**p) for p in data["players"]]
+@app.get("/scenarios")
+def list_scenarios() -> dict[str, list[dict]]:
+    """The real World Cup 2022 freeze-frames the demo can play (offside/onside/tight).
+
+    Each carries its byline + the geometry-computed expected verdict, so a judge can see
+    the engine returns different real answers, not one fixed offside.
+    """
+    return {"scenarios": scenarios.scenarios_index()}
 
 
 @app.get("/stream/canned")
-async def stream_canned(language: str = "English") -> EventSourceResponse:
-    frame = _canned_frame()
+async def stream_canned(
+    language: str = "English", scenario: str = scenarios.DEFAULT_SCENARIO
+) -> EventSourceResponse:
+    frame = scenarios.load_frame(scenario)
+    meta = scenarios.trigger_meta(scenario)
 
     async def event_gen():
-        gen = explanation_stages(frame, language=language)
+        gen = explanation_stages(frame, language=language, trigger_meta=meta)
         while True:
             stage = await asyncio.to_thread(next, gen, _SENTINEL)
             if stage is _SENTINEL:
@@ -61,12 +67,15 @@ async def stream_canned(language: str = "English") -> EventSourceResponse:
 
 
 @app.get("/stream/live")
-async def stream_live(language: str = "English") -> EventSourceResponse:
+async def stream_live(
+    language: str = "English", scenario: str = scenarios.DEFAULT_SCENARIO
+) -> EventSourceResponse:
     """Live-trigger beat: emit the transitional 'VAR is reviewing' announcement, then
     the full explanation. Uses the deterministic replay floor so the demo never depends
     on a live match; real Sportmonks / API-Football events are used when available.
     """
-    frame = _canned_frame()
+    frame = scenarios.load_frame(scenario)
+    meta = scenarios.trigger_meta(scenario)
     events, source = resolve_live_var_events()
     transitional = pick_transitional(events)
 
@@ -76,7 +85,7 @@ async def stream_live(language: str = "English") -> EventSourceResponse:
                 "event": "reviewing",
                 "data": json.dumps(reviewing_stage(transitional, source)),
             }
-        gen = explanation_stages(frame, language=language)
+        gen = explanation_stages(frame, language=language, trigger_meta=meta)
         while True:
             stage = await asyncio.to_thread(next, gen, _SENTINEL)
             if stage is _SENTINEL:
