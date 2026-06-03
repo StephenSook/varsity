@@ -16,11 +16,10 @@ DEFAULT_MODEL = "ibm/granite-4-h-small"
 # keep the demo from ever showing nothing. Keyed by BCP-47-ish language prefixes.
 _FALLBACKS: dict[str, tuple[str, str]] = {
     "en": (
-        "Under Law 11, the most advanced attacker was ahead of the second-to-last "
-        "defender by {m:.2f} meters when the ball was played, so the player was correctly "
-        "judged offside.",
-        "Under Law 11, the most advanced attacker was level with or behind the "
-        "second-to-last defender by {m:.2f} meters, so the position was legal.",
+        "When the ball was played, the most advanced attacker was {m:.2f} meters ahead of "
+        "the second-to-last defender. That puts the player offside under Law 11.",
+        "When the ball was played, the most advanced attacker was level with or behind the "
+        "second-to-last defender by {m:.2f} meters. That keeps the player onside under Law 11.",
     ),
     "es": (
         "Según la Ley 11, el atacante más adelantado estaba por delante del penúltimo "
@@ -177,9 +176,10 @@ class GraniteClient:
         relation = "ahead of" if is_offside else "behind"
         prompt = (
             "You are explaining a soccer VAR offside decision to a blind fan in plain, "
-            f"warm language. Reply in {language}, in 2 to 3 short sentences. Ground the "
-            "explanation in the Law text below and cite the Law number. Do not invent any "
-            "rule that is not in the Law text.\n\n"
+            f"warm language. Reply in {language}, in 2 to 3 short sentences. Lead with where "
+            "the players were, then state the verdict, then cite the Law that justifies it "
+            "(given-before-new order). Ground the explanation in the Law text below and cite "
+            "the Law number. Do not invent any rule that is not in the Law text.\n\n"
             f"Law text:\n{law_text}\n\n"
             "Decision data: the most advanced attacker was "
             f"{abs(margin_meters):.2f} meters {relation} the second-to-last defender when "
@@ -211,9 +211,10 @@ class GraniteClient:
         handball, ...) over the SAME retrieval + safety path as offside."""
         prompt = (
             "You are explaining a soccer VAR decision to a blind fan in plain, warm "
-            f"language. Reply in {language}, in 2 to 3 short sentences. Ground the "
-            "explanation in the Law text below and cite the Law number. Do not invent any "
-            "rule that is not in the Law text.\n\n"
+            f"language. Reply in {language}, in 2 to 3 short sentences. Lead with the "
+            "incident, then state the decision, then cite the Law that justifies it "
+            "(given-before-new order). Ground the explanation in the Law text below and cite "
+            "the Law number. Do not invent any rule that is not in the Law text.\n\n"
             f"Law text:\n{law_text}\n\n"
             f"Incident: {incident} Verdict: {outcome}.\n\nExplanation:"
         )

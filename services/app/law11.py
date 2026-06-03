@@ -31,6 +31,7 @@ class ProofStep:
     status: str  # "pass" | "fail" | "n/a"
     law: str
     role: str  # "premise" | "defeater"
+    clause: str = ""  # the specific Law-11 condition this step grounds in (finer than `law`)
 
 
 @dataclass(frozen=True)
@@ -41,8 +42,8 @@ class Law11Proof:
     conclusion: str
 
 
-def _step(key, claim, status, law, role) -> ProofStep:
-    return ProofStep(key=key, claim=claim, status=status, law=law, role=role)
+def _step(key, claim, status, law, role, clause="") -> ProofStep:
+    return ProofStep(key=key, claim=claim, status=status, law=law, role=role, clause=clause)
 
 
 def prove(
@@ -77,6 +78,7 @@ def prove(
             "pass" if in_opp_half else "fail",
             "11.1",
             "premise",
+            clause="in the opponents' half",
         ),
         _step(
             "position.beyond_defender",
@@ -84,6 +86,7 @@ def prove(
             "pass" if beyond_defender else "fail",
             "11.1",
             "premise",
+            clause="beyond the second-to-last opponent",
         ),
         _step(
             "position.beyond_ball",
@@ -91,6 +94,7 @@ def prove(
             "pass" if beyond_ball else "fail",
             "11.1",
             "premise",
+            clause="beyond the ball",
         ),
     ]
 
@@ -105,14 +109,15 @@ def prove(
                 "pass",
                 "11.2",
                 "premise",
+                clause="active involvement",
             )
         )
 
     # Law 11.3 - the no-offence defeaters, each checked and (for open play) dismissed.
-    for key, restart in (
-        ("defeater.goal_kick", "a goal kick"),
-        ("defeater.throw_in", "a throw-in"),
-        ("defeater.corner", "a corner kick"),
+    for key, restart, exc in (
+        ("defeater.goal_kick", "a goal kick", "goal-kick exception"),
+        ("defeater.throw_in", "a throw-in", "throw-in exception"),
+        ("defeater.corner", "a corner kick", "corner exception"),
     ):
         steps.append(
             _step(
@@ -121,6 +126,7 @@ def prove(
                 "n/a",
                 "11.3",
                 "defeater",
+                clause=exc,
             )
         )
 
@@ -160,7 +166,14 @@ def proof_payload(proof: Law11Proof) -> dict:
     return {
         "stage": "proof",
         "steps": [
-            {"key": s.key, "claim": s.claim, "status": s.status, "law": s.law, "role": s.role}
+            {
+                "key": s.key,
+                "claim": s.claim,
+                "status": s.status,
+                "law": s.law,
+                "role": s.role,
+                "clause": s.clause,
+            }
             for s in proof.steps
         ],
         "derived_offside": proof.derived_offside,
