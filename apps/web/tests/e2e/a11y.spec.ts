@@ -61,6 +61,17 @@ test('the scenario picker exposes the three real World Cup frames (offside defau
   }
 })
 
+test('the ask-any-rule oracle exposes a labelled question input and Ask button', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const form = page.getByRole('form', { name: 'Ask the Laws of the Game' })
+  await expect(
+    form.getByRole('textbox', { name: 'Ask any question about the Laws of the Game' }),
+  ).toBeVisible()
+  await expect(form.getByRole('button', { name: 'Ask' })).toBeDisabled()
+})
+
 test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) => {
   await page.goto('/')
   const canvas = page.locator('canvas')

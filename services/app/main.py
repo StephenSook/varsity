@@ -17,7 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app import decisions, scenarios
 from app.observability import setup_tracing
-from app.pipeline import decision_stages, explanation_stages
+from app.pipeline import decision_stages, explanation_stages, question_stages
 from app.triggers.resolver import pick_transitional, resolve_live_var_events, reviewing_stage
 
 app = FastAPI(title="VARSITY backend", version="0.1.0")
@@ -111,6 +111,23 @@ async def stream_decision(type: str, language: str = "English") -> EventSourceRe
 
     async def event_gen():
         gen = decision_stages(type, language=language)
+        while True:
+            stage = await asyncio.to_thread(next, gen, _SENTINEL)
+            if stage is _SENTINEL:
+                break
+            yield {"event": stage["stage"], "data": json.dumps(stage)}
+
+    return EventSourceResponse(event_gen())
+
+
+@app.get("/stream/ask")
+async def stream_ask(q: str, language: str = "English") -> EventSourceResponse:
+    """The rule oracle: answer a free-text fan question end to end, grounded in the Law
+    the retriever returns, with Guardian checking the answer stays grounded."""
+    question = q.strip()[:300]
+
+    async def event_gen():
+        gen = question_stages(question, language=language)
         while True:
             stage = await asyncio.to_thread(next, gen, _SENTINEL)
             if stage is _SENTINEL:

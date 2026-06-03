@@ -108,6 +108,15 @@ type Moment = {
 
 type DecisionCard = { decisionType: string; incident: string; outcome: string } | null
 
+type SpeechRecognitionEventLike = { results?: Array<Array<{ transcript: string }>> }
+type SpeechRecognitionLike = {
+  lang: string
+  interimResults: boolean
+  maxAlternatives: number
+  onresult: (e: SpeechRecognitionEventLike) => void
+  start: () => void
+}
+
 function describe(s: Stage): string {
   switch (s.stage) {
     case 'trigger':
@@ -173,6 +182,8 @@ export function Demo() {
   const [scenario, setScenario] = useState<Scenario>('offside')
   const [moment, setMoment] = useState<Moment>(null)
   const [decision, setDecision] = useState<DecisionCard>(null)
+  const [question, setQuestion] = useState('')
+  const [askedQuestion, setAskedQuestion] = useState('')
   const [soundOn, setSoundOn] = useState(true)
   const [buildUp, setBuildUp] = useState(false)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
@@ -383,6 +394,76 @@ export function Demo() {
     }
   }
 
+  // The "ask any rule" oracle: stream a free-text question through retrieve -> Granite
+  // (grounded in the retrieved Law) -> Guardian -> aria-live, in the chosen language.
+  function askQuestion(q: string) {
+    const asked = q.trim()
+    if (!asked || streaming) return
+    if (soundOn) {
+      audioCtxRef.current ??= new AudioContext()
+      void audioCtxRef.current.resume()
+    }
+    sourceRef.current?.close()
+    setStages([])
+    setExplanation('')
+    setGeo(null)
+    setLawText('')
+    setOfflineSource(null)
+    setLatencyMs(null)
+    setReviewing(null)
+    setMoment(null)
+    setDecision(null)
+    setAskedQuestion(asked)
+    startRef.current = performance.now()
+    setStreaming(true)
+    const url = `${BACKEND}/stream/ask?q=${encodeURIComponent(asked)}&language=${encodeURIComponent(lang)}`
+    const source = new EventSource(url)
+    sourceRef.current = source
+    for (const name of STAGES) {
+      source.addEventListener(name, (event) => {
+        const data = JSON.parse((event as MessageEvent).data) as Stage
+        setStages((prev) => [...prev, data])
+        if (name === 'law') setLawText(String(data.text ?? ''))
+        if (name === 'verdict') {
+          const text = String(data.text ?? '')
+          setExplanation(text)
+          announce(text)
+          if (data.law_text) setLawText(String(data.law_text))
+          setLatencyMs(performance.now() - startRef.current)
+          setStreaming(false)
+          source.close()
+        }
+      })
+    }
+    source.onerror = () => {
+      setStreaming(false)
+      source.close()
+    }
+  }
+
+  // Optional voice input (Web Speech API): screen-reader-friendly + hands-free. A graceful
+  // no-op where unsupported; the text input is always available.
+  function startVoiceInput() {
+    const w = window as unknown as {
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike
+      SpeechRecognition?: new () => SpeechRecognitionLike
+    }
+    const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition
+    if (!Rec) return
+    const rec = new Rec()
+    rec.lang = UI[lang].bcp47
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    rec.onresult = (e: SpeechRecognitionEventLike) => {
+      const said = e.results?.[0]?.[0]?.transcript ?? ''
+      if (said) {
+        setQuestion(said)
+        askQuestion(said)
+      }
+    }
+    rec.start()
+  }
+
   async function shareCurrent() {
     if (!explanation) return
     setShareStatus('Preparing clip…')
@@ -454,6 +535,9 @@ export function Demo() {
   }, [verbosity])
 
   const t = UI[lang]
+  const voiceSupported =
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
   const segBtn = (active: boolean) =>
     `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
       active ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'
@@ -593,6 +677,53 @@ export function Demo() {
           Share clip
         </button>
       </div>
+
+      {/* The rule oracle: ask any Laws-of-the-Game question, answered grounded in the
+          retrieved Law (Granite + Guardian), spoken through the same aria-live region. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          askQuestion(question)
+        }}
+        aria-label="Ask the Laws of the Game"
+        className="flex w-full max-w-2xl flex-wrap items-center justify-center gap-2"
+      >
+        <label htmlFor="ask-input" className="sr-only">
+          Ask any question about the Laws of the Game
+        </label>
+        <input
+          id="ask-input"
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ask any rule: why was that a red card?"
+          className="min-w-0 flex-1 rounded-full bg-slate-800/60 px-5 py-3 text-sm text-slate-100 placeholder:text-slate-500 ring-1 ring-slate-700/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+        />
+        <button
+          type="submit"
+          disabled={streaming || !question.trim()}
+          className="rounded-full bg-sky-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-sky-400 disabled:opacity-50"
+        >
+          Ask
+        </button>
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={startVoiceInput}
+            disabled={streaming}
+            aria-label="Ask by voice"
+            className="rounded-full border border-slate-500/60 px-4 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-500/10 disabled:opacity-40"
+          >
+            Voice
+          </button>
+        )}
+      </form>
+
+      {askedQuestion && (
+        <p className="max-w-2xl text-sm text-slate-400">
+          You asked: <span className="text-slate-200">{askedQuestion}</span>
+        </p>
+      )}
 
       {reviewing && (
         <div
