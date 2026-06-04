@@ -8,10 +8,37 @@ sequence even with no network. The live path is a flourish, never load-bearing.
 
 from __future__ import annotations
 
+import os
+
 from app.triggers.fusion import FusedDecision, fuse
 from app.triggers.replay import ReplayBuffer, canned_buffer
 from app.triggers.schema import dedup_and_sort, normalize_all
 from app.triggers.sportmonks import VarEvent
+
+# Values that look like an unset key, so a left-over .env placeholder never masquerades as live.
+_PLACEHOLDERS = {"", "changeme", "your-key", "your_key", "placeholder", "todo", "none", "xxx"}
+
+
+def _real_key(name: str) -> str:
+    v = os.environ.get(name, "").strip()
+    return "" if v.lower() in _PLACEHOLDERS else v
+
+
+def live_clients() -> tuple[object | None, object | None]:
+    """Instantiate the live VAR-feed clients whose API keys are actually present (not a placeholder).
+
+    With no real keys this returns (None, None) and the resolver falls to the deterministic replay
+    floor, so the canned demo is unaffected; with keys present the real Sportmonks / API-Football
+    live path is exercised. This is the env-gated wiring that lets the (already-built) clients run
+    against live World Cup data once the keys are set, without ever putting the live path on the
+    critical path of the deterministic demo.
+    """
+    from app.triggers.apifootball import ApiFootballClient
+    from app.triggers.sportmonks import SportmonksClient
+
+    sportmonks = SportmonksClient() if _real_key("SPORTMONKS_API_KEY") else None
+    apifootball = ApiFootballClient() if _real_key("API_FOOTBALL_KEY") else None
+    return sportmonks, apifootball
 
 
 def resolve_live_var_events(
