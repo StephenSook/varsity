@@ -34,7 +34,10 @@ _HAP = re.compile(
 # Prompt-injection / jailbreak markers (LLM01). Conservative: targets the canonical
 # override phrasings rather than guessing intent from ordinary questions.
 _INJECTION = re.compile(
-    r"ignore\s+(?:all\s+|the\s+|your\s+)?(?:previous|above|prior|earlier)\s+"
+    # "ignore everything / ignore all ..." (objects that never appear in a real rules
+    # question) OR "ignore [the/your/previous/...] <instruction|prompt|...>".
+    r"ignore\s+(?:everything|all\b)"
+    r"|ignore\s+(?:all\s+|the\s+|your\s+)?(?:previous|above|prior|earlier)\s+"
     r"(?:instruction|prompt|message|rule)"
     r"|disregard\s+(?:all|the|your|previous|any)"
     r"|forget\s+(?:everything|all|your|the\s+above|previous)"
@@ -96,8 +99,15 @@ def screen(text: str) -> ScreenResult:
 
 
 def spotlight(text: str) -> str:
-    """Wrap untrusted user text as clearly-delimited DATA (spotlighting / datamarking)."""
-    safe = (text or "").replace(SPOTLIGHT_OPEN, "").replace(SPOTLIGHT_CLOSE, "")
+    """Wrap untrusted user text as clearly-delimited DATA (spotlighting / datamarking).
+
+    Strips the delimiters in a LOOP, not a single pass: a single replace is defeated by
+    nesting (``<<<END_FAN_<<<END_FAN_QUESTION>>>QUESTION>>>`` collapses into a real close
+    delimiter), so a crafted question could otherwise break out of the data block.
+    """
+    safe = text or ""
+    while SPOTLIGHT_OPEN in safe or SPOTLIGHT_CLOSE in safe:
+        safe = safe.replace(SPOTLIGHT_OPEN, "").replace(SPOTLIGHT_CLOSE, "")
     return f"{SPOTLIGHT_OPEN}\n{safe}\n{SPOTLIGHT_CLOSE}"
 
 

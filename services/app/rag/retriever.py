@@ -54,13 +54,16 @@ class LawRetriever:
         data = json.loads(path.read_text())
         # LLM08 RAG-poisoning defense: verify the canonical corpus against its signed
         # SHA-256 manifest and FAIL CLOSED on a mismatch (a tampered Law would otherwise
-        # silently corrupt an explanation a blind user cannot visually fact-check). Custom
-        # corpora (test fixtures) carry no manifest, so verification is skipped for them.
+        # silently corrupt an explanation a blind user cannot visually fact-check). The
+        # canonical corpus MUST be signed - a missing manifest fails closed too, so an
+        # attacker cannot bypass the check by deleting the signature (easier than forging
+        # it). Custom corpora (test fixtures) are a different path and skip verification.
         self.corpus_root: str | None = None
-        if verify_integrity and path == CORPUS:
+        if verify_integrity and path.resolve() == CORPUS.resolve():
             manifest = corpus_signature.load_manifest(SIGNATURE)
-            if manifest is not None:
-                self.corpus_root = corpus_signature.verify_or_raise(data, manifest)
+            if manifest is None:
+                raise corpus_signature.CorpusIntegrityError("the canonical Law corpus is unsigned")
+            self.corpus_root = corpus_signature.verify_or_raise(data, manifest)
         self.chunks = [LawChunk(law=c["law"], title=c["title"], text=c["text"]) for c in data]
         self._index = None  # lazy-loaded FAISS index (online path only)
         self._build_bm25()
