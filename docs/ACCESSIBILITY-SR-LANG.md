@@ -7,10 +7,10 @@ switch language. The uncomfortable truth: **correct markup does not guarantee th
 ## The gap: WCAG conformance ≠ the screen reader switching voice
 
 WCAG 2.2 SC 3.1.2 "Language of Parts" requires that the language of each passage be
-**programmatically determinable** — the `lang` attribute is the sufficient technique. We meet it:
+**programmatically determinable**, the `lang` attribute is the sufficient technique. We meet it:
 the `<html>` element's `lang` is kept in sync with the selected language (SC 3.1.1), and the
 live-region announcement node carries its own `lang`. But the W3C Understanding document is explicit
-that meeting 3.1.2 does **not** require the assistive technology to actually switch voice — gaps
+that meeting 3.1.2 does **not** require the assistive technology to actually switch voice, gaps
 there "are caused by limitations of user agents and assistive technologies [and] they don't fail
 the requirements of this success criterion." Conformance is necessary, not sufficient.
 
@@ -23,7 +23,7 @@ content?
 |---|---|---|
 | **NVDA** + Firefox/Chrome/Edge (Windows) | **No** (on live updates) | The live-region update is not spoken in the node's `lang`. **NVDA #4396**, open since 2014-08-15: *"subsequently tabbing to that element produces the correct pronunciation."* The focus trick is the documented fix. |
 | **VoiceOver** + Safari (iOS) | **Yes** | iOS VoiceOver auto-switches voice from `lang`. |
-| **VoiceOver** + Safari (macOS) | **No** | macOS VoiceOver ignores `lang` and uses its own "Detect Languages" auto-detection — a genuine macOS-vs-iOS divergence. |
+| **VoiceOver** + Safari (macOS) | **No** | macOS VoiceOver ignores `lang` and uses its own "Detect Languages" auto-detection, a genuine macOS-vs-iOS divergence. |
 | **JAWS** + Chrome (Windows) | Static: yes; live region: **UNVERIFIED** | JAWS loads the phonetic engine from markup for static content; its behavior on dynamically-updated live regions is not confirmed by a primary source. |
 | **Android TalkBack** | **UNVERIFIED** | No authoritative source confirms TalkBack honors HTML `lang` to auto-switch voice on dynamic web content. Test on-device before relying on it. |
 
@@ -33,11 +33,11 @@ Sources: [NVDA #4396](https://github.com/nvaccess/nvda/issues/4396) · [w3c/aria
 
 1. **Markup, done right (conformance floor).** `<html lang>` tracks the selected language (3.1.1); the
    live-region announcement node carries its own `lang` (3.1.2); the English IFAB Law text keeps its
-   own `lang="en"`. Necessary, and forward-compatible as AT improves — but not sufficient today.
+   own `lang="en"`. Necessary, and forward-compatible as AT improves, but not sufficient today.
 2. **The NVDA focus-trick, exposed as a feature.** A **"🔊 Re-announce"** button (`reAnnounce()` in
    `apps/web/src/Demo.tsx`) is localized into each language and, on activation, moves focus to the
    live-region node. Per NVDA #4396, focusing the node makes NVDA re-pronounce the current text in
-   the node's `lang` — turning a 12-year-old bug into a one-tap fix. The node is `tabIndex={-1}` and
+   the node's `lang`, turning a 12-year-old bug into a one-tap fix. The node is `tabIndex={-1}` and
    `sr-only` so it is focusable without disturbing the visual layout.
 3. **A bundled-TTS fallback (the only hard guarantee).** Because macOS VoiceOver language-detects and
    TalkBack support is unverified, the only mechanism that *guarantees* the chosen language is spoken
