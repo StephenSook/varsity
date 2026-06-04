@@ -134,3 +134,21 @@ def test_spoken_line_never_contradicts_the_verdict_band() -> None:
         assert "trusts the official" not in gum.spoken_narration(m, is_offside=True)
     # a genuinely very-tight call still withholds and defers
     assert "trusts the official" in gum.spoken_narration(0.02, is_offside=True)
+
+
+def test_ipcc_hedge_covers_the_full_symmetric_scale() -> None:
+    # the lower half must exist: a low probability is "unlikely", never a false "more likely than
+    # not" (the old bands stopped at 0.5 and fell through to that fallback for every p < 0.5).
+    assert gum.ipcc_hedge(1.0)[0] == "virtually certain"
+    assert gum.ipcc_hedge(0.55)[0] == "more likely than not"
+    assert gum.ipcc_hedge(0.40)[0] == "about as likely as not"
+    assert gum.ipcc_hedge(0.20)[0] == "unlikely"
+    assert gum.ipcc_hedge(0.0)[0] == "exceptionally unlikely"
+
+
+def test_spoken_line_for_data_contradicting_the_official_is_not_falsely_confident() -> None:
+    # geometry clearly onside (-3 m) but the official called offside: the data's support for that
+    # verdict is ~0, so the spoken line must read "unlikely", not "more likely than not".
+    line = gum.spoken_narration(-3.0, is_offside=True)
+    assert "more likely than not" not in line
+    assert "unlikely" in line

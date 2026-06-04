@@ -169,12 +169,21 @@ def budget(
 # 2014 Nature Climate Change) showed lay listeners under-interpret the words toward 50%, so we
 # pair the word with the percentage in spoken text - the documented mitigation, and exactly right
 # for a blind-fan audience who cannot see a number on screen.
+# The full SYMMETRIC IPCC AR6 calibrated-likelihood scale (Mastrandrea et al. 2010). The lower half
+# matters: when the data's support for the RECEIVED verdict is low (a clear geometry-vs-official
+# disagreement too large for the withhold branch), the spoken line must say "unlikely", not fall
+# through to a false "more likely than not".
 _IPCC_BANDS: list[tuple[float, str, str]] = [
     (0.99, "virtually certain", "99 to 100 percent"),
     (0.95, "extremely likely", "95 to 100 percent"),
     (0.90, "very likely", "90 to 95 percent"),
     (0.66, "likely", "66 to 90 percent"),
     (0.50, "more likely than not", "50 to 66 percent"),
+    (0.33, "about as likely as not", "33 to 50 percent"),
+    (0.10, "unlikely", "10 to 33 percent"),
+    (0.05, "very unlikely", "5 to 10 percent"),
+    (0.01, "extremely unlikely", "1 to 5 percent"),
+    (0.0, "exceptionally unlikely", "less than 1 percent"),
 ]
 
 
@@ -183,7 +192,7 @@ def ipcc_hedge(p: float) -> tuple[str, str]:
     for threshold, word, rng in _IPCC_BANDS:
         if p >= threshold:
             return word, rng
-    return "more likely than not", "50 to 66 percent"
+    return "exceptionally unlikely", "less than 1 percent"
 
 
 def spoken_narration(
