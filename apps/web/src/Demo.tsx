@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
+import { listen, onDeviceAsrAvailable } from './voice'
 import { useLang, type Lang } from './i18n'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
@@ -272,6 +273,7 @@ export function Demo() {
   } | null>(null)
   const [question, setQuestion] = useState('')
   const [askedQuestion, setAskedQuestion] = useState('')
+  const [voiceStatus, setVoiceStatus] = useState('')
   const [soundOn, setSoundOn] = useState(true)
   const [buildUp, setBuildUp] = useState(false)
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
@@ -727,21 +729,44 @@ export function Demo() {
     }
   }
 
-  // Optional voice input (Web Speech API): screen-reader-friendly + hands-free. A graceful
-  // no-op where unsupported; the text input is always available.
-  function startVoiceInput() {
+  // Optional voice input for the oracle, two tiers. Tier 1 (premium): on-device ASR (Whisper in
+  // Transformers.js + WebGPU) - the audio is transcribed in the browser and never leaves the
+  // device. Tier 2 (floor): the Web Speech API (zero download; on-device only in recent Chrome,
+  // otherwise the browser's speech service). Either way the transcript feeds the same oracle, and
+  // a graceful no-op where neither is available; the text input is always there.
+  async function startVoiceInput() {
+    setVoiceStatus('')
+    if (await onDeviceAsrAvailable()) {
+      try {
+        const { transcript } = listen(UI[lang].bcp47, { onStatus: setVoiceStatus })
+        const said = await transcript
+        setVoiceStatus('')
+        if (said) {
+          setQuestion(said)
+          askQuestion(said)
+        }
+        return
+      } catch {
+        setVoiceStatus('') // fall through to the Web Speech floor
+      }
+    }
     const w = window as unknown as {
       webkitSpeechRecognition?: new () => SpeechRecognitionLike
       SpeechRecognition?: new () => SpeechRecognitionLike
     }
     const Rec = w.SpeechRecognition ?? w.webkitSpeechRecognition
-    if (!Rec) return
+    if (!Rec) {
+      setVoiceStatus('Voice input is not available in this browser; use the text box.')
+      return
+    }
     const rec = new Rec()
     rec.lang = UI[lang].bcp47
     rec.interimResults = false
     rec.maxAlternatives = 1
+    setVoiceStatus('Listening...')
     rec.onresult = (e: SpeechRecognitionEventLike) => {
       const said = e.results?.[0]?.[0]?.transcript ?? ''
+      setVoiceStatus('')
       if (said) {
         setQuestion(said)
         askQuestion(said)
@@ -823,7 +848,8 @@ export function Demo() {
   const t = UI[lang]
   const voiceSupported =
     typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+    (('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) ||
+      (!!navigator.mediaDevices?.getUserMedia && 'gpu' in navigator))
   const segBtn = (active: boolean) =>
     `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
       active ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'
@@ -1016,6 +1042,12 @@ export function Demo() {
           </button>
         )}
       </form>
+
+      {voiceStatus && (
+        <p role="status" aria-live="polite" className="max-w-2xl text-sm text-emerald-200">
+          {voiceStatus}
+        </p>
+      )}
 
       {askedQuestion && (
         <p className="max-w-2xl text-sm text-slate-400">
