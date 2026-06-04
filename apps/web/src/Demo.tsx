@@ -1154,7 +1154,7 @@ export function Demo() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask any rule: why was that a red card?"
-          className="min-w-0 flex-1 rounded-full bg-slate-800/60 px-5 py-3 text-sm text-slate-100 placeholder:text-slate-500 ring-1 ring-slate-700/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+          className="min-w-0 flex-1 rounded-full bg-slate-800/60 px-5 py-3 text-sm text-slate-100 placeholder:text-slate-400 ring-1 ring-slate-700/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
         />
         <button
           type="submit"
@@ -1294,7 +1294,7 @@ export function Demo() {
                       ? 'text-emerald-400'
                       : s.status === 'fail'
                         ? 'text-amber-400'
-                        : 'text-slate-500'
+                        : 'text-slate-400'
                   }
                 >
                   {s.status === 'pass' ? '✓' : s.status === 'fail' ? '✗' : '○'}
@@ -1303,7 +1303,7 @@ export function Demo() {
                   <span className="sr-only">
                     {s.status === 'pass' ? 'Met. ' : s.status === 'fail' ? 'Not met. ' : 'Not applicable. '}
                   </span>
-                  {s.claim} <span className="font-mono text-xs text-slate-500">Law {s.law}</span>
+                  {s.claim} <span className="font-mono text-xs text-slate-400">Law {s.law}</span>
                 </span>
               </li>
             ))}
@@ -1404,7 +1404,7 @@ export function Demo() {
                   <span className="sr-only">{critic.passed ? 'Passed. ' : 'Flagged. '}</span>
                   {critic.detail}
                   {critic.kind === 'advisory' && (
-                    <span className="ml-1 font-mono text-xs text-slate-500">· advisory</span>
+                    <span className="ml-1 font-mono text-xs text-slate-400">· advisory</span>
                   )}
                 </span>
               </li>
@@ -1464,12 +1464,12 @@ export function Demo() {
                 <span>
                   {link.claim}{' '}
                   <span className="font-mono text-xs text-emerald-300/80">{link.law_clause}</span>{' '}
-                  <span className="text-xs text-slate-500">· {link.source}</span>
+                  <span className="text-xs text-slate-400">· {link.source}</span>
                 </span>
               </li>
             ))}
           </ul>
-          <p className="mt-2 font-mono text-xs text-slate-500" aria-label="Manifest hash">
+          <p className="mt-2 font-mono text-xs text-slate-400" aria-label="Manifest hash">
             <span className="sr-only">Tamper-evident manifest hash: </span>
             {provenance.hash}
           </p>
@@ -1654,14 +1654,14 @@ export function Demo() {
             Exactly what a blind fan hears: every aria-live announcement, in order.
           </p>
           {transcript.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">
+            <p className="mt-3 text-sm text-slate-400">
               Nothing announced yet. Press Explain, and the spoken verdict appears here.
             </p>
           ) : (
             <ol className="mt-3 space-y-2">
               {transcript.map((line, i) => (
                 <li key={i} className="flex gap-3 text-sm text-slate-200">
-                  <span aria-hidden="true" className="font-mono text-xs text-slate-500">
+                  <span aria-hidden="true" className="font-mono text-xs text-slate-400">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <span lang={UI[lang].bcp47}>{line}</span>
