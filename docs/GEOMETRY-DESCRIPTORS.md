@@ -42,3 +42,24 @@ saying so is itself the point (it shows where the cliff is):
   inflate the maths footprint dishonestly.
 
 Excluding these on principle is a Technical-Execution signal, not a gap.
+
+## Spatial-structure scalars (the convex hull + free space, the Voronoi-lite delivered)
+
+The Voronoi "space behind the line" the report wanted is now delivered without scipy/shapely:
+
+- **The defenders' convex hull** (Andrew's monotone chain) + its **footprint area** (shoelace),
+  the report's named structure, pure Python.
+- **`free_space_behind_line_m2`** is a seeded Monte-Carlo estimate of the area behind the offside
+  line that no defender could reach first (farther than a defender's reach from every opponent).
+  This is exactly the vanishing-speed case where the standard Voronoi diagram is correct
+  (Efthimiou 2021), so a simple sampling estimate carries the narratable "X square metres of space
+  behind the line" scalar without the dependency.
+- **`line_step_m`** captures the report's "the right-back was 4 m deeper" descriptor as the
+  x-spread of the three deepest defenders, robustly and without a triangulation.
+
+**The alpha-shape concave hull is honestly dropped, and the reason is a real one, not effort:**
+the canonical alpha-shape is Delaunay-based, and a Delaunay triangulation is numerically fragile
+precisely on the near-collinear point sets that dominate our data, a flat or near-flat defensive
+line. A robust implementation would need exact-arithmetic Delaunay for a descriptor whose value
+(the concave outline of all visible opponents) is marginal over the convex hull + thickness +
+stepped-line already shipped. The free-space scalar carries the spatial-control narration instead.
