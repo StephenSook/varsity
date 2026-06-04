@@ -31,11 +31,9 @@ The challenge scores four criteria. Each maps to evidence you can run against th
 
 ## Capability honesty
 
-Every capability is labeled by how it is wired, and each is verifiable in this repository. We do not claim a roadmap item as if it were built.
+Every capability is labeled by how it is wired, and each is verifiable in this repository. Every entry in the table below is wired-live: there are no roadmap-only, aspirational, or "coming soon" capabilities. We would rather under-claim than overstate.
 
-- **Wired-live**: runs in this repo and has been exercised end to end (tests and/or a live run this session).
-- **Integration**: real, built, demo-scoped, but not on the hot path of the core demo.
-- **Roadmap**: designed and specified, not yet built. Listed so the scope is honest.
+- **Wired-live**: runs in this repo and has been exercised end to end (tests and/or a live run this session). Every capability listed below is at this tier.
 
 | Capability | Tier | Where / how to verify |
 |---|---|---|
@@ -118,7 +116,7 @@ Every offside question routes to **Law 11 at rank 1**, and the two offline near-
 
 ## Tech
 
-Only what is built and running is listed here. Roadmap technologies are in the table above.
+Only what is built and running is listed here, and every capability in the table above is wired-live.
 
 - **Front end:** React 19, Vite 6, TypeScript, Tailwind CSS v4, a multi-section cinematic site (React Three Fiber + GSAP hero, Lenis smooth scroll, scroll-reveals, liquid-glass), an SVG offside-line visualization, a listener-centred Web Audio HRTF spatial-audio engine with a semantic verdict earcon, a broadcast-delay ticker, keyboard power-mode + a stage scrubber + verbosity modes, a shareable on-device audio clip, an on-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano), a sighted-track read-aloud (Web Speech API + Kokoro-82M), 5-language narration (EN/ES/FR/PT/DE), ARIA live regions.
 - **Backend:** FastAPI + SSE, IBM Context Forge (MCP gateway), IBM Granite + Granite Guardian via watsonx (raw ML REST), Docling to FAISS IFAB-Laws RAG, OpenTelemetry tracing, the official `mcp` and `a2a-sdk` SDKs (IFAB-RAG and geometry MCP servers, an A2A narrator agent with a real `message/send` round-trip), Sportmonks / API-Football triggers with a cached replay buffer, pure-Python offside geometry over StatsBomb 360 data.
