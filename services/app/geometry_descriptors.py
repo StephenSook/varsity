@@ -162,9 +162,157 @@ def _free_space_behind_line_m2(
 
 def _line_step_m(line: list[FreezeFramePlayer]) -> float:
     """How STEPPED the back line was: the x-spread of the three deepest defenders, in metres (the
-    report's 'the right-back was 4 m deeper' descriptor, without a fragile Delaunay alpha-shape)."""
+    report's 'the right-back was 4 m deeper' descriptor)."""
     xs = sorted((d.x for d in line), reverse=True)[:3]
     return round((max(xs) - min(xs)) * METERS_PER_UNIT, 1) if len(xs) >= 2 else 0.0
+
+
+def _euclid(a: FreezeFramePlayer, b: FreezeFramePlayer) -> float:
+    return math.hypot(a.x - b.x, a.y - b.y)
+
+
+def _mst_edge_lengths(points: list[FreezeFramePlayer]) -> list[float]:
+    """Prim's minimum spanning tree over the defenders; returns the edge lengths, ascending."""
+    n = len(points)
+    if n < 2:
+        return []
+    in_tree = [False] * n
+    in_tree[0] = True
+    best = [_euclid(points[0], points[i]) for i in range(n)]
+    lengths: list[float] = []
+    for _ in range(n - 1):
+        j = min((i for i in range(n) if not in_tree[i]), key=lambda i: best[i])
+        lengths.append(best[j])
+        in_tree[j] = True
+        for i in range(n):
+            if not in_tree[i]:
+                d = _euclid(points[j], points[i])
+                if d < best[i]:
+                    best[i] = d
+    return sorted(lengths)
+
+
+def _defensive_grouping(points: list[FreezeFramePlayer]) -> dict:
+    """0-dimensional persistence, the single-linkage / MST view (Carlsson, *Bull. AMS* 2009: the
+    0-dim persistence diagram IS the single-linkage dendrogram). The defenders split into groups at
+    the LARGEST gap between consecutive MST edge lengths (the most persistent split). A robust,
+    narratable clustering scalar; H1/loops are dropped honestly (a ~10-point cloud is too sparse for
+    a meaningful 1-cycle), so only the H0 grouping is reported."""
+    edges = _mst_edge_lengths(points)
+    if len(edges) < 2:
+        return {
+            "defensive_groups": max(len(points), 1),
+            "largest_gap_m": 0.0,
+            "split_radius_m": 0.0,
+        }
+    median_edge = edges[len(edges) // 2]
+    # A defensive-group boundary is an MST edge at least twice the typical spacing: scale-relative,
+    # so a uniform cluster stays one group and only a genuine gap splits the cloud.
+    boundaries = [e for e in edges if median_edge > 0 and e >= 2.0 * median_edge]
+    groups = len(boundaries) + 1
+    gap, at = max((edges[i + 1] - edges[i], edges[i]) for i in range(len(edges) - 1))
+    return {
+        "defensive_groups": groups,
+        "largest_gap_m": round(gap * METERS_PER_UNIT, 1),
+        "split_radius_m": round((boundaries[0] if boundaries else at) * METERS_PER_UNIT, 1),
+    }
+
+
+def _ccw(p: list[tuple[float, float]], a: int, b: int, c: int) -> tuple[int, int, int]:
+    """Order a triangle's vertices counter-clockwise (exact orient2d sign)."""
+    s = orient2d_sign(p[a][0], p[a][1], p[b][0], p[b][1], p[c][0], p[c][1])
+    return (a, b, c) if s > 0 else (a, c, b)
+
+
+def _incircle_inside(p: list[tuple[float, float]], a: int, b: int, c: int, d: int) -> bool:
+    """Exact test: is point d strictly inside the circumcircle of the CCW triangle (a, b, c)? The
+    4x4 in-circle determinant in exact rationals (Shewchuk's incircle predicate), so the Delaunay
+    triangulation is provably immune to floating-point cocircular ties on near-collinear inputs."""
+    ax = Fraction(p[a][0]) - Fraction(p[d][0])
+    ay = Fraction(p[a][1]) - Fraction(p[d][1])
+    bx = Fraction(p[b][0]) - Fraction(p[d][0])
+    by = Fraction(p[b][1]) - Fraction(p[d][1])
+    cx = Fraction(p[c][0]) - Fraction(p[d][0])
+    cy = Fraction(p[c][1]) - Fraction(p[d][1])
+    aa = ax * ax + ay * ay
+    bb = bx * bx + by * by
+    cc = cx * cx + cy * cy
+    det = ax * (by * cc - bb * cy) - ay * (bx * cc - bb * cx) + aa * (bx * cy - by * cx)
+    return det > 0
+
+
+def _delaunay(
+    points: list[tuple[float, float]],
+) -> tuple[list[tuple[int, int, int]], list[tuple[float, float]]]:
+    """Bowyer-Watson Delaunay triangulation, pure Python with exact in-circle tests. Returns the
+    triangles (index triples into the returned vertex list) and the vertex list. Collinear or <3
+    distinct points yield no triangles (the correct degenerate result)."""
+    p = list(dict.fromkeys(points))
+    n = len(p)
+    if n < 3:
+        return [], p
+    xs = [q[0] for q in p]
+    ys = [q[1] for q in p]
+    dmax = max(max(xs) - min(xs), max(ys) - min(ys), 1.0) * 1000
+    midx = (min(xs) + max(xs)) / 2
+    midy = (min(ys) + max(ys)) / 2
+    p = p + [
+        (midx - 2 * dmax, midy - dmax),
+        (midx, midy + 2 * dmax),
+        (midx + 2 * dmax, midy - dmax),
+    ]
+    tris = [_ccw(p, n, n + 1, n + 2)]
+    for ip in range(n):
+        bad = [t for t in tris if _incircle_inside(p, t[0], t[1], t[2], ip)]
+        boundary: dict[tuple[int, int], int] = {}
+        for t in bad:
+            for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+                k = (min(e), max(e))
+                boundary[k] = boundary.get(k, 0) + 1
+        tris = [t for t in tris if t not in bad]
+        for (a, b), cnt in boundary.items():
+            if cnt != 1:
+                continue
+            non_degenerate = orient2d_sign(
+                p[a][0], p[a][1], p[b][0], p[b][1], p[ip][0], p[ip][1]
+            )
+            if non_degenerate != 0:
+                tris.append(_ccw(p, a, b, ip))
+    return [t for t in tris if all(v < n for v in t)], p
+
+
+def _tri_area(p: list[tuple[float, float]], t: tuple[int, int, int]) -> float:
+    (ax, ay), (bx, by), (cx, cy) = p[t[0]], p[t[1]], p[t[2]]
+    return abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2.0
+
+
+def _circumradius(p: list[tuple[float, float]], t: tuple[int, int, int]) -> float:
+    (ax, ay), (bx, by), (cx, cy) = p[t[0]], p[t[1]], p[t[2]]
+    a = math.hypot(bx - cx, by - cy)
+    b = math.hypot(ax - cx, ay - cy)
+    c = math.hypot(ax - bx, ay - by)
+    area = _tri_area(p, t)
+    return float("inf") if area < 1e-12 else (a * b * c) / (4 * area)
+
+
+def _block_concavity_ratio(defenders: list[FreezeFramePlayer]) -> float:
+    """How CONVEX/filled the defensive block was: the alpha-complex area over the convex-hull area.
+    1.0 = a solid convex block (or a degenerate near-collinear line, which honestly reports no
+    concavity); < 1.0 = the block had a gap or dent. The alpha is DATA-ADAPTIVE (1.5x the median
+    Delaunay edge), so it is one deterministic value per frame, not a wobbly tunable: this is the
+    robust alpha-shape, with an exact-arithmetic Delaunay underneath."""
+    tris, p = _delaunay([(d.x, d.y) for d in defenders])
+    if not tris:
+        return 1.0
+    edge_lens = sorted(
+        math.hypot(p[a][0] - p[b][0], p[a][1] - p[b][1])
+        for t in tris
+        for a, b in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0]))
+    )
+    alpha = 1.5 * edge_lens[len(edge_lens) // 2]
+    alpha_area = sum(_tri_area(p, t) for t in tris if _circumradius(p, t) <= alpha)
+    hull_yd2 = _hull_area_m2(defenders) / (METERS_PER_UNIT**2)
+    return 1.0 if hull_yd2 <= 0 else round(min(alpha_area / hull_yd2, 1.0), 2)
 
 
 @dataclass(frozen=True)
@@ -177,6 +325,9 @@ class LineDescriptors:
     hull_area_m2: float  # convex-hull footprint of the defensive block
     free_space_behind_line_m2: float  # space behind the line no defender could reach first
     line_step_m: float  # how stepped the back line was (deepest-3 x-spread)
+    defensive_groups: int  # H0-persistence (MST-gap) count of defensive clusters
+    largest_gap_m: float  # the most persistent MST split between defensive groups
+    block_concavity_ratio: float  # robust alpha-shape: alpha-complex area / convex-hull area
     note: str
 
 
@@ -186,9 +337,12 @@ def describe(frame: list[FreezeFramePlayer]) -> LineDescriptors:
     thickness = _pca_thickness_m(line)
     width = _lateral_width_m(line)
     ahead = ahead_of_line_sign(frame)
-    hull_area = _hull_area_m2(_defenders(frame))
+    defs = _defenders(frame)
+    hull_area = _hull_area_m2(defs)
     free_space = _free_space_behind_line_m2(frame, second_last_opponent_x(frame))
     step = _line_step_m(line)
+    grouping = _defensive_grouping(defs)
+    concavity = _block_concavity_ratio(defs)
     note = (
         f"The {len(line)} visible defenders formed a line {abs(tilt):.1f} degrees "
         f"{'tilted' if abs(tilt) >= 1 else 'level'} to the goal line, {thickness:.2f} m deep and "
@@ -204,12 +358,16 @@ def describe(frame: list[FreezeFramePlayer]) -> LineDescriptors:
         hull_area_m2=hull_area,
         free_space_behind_line_m2=free_space,
         line_step_m=step,
+        defensive_groups=grouping["defensive_groups"],
+        largest_gap_m=grouping["largest_gap_m"],
+        block_concavity_ratio=concavity,
         note=note,
     )
 
 
 def payload(frame: list[FreezeFramePlayer]) -> dict:
     d = describe(frame)
+    grouping = _defensive_grouping(_defenders(frame))
     return {
         "n_defenders": d.n_defenders,
         "tilt_deg": d.tilt_deg,
@@ -219,12 +377,18 @@ def payload(frame: list[FreezeFramePlayer]) -> dict:
         "hull_area_m2": d.hull_area_m2,
         "free_space_behind_line_m2": d.free_space_behind_line_m2,
         "line_step_m": d.line_step_m,
+        "defensive_groups": d.defensive_groups,
+        "largest_gap_m": d.largest_gap_m,
+        "split_radius_m": grouping["split_radius_m"],
+        "block_concavity_ratio": d.block_concavity_ratio,
         "note": d.note,
         "method": (
             "Theil-Sen robust tilt (29.3% breakdown), closed-form 2D PCA thickness, the defenders' "
             "convex hull (monotone chain) + a Monte-Carlo free-space-behind-the-line estimate "
-            "(vanishing-speed Voronoi-lite, no scipy), and an exact-rational orient2d "
-            "'ahead-of-line' predicate (Shewchuk 1997). Describes the defensive line; the offside "
-            "line stays the Law-11 perpendicular through the second-last opponent."
+            "(vanishing-speed Voronoi-lite, no scipy), an exact-rational orient2d 'ahead-of-line' "
+            "predicate, H0-persistence defensive grouping (MST-gap, Carlsson 2009), and a robust "
+            "alpha-shape block-concavity ratio (exact-arithmetic Bowyer-Watson Delaunay with a "
+            "data-adaptive alpha; Shewchuk-family predicates). Describes the defensive line; the "
+            "offside line stays the Law-11 perpendicular through the second-last opponent."
         ),
     }

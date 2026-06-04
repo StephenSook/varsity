@@ -81,3 +81,32 @@ def test_new_descriptors_in_payload():
     p = gd.payload(_frame(100.0, [(98.0, 20.0), (96.0, 60.0), (119.0, 40.0)]))
     assert {"hull_area_m2", "free_space_behind_line_m2", "line_step_m"} <= set(p)
     assert "free-space-behind-the-line" in p["method"]
+
+
+def test_defensive_grouping_splits_two_clusters_but_not_a_blob():
+    # H0-persistence (MST-gap): two clusters far apart -> 2 groups; a tight blob stays 1
+    two = _frame(110.0, [(90, 10), (91, 12), (92, 11), (70, 70), (71, 72), (72, 71)])
+    assert gd._defensive_grouping(gd._defenders(two))["defensive_groups"] == 2
+    blob = _frame(110.0, [(90, 40), (92, 41), (91, 38), (93, 39), (89, 41)])
+    assert gd._defensive_grouping(gd._defenders(blob))["defensive_groups"] == 1
+
+
+def test_block_concavity_one_on_a_line_and_below_one_on_an_l_shape():
+    # robust alpha-shape: a collinear line reports no concavity (1.0); an L-shape is concave (<1)
+    flat = _frame(110.0, [(95, 10), (95, 30), (95, 50), (95, 70)])
+    assert gd._block_concavity_ratio(gd._defenders(flat)) == 1.0
+    el = _frame(110.0, [(80, 20), (82, 20), (84, 20), (86, 20), (80, 40), (80, 60), (80, 75)])
+    assert gd._block_concavity_ratio(gd._defenders(el)) < 1.0
+
+
+def test_delaunay_is_exact_on_a_cocircular_quad():
+    # four cocircular points: the exact in-circle predicate must triangulate the convex quad into 2
+    tris, _ = gd._delaunay([(0.0, 1.0), (1.0, 0.0), (0.0, -1.0), (-1.0, 0.0)])
+    assert len(tris) == 2
+
+
+def test_grouping_and_concavity_in_payload():
+    p = gd.payload(_frame(100.0, [(98.0, 20.0), (96.0, 60.0), (119.0, 40.0)]))
+    keys = {"defensive_groups", "largest_gap_m", "split_radius_m", "block_concavity_ratio"}
+    assert keys <= set(p)
+    assert "MST-gap" in p["method"] and "alpha-shape" in p["method"]
