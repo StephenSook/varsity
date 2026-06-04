@@ -30,7 +30,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'discourse', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
 
 // Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
 const LAW11_SPEARCONS = [
@@ -157,6 +157,10 @@ function describe(s: Stage): string {
       return ` — ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
     case 'geometry_descriptors':
       return ` — line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line`
+    case 'discourse':
+      return s.connective
+        ? ` — ${String(s.connective)}`
+        : ` — ${String(s.decisions_seen)} decision(s) seen this match`
     case 'law':
       return ` — Law ${String(s.law)} (${String(s.title)})`
     case 'granite':
@@ -229,6 +233,9 @@ export function Demo() {
   // captured from the uncertainty_budget stage and appended to the spoken verdict so the blind
   // fan HEARS the honest uncertainty, not just sees it in the trace.
   const budgetSpokenRef = useRef('')
+  // The discourse lead-in (references decisions already explained earlier in this match), captured
+  // from the discourse stage and prepended to the spoken verdict.
+  const discourseRef = useRef('')
   const [lawText, setLawText] = useState('')
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
@@ -603,6 +610,9 @@ export function Demo() {
         if (name === 'uncertainty_budget') {
           budgetSpokenRef.current = String(data.spoken ?? '')
         }
+        if (name === 'discourse') {
+          discourseRef.current = String(data.connective ?? '')
+        }
         if (name === 'verdict') {
           const text = String(data.text ?? '')
           setExplanation(text)
@@ -615,9 +625,12 @@ export function Demo() {
                 marginM: Number(data.margin_meters ?? 0),
                 confidence: data.confidence ? String(data.confidence) : undefined,
               })
-          announce(
-            !isDecision && budgetSpokenRef.current ? `${spoken} ${budgetSpokenRef.current}` : spoken,
-          )
+          const lead =
+            !isDecision && discourseRef.current
+              ? `${discourseRef.current.charAt(0).toUpperCase()}${discourseRef.current.slice(1)}. `
+              : ''
+          const tail = !isDecision && budgetSpokenRef.current ? ` ${budgetSpokenRef.current}` : ''
+          announce(`${lead}${spoken}${tail}`)
           if (data.law_text) setLawText(String(data.law_text))
           if (!isDecision) {
             triggerHaptic(data as unknown as Geometry)

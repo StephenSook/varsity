@@ -14,6 +14,7 @@ from app import (
     causal,
     citation_metrics,
     completeness,
+    discourse,
     geometry_descriptors,
     gum,
     law11,
@@ -118,6 +119,23 @@ def explanation_stages(
     # Descriptive geometry: the defensive line's tilt + thickness + width + an exact-rational
     # "ahead-of-line" predicate. Describes the spatial context; never redefines the offside line.
     yield {"stage": "geometry_descriptors", **geometry_descriptors.payload(frame)}
+
+    # Discourse cohesion: reference the decisions already explained earlier in this match (records
+    # and refers back to RECEIVED decisions; never predicts or recomputes a call).
+    _match_id = (trigger_meta or {}).get("match_name", "default")
+    _band = quantify(geo.margin_meters).band
+    _key = discourse.moment_key(geo.is_offside, geo.margin_meters)
+    _state = discourse.for_match(_match_id)
+    _connective = discourse.connective(
+        _state, key=_key, is_offside=geo.is_offside, band=_band
+    )
+    discourse.record(_state, key=_key, is_offside=geo.is_offside, band=_band)
+    yield {
+        "stage": "discourse",
+        "connective": _connective,
+        "tight_calls_so_far": _state.tight_count,
+        "decisions_seen": len(_state.history),
+    }
 
     sig = referee_signal(is_offside=geo.is_offside)
     yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}
