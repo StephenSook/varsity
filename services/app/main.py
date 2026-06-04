@@ -171,6 +171,18 @@ def corpus_integrity() -> dict:
     }
 
 
+@app.get("/red_team")
+def red_team() -> dict:
+    """The red-team regression receipt for the oracle input screen: the deterministic
+    floor catches every English prompt-injection + HAP attack (zero leakage) and never
+    false-positives a legit rules question, with the known non-English / leet screen-misses
+    documented honestly (defended downstream by spotlighting + Law-grounding). Offline,
+    deterministic, no model call - a judge-facing receipt that runs in CI."""
+    from verify.red_team_eval import payload
+
+    return payload()
+
+
 _retriever: LawRetriever | None = None
 
 

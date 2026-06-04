@@ -195,6 +195,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/safety/input_screen.py',
     tier: 'live',
   },
+  {
+    t: 'Red-team regression: zero leakage, honest misses',
+    w: 'services/verify/red_team_eval.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -373,6 +378,18 @@ export function JudgesPanel() {
             resolve('stream error (the free backend may be cold; retry in ~30s)')
           }
         }),
+    },
+    {
+      key: 'redteam',
+      label: 'Run the red-team regression',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/red_team`)).json()
+        return (
+          `${j.structural_caught}/${j.structural_attacks} attacks caught · ` +
+          `leakage ${j.structural_leakage} · ${j.false_positives} false positives · ` +
+          `${j.documented_screen_misses} honest screen-misses (defended downstream)`
+        )
+      },
     },
     {
       key: 'health',
