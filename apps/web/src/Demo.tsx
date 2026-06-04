@@ -176,7 +176,7 @@ function describe(s: Stage): string {
     case 'granite':
       return ` · ${String(s.model)}`
     case 'guardian':
-      return ` · ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
+      return ` · Granite Guardian: risk=${String(s.answer) || 'n/a'} -> ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
     case 'decision':
       return ` · ${String(s.outcome)}`
     case 'signal':
@@ -196,7 +196,7 @@ function describe(s: Stage): string {
     case 'completeness':
       return ` · ${String(s.disclosed)}/${String(s.total)} disclosures`
     case 'provenance':
-      return ` · ${String(s.link_count)} grounded claims`
+      return ` · ${String(s.link_count)} grounded claims${s.guardian_model ? ` · Guardian ${String(s.guardian_model)}` : ''}`
     case 'citation_metrics':
       return ` · citation precision ${String(s.precision)}, recall ${String(s.recall)}`
     default:
