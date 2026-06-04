@@ -14,6 +14,7 @@ from app import (
     causal,
     citation_metrics,
     completeness,
+    gum,
     law11,
     parallax,
     provenance,
@@ -105,6 +106,10 @@ def explanation_stages(
             for p in frame
         ],
     }
+
+    # GUM uncertainty budget: the honest broadcast-data coverage interval, Bayesian credible
+    # interval, Shannon entropy, and Monte-Carlo cross-check (the rigorous superset of the band).
+    yield {"stage": "uncertainty_budget", **gum.payload(geo.margin_meters)}
 
     sig = referee_signal(is_offside=geo.is_offside)
     yield {"stage": "signal", "text": sig["text"], "law": sig["law"]}

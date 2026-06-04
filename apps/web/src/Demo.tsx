@@ -22,7 +22,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
 
 // Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
 const LAW11_SPEARCONS = [
@@ -145,6 +145,8 @@ function describe(s: Stage): string {
       return ` — ${String(s.source)}`
     case 'geometry':
       return ` — margin ${String(s.margin_meters)}m, ${s.is_offside ? 'offside' : 'onside'}`
+    case 'uncertainty_budget':
+      return ` — ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
     case 'law':
       return ` — Law ${String(s.law)} (${String(s.title)})`
     case 'granite':

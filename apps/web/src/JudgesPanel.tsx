@@ -205,6 +205,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/verify/faithfulness_eval.py',
     tier: 'live',
   },
+  {
+    t: 'GUM uncertainty budget: coverage interval, entropy, Monte-Carlo',
+    w: 'services/app/gum.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -408,6 +413,18 @@ export function JudgesPanel() {
           .map((a) => `${a.decision} P${a.precision}/R${a.recall}`)
           .join(', ')
         return `structural leakage ${j.structural_leakage} · caught per decision: ${decisions} · ALCE: ${alce}`
+      },
+    },
+    {
+      key: 'uncertainty',
+      label: 'Show the GUM uncertainty budget',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/uncertainty?margin_m=0.02`)).json()
+        const [lo, hi] = j.coverage_interval_m as number[]
+        return (
+          `tight call: ±${j.expanded_uncertainty_m}m at 95% GUM coverage ([${lo}, ${hi}] straddles 0 → too close), ` +
+          `${j.entropy_bits} bits · honest σ ${j.regimes.broadcast_annotation_sigma_m}m vs optical ${j.regimes.optical_equivalent_sigma_m}m`
+        )
       },
     },
     {
