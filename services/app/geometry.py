@@ -59,8 +59,11 @@ class FreezeFramePlayer:
 @dataclass(frozen=True)
 class OffsideResult:
     is_offside: bool
+    # signed x-distance from the attacker to ``reference_x`` (the BINDING reference, which can be
+    # the ball, not always the defender line): read ``reference_x`` / ``offside_line_x`` to interpret
+    # it, never assume margin_meters is "distance past the defender line".
     margin_meters: float
-    offside_line_x: float
+    offside_line_x: float  # the defender line (the Law-11 second-last-opponent perpendicular)
     attacker_x: float
     beyond_defender: bool
     beyond_ball: bool
