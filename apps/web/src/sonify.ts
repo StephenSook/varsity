@@ -480,6 +480,26 @@ export function playSpatialScan(geo: Geometry, mode: SpatialMode = 'hrtf'): void
   }
 }
 
+// Play the Plomp-Levelt margin chord at the verdict moment: a 500 Hz reference + a partner tone
+// detuned by the margin. A knife-edge call detunes inside the critical band, so the listener HEARS
+// the closeness as roughness/beating; a clear call is a smooth, consonant dyad. Manual-verified.
+export function playMarginChord(ctx: AudioContext, geo: Geometry, gain = 0.1, delaySec = 0): void {
+  const { refHz, partnerHz } = marginChord(marginMeters(geo))
+  const t0 = ctx.currentTime + delaySec
+  const mix = new GainNode(ctx, { gain: 0 })
+  mix.gain.setValueAtTime(0, t0)
+  mix.gain.linearRampToValueAtTime(gain, t0 + 0.05)
+  mix.gain.setValueAtTime(gain, t0 + 1.0)
+  mix.gain.exponentialRampToValueAtTime(0.001, t0 + 1.4)
+  mix.connect(ctx.destination)
+  for (const hz of [refHz, partnerHz]) {
+    const osc = new OscillatorNode(ctx, { type: 'sine', frequency: hz })
+    osc.connect(mix)
+    osc.start(t0)
+    osc.stop(t0 + 1.4)
+  }
+}
+
 // Play the build-up: a Geiger-counter click track that accelerates as the attacker
 // nears the offside line, a rising attacker tone that pans from behind the line toward
 // (and across, if offside) it, over a faint centred defender-line reference. ~3.5s, then
