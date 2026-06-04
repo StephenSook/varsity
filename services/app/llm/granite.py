@@ -9,9 +9,13 @@ from app.llm import _watsonx
 from app.llm.guardian import cites_law_clause
 from app.safety.input_screen import SPOTLIGHT_CLOSE, SPOTLIGHT_OPEN, spotlight
 from app.termbase import glossary_line
+from app.uncertainty import SIGMA_MARGIN_M
 from app.verification import TOO_CLOSE_HEDGE
 
 DEFAULT_MODEL = "ibm/granite-4-h-small"
+# The honest broadcast measurement-noise figure (cm) injected into the too-close floors + prompt,
+# so it tracks the band sigma in uncertainty.py instead of being hardcoded.
+_NOISE_CM = round(SIGMA_MARGIN_M * 100)
 
 
 # Deterministic Law-11-grounded floors per language, used only when watsonx returns no
@@ -63,16 +67,17 @@ _VERDICT_WORD: dict[str, tuple[str, str]] = {
     "de": ("Abseits", "in regulärer Position"),
 }
 
-# Too-close (within-noise) floors: a knife-edge call is INSIDE the ~13 cm our coarse freeze-frame
-# data can resolve, so a precise margin would be false precision. These hedge (Umpire's Call /
+# Too-close (within-noise) floors: a knife-edge call is INSIDE the measurement noise our coarse
+# freeze-frame data can resolve, so a precise margin would be false precision. These hedge (Umpire's
+# Call /
 # within the measurement noise), cite the Law, reference the line, and quote NO number - VARSITY
 # describes the official decision. {v} is the verdict word.
 _FALLBACKS_TIGHT: dict[str, str] = {
-    "en": "When the ball was played, the most advanced attacker and the second-to-last defender were level - a very close, Umpire's Call situation, too close for our freeze-frame data to resolve within the roughly 13 centimetres of measurement noise. Under Law 11, VARSITY describes the official decision: {v}.",  # noqa: E501
-    "es": "Cuando se jugó el balón, el atacante más adelantado y el penúltimo defensor estaban a la misma altura: una jugada muy ajustada, demasiado justa para resolverla con nuestros datos dentro de los aproximadamente 13 centímetros de ruido de medición. Según la Regla 11, VARSITY describe la decisión oficial: {v}.",  # noqa: E501
-    "fr": "Au moment où le ballon a été joué, l'attaquant le plus avancé et l'avant-dernier défenseur étaient à la même hauteur : une action très serrée, trop juste pour être tranchée avec nos données dans la marge d'environ 13 centimètres de bruit de mesure. Selon la Loi 11, VARSITY décrit la décision officielle : {v}.",  # noqa: E501
-    "pt": "Quando a bola foi jogada, o atacante mais avançado e o penúltimo defensor estavam na mesma linha: um lance muito apertado, próximo demais para ser resolvido com os nossos dados dentro dos cerca de 13 centímetros de ruído de medição. Segundo a Regra 11, a VARSITY descreve a decisão oficial: {v}.",  # noqa: E501
-    "de": "Beim Abspiel waren der vorderste Angreifer und der vorletzte Verteidiger auf gleicher Höhe - eine sehr knappe Szene, zu knapp, um sie mit unseren Daten innerhalb der etwa 13 Zentimeter Messrauschen aufzulösen. Nach Regel 11 beschreibt VARSITY die offizielle Entscheidung: {v}.",  # noqa: E501
+    "en": "When the ball was played, the most advanced attacker and the second-to-last defender were level - a very close, Umpire's Call situation, too close for our freeze-frame data to resolve within the roughly {cm} centimetres of measurement noise. Under Law 11, VARSITY describes the official decision: {v}.",  # noqa: E501
+    "es": "Cuando se jugó el balón, el atacante más adelantado y el penúltimo defensor estaban a la misma altura: una jugada muy ajustada, demasiado justa para resolverla con nuestros datos dentro de los aproximadamente {cm} centímetros de ruido de medición. Según la Regla 11, VARSITY describe la decisión oficial: {v}.",  # noqa: E501
+    "fr": "Au moment où le ballon a été joué, l'attaquant le plus avancé et l'avant-dernier défenseur étaient à la même hauteur : une action très serrée, trop juste pour être tranchée avec nos données dans la marge d'environ {cm} centimètres de bruit de mesure. Selon la Loi 11, VARSITY décrit la décision officielle : {v}.",  # noqa: E501
+    "pt": "Quando a bola foi jogada, o atacante mais avançado e o penúltimo defensor estavam na mesma linha: um lance muito apertado, próximo demais para ser resolvido com os nossos dados dentro dos cerca de {cm} centímetros de ruído de medição. Segundo a Regra 11, a VARSITY descreve a decisão oficial: {v}.",  # noqa: E501
+    "de": "Beim Abspiel waren der vorderste Angreifer und der vorletzte Verteidiger auf gleicher Höhe - eine sehr knappe Szene, zu knapp, um sie mit unseren Daten innerhalb der etwa {cm} Zentimeter Messrauschen aufzulösen. Nach Regel 11 beschreibt VARSITY die offizielle Entscheidung: {v}.",  # noqa: E501
 }
 
 
@@ -100,7 +105,7 @@ def _fallback_explanation(
     key = _lang_key(language)
     if within_noise:
         verdict_word = _VERDICT_WORD[key][0 if is_offside else 1]
-        return _FALLBACKS_TIGHT[key].format(v=verdict_word)
+        return _FALLBACKS_TIGHT[key].format(v=verdict_word, cm=_NOISE_CM)
     offside_tpl, onside_tpl = _FALLBACKS[key]
     tpl = offside_tpl if is_offside else onside_tpl
     return tpl.format(m=abs(margin_meters))
@@ -214,7 +219,8 @@ class GraniteClient:
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, warm "
                 f"language. Reply in {language}, in 2 to 3 short sentences. "
                 f"{glossary_line(language)}This call is INSIDE "
-                "the measurement noise of our coarse freeze-frame data (about 13 cm), so it is "
+                f"the measurement noise of our coarse freeze-frame data (about {_NOISE_CM} cm), so "
+                "it is "
                 "too close for us to call independently. DO NOT quote a precise margin and DO NOT "
                 "sound certain. Say the players were level within that noise - an 'Umpire's "
                 "Call' situation - and that VARSITY describes the official decision. Refer to "

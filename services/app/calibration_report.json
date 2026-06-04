@@ -1,87 +1,87 @@
 {
-  "sigma_model_cm": 12.7,
-  "sigma_true_cm": 12.7,
+  "sigma_model_cm": 55.3,
+  "sigma_true_cm": 55.3,
   "samples": 40000,
-  "ece": 0.0035,
+  "ece": 0.0034,
   "ece_ci95": [
     0.0028,
     0.0066
   ],
   "brier": 0.0598,
-  "log_loss": 0.192,
+  "log_loss": 0.1921,
   "overconfident_ece": 0.0416,
   "bins": [
     {
       "lo": 0.5,
       "hi": 0.55,
-      "count": 1069,
-      "confidence": 0.5251,
-      "accuracy": 0.5416
+      "count": 1070,
+      "confidence": 0.5252,
+      "accuracy": 0.5421
     },
     {
       "lo": 0.55,
       "hi": 0.6,
-      "count": 1047,
-      "confidence": 0.575,
-      "accuracy": 0.5654
+      "count": 1044,
+      "confidence": 0.5749,
+      "accuracy": 0.5661
     },
     {
       "lo": 0.6,
       "hi": 0.65,
-      "count": 1127,
+      "count": 1129,
       "confidence": 0.6252,
-      "accuracy": 0.6495
+      "accuracy": 0.6484
     },
     {
       "lo": 0.65,
       "hi": 0.7,
-      "count": 1211,
+      "count": 1212,
       "confidence": 0.6749,
-      "accuracy": 0.6713
+      "accuracy": 0.6716
     },
     {
       "lo": 0.7,
       "hi": 0.75,
-      "count": 1301,
+      "count": 1300,
       "confidence": 0.725,
-      "accuracy": 0.721
+      "accuracy": 0.7215
     },
     {
       "lo": 0.75,
       "hi": 0.8,
-      "count": 1396,
+      "count": 1398,
       "confidence": 0.776,
-      "accuracy": 0.7665
+      "accuracy": 0.7661
     },
     {
       "lo": 0.8,
       "hi": 0.85,
-      "count": 1614,
+      "count": 1612,
       "confidence": 0.826,
-      "accuracy": 0.8445
+      "accuracy": 0.8443
     },
     {
       "lo": 0.85,
       "hi": 0.9,
-      "count": 2049,
+      "count": 2051,
       "confidence": 0.8758,
-      "accuracy": 0.8726
+      "accuracy": 0.8727
     },
     {
       "lo": 0.9,
       "hi": 0.95,
-      "count": 3159,
+      "count": 3160,
       "confidence": 0.927,
       "accuracy": 0.9291
     },
     {
       "lo": 0.95,
       "hi": 1.0,
-      "count": 26027,
+      "count": 26024,
       "confidence": 0.9934,
       "accuracy": 0.9927
     }
   ],
-  "note": "Under the stated sigma~=13 cm Gaussian noise model the reported confidence Phi(|M|/sigma) is calibrated by construction; this receipt confirms the implementation realizes it (ECE 0.0035, Brier 0.0598 over 40,000 seeded draws). An overconfident control (sigma halved) gives ECE 0.0416, so the diagram discriminates. This is an implementation + self-consistency check, not field calibration against limb-tracked ground truth (StatsBomb 360 has none).",
+  "note": "Under the stated sigma~=55 cm Gaussian noise model the reported confidence Phi(|M|/sigma) is calibrated by construction; this receipt confirms the implementation realizes it (ECE 0.0034, Brier 0.0598 over 40,000 seeded draws). An overconfident control (sigma halved) gives ECE 0.0416, so the diagram discriminates. This is an implementation + self-consistency check, not field calibration against limb-tracked ground truth (StatsBomb 360 has none).",
   "source": "VARSITY calibration receipt (seeded Monte-Carlo over the uncertainty noise model)"
 }

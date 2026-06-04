@@ -6,11 +6,11 @@ def test_clear_offside_is_virtually_certain() -> None:
     assert u.band == "clear"
     assert u.p_verdict > 0.99
     assert u.likelihood == "virtually certain"
-    assert abs(u.sigma_meters - 0.127) < 0.01
+    assert abs(u.sigma_meters - 0.553) < 0.01  # the honest broadcast sigma, not the optical 0.127
 
 
 def test_razor_tight_is_within_measurement_noise() -> None:
-    # 2 cm, well inside the ~13 cm propagated sigma -> essentially a coin flip on geometry
+    # 2 cm, well inside the ~55 cm broadcast sigma -> essentially a coin flip on geometry
     u = quantify(0.02)
     assert u.band == "very tight"
     assert u.p_verdict < 0.6
@@ -44,3 +44,18 @@ def test_confidence_band_schema_and_defer_to_official() -> None:
     too_close = quantify(0.02)
     assert too_close.confidence_band == "too_close_to_call"
     assert too_close.defer_to_official is True
+
+
+def test_band_sigma_is_the_honest_broadcast_budget_not_optical() -> None:
+    # The band drives spoken confidence + the structured p_verdict off the HONEST broadcast sigma
+    # (~0.55 m), ONE source shared with the gum.py budget; the optical ~0.13 m is the comparison.
+    from app.gum import SIGMA_MARGIN_GUM_M
+    from app.uncertainty import SIGMA_MARGIN_OPTICAL_M
+
+    assert SIGMA_MARGIN_M == SIGMA_MARGIN_GUM_M  # one source, no drift
+    assert 0.5 < SIGMA_MARGIN_M < 0.6
+    assert SIGMA_MARGIN_OPTICAL_M < SIGMA_MARGIN_M and abs(SIGMA_MARGIN_OPTICAL_M - 0.127) < 0.01
+    # a 30 cm offside is honestly too close to call on coarse broadcast data ...
+    assert quantify(0.30).confidence_band == "too_close_to_call"
+    # ... while the clear demo call (5.69 m) stays clear: the core demo is unaffected.
+    assert quantify(5.69).confidence_band == "clear"

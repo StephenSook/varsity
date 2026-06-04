@@ -26,8 +26,11 @@ def test_too_close_floor_hedges_cites_the_law_and_quotes_no_number() -> None:
     assert cites_law_clause(txt)
     assert TOO_CLOSE_HEDGE.search(txt)  # acknowledges the data limit
     assert "offside" in txt
-    # no precise metre/centimetre margin (only Law 11 and the ~13 cm noise figure may appear)
-    digits = txt.replace("11", "").replace("13", "")
+    # no precise metre/centimetre margin: only Law 11 and the honest noise figure may appear
+    from app.uncertainty import SIGMA_MARGIN_M
+
+    noise_cm = str(round(SIGMA_MARGIN_M * 100))
+    digits = txt.replace("11", "").replace(noise_cm, "")
     assert not any(ch.isdigit() for ch in digits)
 
 

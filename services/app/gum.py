@@ -9,7 +9,7 @@ received decision's geometry; it never adjudicates.
 THE HONEST TWO-REGIME PICTURE. Our coordinates are a single broadcast-annotated (x, y) per player
 from StatsBomb 360 - not limb-level optical tracking. So there are two regimes:
 - OPTICAL-EQUIVALENT (optimistic): if this were TRACAB-grade optical tracking (~9 cm/player, Linke
-  et al., PLOS ONE 2020), the margin would be good to ~13 cm - the band ``uncertainty.py`` reports.
+  et al., PLOS ONE 2020), the margin would be good to ~13 cm. This is kept ONLY as the comparison.
 - BROADCAST-ANNOTATION (honest): on the single annotated point we actually have, the Type-B
   coordinate uncertainty is far larger. The homography systematic error largely CANCELS in the
   differential margin (both players come from the same frame), but the residual plus the
@@ -29,7 +29,19 @@ import math
 import random
 from dataclasses import dataclass
 
-from app.uncertainty import normal_cdf, quantify
+from app.uncertainty import (
+    HOMOGRAPHY_CORRELATION,
+    SIGMA_MARGIN_M,
+    SIGMA_MARGIN_OPTICAL_M,
+    U_COORD_BROADCAST_M,
+    U_SHAPE_M,
+    normal_cdf,
+    quantify,
+)
+
+# The GUM budget's sigma IS the band's honest sigma - one source in uncertainty.py, no drift.
+SIGMA_MARGIN_GUM_M = SIGMA_MARGIN_M
+K_COVERAGE = 2.0  # GUM coverage factor for ~95% under the normal approximation
 
 
 def _withhold(margin_meters: float, straddles_zero: bool) -> bool:
@@ -39,43 +51,6 @@ def _withhold(margin_meters: float, straddles_zero: bool) -> bool:
     confident verdict is never paired with a 'too close to call' withholding for a margin the band
     reads as clear or marginal."""
     return straddles_zero and quantify(margin_meters).band == "very tight"
-
-# --- The Type-B coordinate-uncertainty budget. These are DOCUMENTED, defensible estimates, NOT a
-#     published StatsBomb spec (which does not exist). Triangulated from the broadcast-CV tracking
-#     literature (Cranga et al. 2025, position RMSE 1.68-16.39 m across providers on a 2022 World
-#     Cup match), SciSports (annotations "several meters ... off"), and StatsBomb's homography
-#     article. The differential margin is much tighter than the absolute coordinate because the
-#     same-frame homography error cancels (correlation r). ---
-U_COORD_BROADCAST_M = 0.60  # per-coordinate Type-B std for a broadcast-annotated point (absolute)
-HOMOGRAPHY_CORRELATION = 0.70  # r: same-frame homography systematic error cancels in the difference
-U_SHAPE_M = 0.30  # body-anchor: Law 11 furthest-forward part vs the annotated point
-K_COVERAGE = 2.0  # GUM coverage factor for ~95% under the normal approximation
-
-# Optical-tracking-equivalent reference (the optimistic regime), for the honest comparison.
-U_COORD_OPTICAL_M = 0.09  # TRACAB Gen4 per-player RMSE (Linke et al., PLOS ONE 2020)
-
-
-def combined_position_uncertainty(u_a: float, u_d: float, r: float) -> float:
-    """GUM law of propagation for m = x_a - x_d with correlation r:
-    u_c^2 = u_a^2 + u_d^2 - 2*r*u_a*u_d (the cross term shrinks the differential)."""
-    return math.sqrt(max(u_a**2 + u_d**2 - 2.0 * r * u_a * u_d, 0.0))
-
-
-def margin_standard_uncertainty_m() -> float:
-    """Combined standard uncertainty u_c on the margin: correlated position + body-anchor shape."""
-    u_pos = combined_position_uncertainty(
-        U_COORD_BROADCAST_M, U_COORD_BROADCAST_M, HOMOGRAPHY_CORRELATION
-    )
-    return math.sqrt(u_pos**2 + U_SHAPE_M**2)
-
-
-# The honest broadcast-regime margin standard uncertainty (~0.55 m).
-SIGMA_MARGIN_GUM_M = round(margin_standard_uncertainty_m(), 3)
-# The optical-equivalent margin sigma (~0.13 m), for the honest comparison.
-SIGMA_MARGIN_OPTICAL_M = round(
-    combined_position_uncertainty(U_COORD_OPTICAL_M, U_COORD_OPTICAL_M, 0.0), 3
-)
-
 
 def entropy_bits(p: float) -> float:
     """Shannon binary entropy H2(p) in bits: 1 bit at p=0.5, 0 bits at p in {0, 1}."""
