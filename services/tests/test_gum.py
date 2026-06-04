@@ -96,3 +96,24 @@ def test_spoken_narration_is_honest_and_rich_on_a_close_call() -> None:
 def test_spoken_narration_handles_the_onside_direction() -> None:
     onside = gum.spoken_narration(-3.14, is_offside=False)
     assert "onside" in onside and "virtually certain" in onside
+
+
+def test_fitted_temperature_recovers_the_closed_form() -> None:
+    # fitting the Boltzmann temperature to reproduce Phi recovers the analytic T = sigma/1.7
+    r = gum.fitted_temperature()
+    assert r["agree"] is True
+    assert abs(r["fitted_temperature_m"] - r["closed_form_temperature_m"]) < 0.05
+
+
+def test_student_t_sensitivity_is_robust_for_clear_and_tight() -> None:
+    assert gum.student_t_sensitivity(5.69)["robust"] is True
+    tight = gum.student_t_sensitivity(0.02)
+    assert tight["robust"] is True  # even a knife-edge call shifts < 2 pp under heavy tails
+    assert abs(tight["shift_percentage_points"]) < 2.0
+
+
+def test_extended_payload_carries_robustness_receipts_only_on_demand() -> None:
+    ext = gum.payload(0.02, is_offside=True, extended=True)
+    assert "student_t_sensitivity" in ext and "fitted_temperature" in ext
+    # the per-stream SSE stage stays light (no heavy receipts)
+    assert "student_t_sensitivity" not in gum.payload(0.02, is_offside=True)

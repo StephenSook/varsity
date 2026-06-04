@@ -25,6 +25,7 @@ it never adjudicates.
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 from functools import lru_cache
@@ -128,6 +129,44 @@ def brier_score(pairs: list[tuple[float, bool]]) -> float:
     return sum((conf - (1.0 if ok else 0.0)) ** 2 for conf, ok in pairs) / len(pairs)
 
 
+def log_loss(pairs: list[tuple[float, bool]]) -> float:
+    """Logarithmic score (cross-entropy), a strictly proper scoring rule that punishes confident
+    errors harder than Brier. Clipped to avoid log(0). Equals the KL divergence from the empirical
+    label distribution to the predicted distribution, up to the (constant) label entropy."""
+    if not pairs:
+        return 0.0
+    eps = 1e-12
+    total = 0.0
+    for conf, ok in pairs:
+        p = min(max(conf, eps), 1 - eps)
+        total += -(math.log(p) if ok else math.log(1 - p))
+    return total / len(pairs)
+
+
+def bootstrap_ece_ci(
+    pairs: list[tuple[float, bool]],
+    *,
+    n_boot: int = 400,
+    n_bins: int = DEFAULT_BINS,
+    seed: int = DEFAULT_SEED,
+    alpha: float = 0.05,
+) -> tuple[float, float]:
+    """A seeded percentile bootstrap 95% interval on the ECE: resample the (confidence, correct)
+    pairs with replacement n_boot times, recompute the ECE each time, take the alpha/2 and
+    1-alpha/2 percentiles. Shows the finite-sample uncertainty on the calibration error itself."""
+    if not pairs:
+        return (0.0, 0.0)
+    rng = random.Random(seed)
+    n = len(pairs)
+    eces = sorted(
+        expected_calibration_error([pairs[rng.randrange(n)] for _ in range(n)], n_bins=n_bins)
+        for _ in range(n_boot)
+    )
+    lo = eces[int((alpha / 2) * n_boot)]
+    hi = eces[min(n_boot - 1, int((1 - alpha / 2) * n_boot))]
+    return (round(lo, 4), round(hi, 4))
+
+
 @dataclass(frozen=True)
 class CalibrationReport:
     sigma_model_m: float
@@ -136,6 +175,8 @@ class CalibrationReport:
     bins: list[ReliabilityBin]
     ece: float
     brier: float
+    log_loss: float  # strictly proper log score (cross-entropy / KL)
+    ece_ci: tuple[float, float]  # bootstrap 95% interval on the ECE
     overconfident_ece: float  # discriminating control: same data read with sigma halved
     note: str
 
@@ -157,6 +198,8 @@ def build_report(
     )
     ece = round(expected_calibration_error(pairs, n_bins=n_bins), 4)
     brier = round(brier_score(pairs), 4)
+    logloss = round(log_loss(pairs), 4)
+    ece_ci = bootstrap_ece_ci(pairs, n_bins=n_bins, seed=seed)
     # Control: an overconfident model reads the SAME observations but assumes half the noise.
     overconfident = _samples(
         n=samples, sigma_true_m=sigma_true_m, sigma_model_m=sigma_model_m / 2,
@@ -175,7 +218,7 @@ def build_report(
     return CalibrationReport(
         sigma_model_m=sigma_model_m, sigma_true_m=sigma_true_m, samples=samples,
         bins=_reliability(pairs, n_bins=n_bins), ece=ece, brier=brier,
-        overconfident_ece=over_ece, note=note,
+        log_loss=logloss, ece_ci=ece_ci, overconfident_ece=over_ece, note=note,
     )
 
 
@@ -187,7 +230,9 @@ def calibration_payload() -> dict:
         "sigma_true_cm": round(r.sigma_true_m * 100, 1),
         "samples": r.samples,
         "ece": r.ece,
+        "ece_ci95": list(r.ece_ci),
         "brier": r.brier,
+        "log_loss": r.log_loss,
         "overconfident_ece": r.overconfident_ece,
         "bins": [
             {

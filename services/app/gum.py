@@ -228,10 +228,76 @@ def spoken_narration(
     )
 
 
-def payload(margin_meters: float, *, is_offside: bool = False) -> dict:
-    """The judge-facing JSON for the /uncertainty endpoint + the SSE stage."""
-    b = budget(margin_meters)
+def student_t_sensitivity(
+    margin_meters: float,
+    *,
+    sigma_m: float = SIGMA_MARGIN_GUM_M,
+    nu: int = 5,
+    draws: int = 10000,
+    seed: int = 11,
+) -> dict:
+    """Heavy-tail robustness check (the report's recommended caveat): re-run P(offside) with a
+    Student-t(nu) noise model scaled to the SAME sigma, and report whether the probability shifts.
+    If it barely moves, the Gaussian maximum-entropy choice is robust here; a large shift would be
+    honest to surface. Pure Python (t = Z / sqrt(chi2(nu)/nu), no scipy)."""
+    gaussian_p = normal_cdf(margin_meters / sigma_m) if sigma_m > 0 else float(margin_meters > 0)
+    rng = random.Random(seed)
+    scale = sigma_m / math.sqrt(nu / (nu - 2)) if nu > 2 else sigma_m
+    beyond = 0
+    for _ in range(draws):
+        z = rng.gauss(0.0, 1.0)
+        chi2 = rng.gammavariate(nu / 2.0, 2.0)
+        t = z / math.sqrt(chi2 / nu)
+        if margin_meters + t * scale > 0.0:
+            beyond += 1
+    t_p = beyond / draws
+    shift_pp = round((t_p - gaussian_p) * 100, 2)
     return {
+        "nu": nu,
+        "gaussian_p_offside": round(gaussian_p, 3),
+        "student_t_p_offside": round(t_p, 3),
+        "shift_percentage_points": shift_pp,
+        "robust": abs(shift_pp) < 2.0,
+    }
+
+
+def fitted_temperature(*, sigma_m: float = SIGMA_MARGIN_GUM_M) -> dict:
+    """Fit the Boltzmann temperature T so the softmax sigmoid(m/T) best reproduces the Gaussian
+    posterior Phi(m/sigma) over a grid of margins (temperature scaling, Guo et al. 2017). It
+    recovers the closed-form T = sigma/1.7, a self-consistency receipt: the fitted and analytic
+    temperatures agree. Deterministic (golden-section over a fixed grid)."""
+    grid = [i * 0.05 for i in range(-40, 41)]
+    target = [normal_cdf(m / sigma_m) for m in grid]
+
+    def mse(t: float) -> float:
+        return sum((1.0 / (1.0 + math.exp(-m / t)) - q) ** 2 for m, q in zip(grid, target)) / len(
+            grid
+        )
+
+    lo, hi = 0.1, 0.6
+    gr = (math.sqrt(5) - 1) / 2
+    c, d = hi - gr * (hi - lo), lo + gr * (hi - lo)
+    for _ in range(60):
+        if mse(c) < mse(d):
+            hi = d
+        else:
+            lo = c
+        c, d = hi - gr * (hi - lo), lo + gr * (hi - lo)
+    fitted = round((lo + hi) / 2, 3)
+    closed = temperature_m(sigma_m)
+    return {
+        "fitted_temperature_m": fitted,
+        "closed_form_temperature_m": closed,
+        "agree": abs(fitted - closed) < 0.05,
+    }
+
+
+def payload(margin_meters: float, *, is_offside: bool = False, extended: bool = False) -> dict:
+    """The judge-facing JSON for the /uncertainty endpoint + the SSE stage. ``extended`` adds the
+    heavier robustness receipts (Student-t sensitivity + the fitted-temperature self-consistency)
+    for the on-demand endpoint; the per-stream SSE stage leaves them off to stay fast."""
+    b = budget(margin_meters)
+    out = {
         "spoken": spoken_narration(margin_meters, is_offside),
         "margin_m": b.margin_m,
         "sigma_margin_m": b.sigma_margin_m,
@@ -265,3 +331,7 @@ def payload(margin_meters: float, *, is_offside: bool = False) -> dict:
             "coordinate Type-B budget is a documented estimate, not a published StatsBomb spec."
         ),
     }
+    if extended:
+        out["student_t_sensitivity"] = student_t_sensitivity(margin_meters)
+        out["fitted_temperature"] = fitted_temperature()
+    return out

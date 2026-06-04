@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.calibration import build_report, predicted_confidence
+from app.calibration import bootstrap_ece_ci, build_report, log_loss, predicted_confidence
 from app.uncertainty import SIGMA_MARGIN_M
 
 
@@ -39,6 +39,25 @@ def test_bins_cover_all_samples_and_accuracy_rises_with_confidence():
     populated = [b for b in r.bins if b.count]
     # The highest-confidence bin is at least as accurate as the lowest populated one.
     assert populated[-1].empirical_accuracy >= populated[0].empirical_accuracy
+
+
+def test_log_loss_is_a_proper_score_and_punishes_confident_errors():
+    # a confidently-wrong forecast costs more than a hedged one (strictly proper)
+    assert log_loss([(0.99, False)]) > log_loss([(0.6, False)])
+    assert log_loss([(0.99, True)]) < log_loss([(0.6, True)])
+    assert build_report().log_loss > 0.0
+
+
+def test_bootstrap_ece_ci_brackets_the_point_estimate():
+    r = build_report()
+    lo, hi = r.ece_ci
+    assert lo <= r.ece <= hi  # the bootstrap interval contains the point ECE
+    assert lo >= 0.0 and hi < 0.05  # well-calibrated, with finite-sample width
+
+
+def test_bootstrap_is_deterministic():
+    pairs = [(0.9, True), (0.6, False), (0.99, True), (0.5, False)] * 50
+    assert bootstrap_ece_ci(pairs) == bootstrap_ece_ci(pairs)
 
 
 def test_calibration_endpoint_serves_the_receipt():

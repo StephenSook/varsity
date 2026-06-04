@@ -92,3 +92,19 @@ narration and a demo. A Wilson 95% interval bounds the simulation proportion.
 - It is **not** field calibration against limb-tracked ground truth (StatsBomb 360 has none), and
   the Type-B budget is a documented estimate, not a measured spec.
 - It **describes** the received decision's geometric precision. It never re-adjudicates the call.
+
+## Robustness receipts (`GET /uncertainty`, extended; `GET /calibration`)
+
+Four honesty checks back the budget, none of which need a gold-standard dataset:
+
+- **Log-loss + bootstrap CI on the ECE.** The calibration receipt adds the strictly-proper log
+  score (the KL cross-entropy, which punishes confident errors harder than Brier) and a seeded
+  percentile bootstrap 95% interval on the ECE, so the calibration error carries its own
+  finite-sample uncertainty (live: ECE 0.35% with a tight bootstrap CI, log-loss ~0.19).
+- **Fitted-temperature self-consistency.** Fitting the Boltzmann temperature `T` so the softmax
+  `sigmoid(m/T)` best reproduces the Gaussian posterior recovers the closed-form `T = sigma/1.7`
+  exactly (Guo et al. 2017 temperature scaling), a clean self-consistency check.
+- **Student-t heavy-tail sensitivity.** Re-running `P(offside)` with a Student-t(5) noise model
+  scaled to the same sigma shifts the probability by under 2 percentage points even on the
+  knife-edge call, so the Gaussian maximum-entropy choice is robust here, and a large shift would
+  be honest to surface (the report's recommended caveat). Pure Python, no scipy.
