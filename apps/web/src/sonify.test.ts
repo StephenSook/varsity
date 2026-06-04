@@ -5,6 +5,9 @@ import {
   MAX_AZIMUTH_DEG,
   confidenceEarcon,
   confidenceTexture,
+  confidenceVoice,
+  iso226Gain,
+  iso226Spl,
   lateralAzimuth,
   lineProximityPreamble,
   lineSweepSpec,
@@ -185,5 +188,52 @@ describe('HRTF spatial scan of the freeze-frame', () => {
     expect(plan[1].onsetMs - plan[0].onsetMs).toBe(BREWSTER.onsetGapMs)
     // the keeper is not pinged as an outfield defender
     expect(plan.filter((v) => v.role === 'defender').length).toBe(2)
+  })
+})
+
+describe('confidenceVoice: the timbre carries the confidence', () => {
+  it('adds vibrato and inharmonicity as the call gets tighter', () => {
+    const clear = confidenceVoice('clear')
+    const tight = confidenceVoice('tight')
+    const veryTight = confidenceVoice('very tight')
+    // a clear call is a pure, steady tone; a knife-edge call wavers and grows inharmonic
+    expect(clear.vibratoCents).toBe(0)
+    expect(clear.inharmonicity).toBe(0)
+    expect(tight.vibratoCents).toBeGreaterThan(clear.vibratoCents)
+    expect(veryTight.vibratoCents).toBeGreaterThan(tight.vibratoCents)
+    expect(veryTight.inharmonicity).toBeGreaterThan(tight.inharmonicity)
+  })
+
+  it('carries the base earcon fields through unchanged', () => {
+    const v = confidenceVoice('clear')
+    const e = confidenceEarcon('clear')
+    expect(v.loudnessScale).toBe(e.loudnessScale)
+    expect(v.noiseMix).toBe(e.noiseMix)
+  })
+})
+
+describe('iso226Gain: ISO 226:2003 equal-loudness normalization', () => {
+  it('is unity at 1 kHz (the contour anchor)', () => {
+    // the 60-phon contour passes through 60 dB SPL at 1 kHz by definition
+    expect(iso226Spl(1000, 60)).toBeCloseTo(60, 0)
+    expect(iso226Gain(1000, 60)).toBeCloseTo(1, 2)
+  })
+
+  it('boosts a low frequency the ear is insensitive to', () => {
+    // at ~125 Hz the ear is far less sensitive, so the tone needs more amplitude to match
+    expect(iso226Gain(125)).toBeGreaterThan(1)
+  })
+
+  it('cuts the ~3-4 kHz band the ear is most sensitive to', () => {
+    // the 60-phon contour dips below 60 dB near 3.5 kHz, so the gain there is < 1
+    expect(iso226Gain(3500)).toBeLessThan(1)
+  })
+
+  it('stays inside its clamp for the whole audible range', () => {
+    for (const f of [20, 200, 1000, 4000, 12500]) {
+      const g = iso226Gain(f)
+      expect(g).toBeGreaterThanOrEqual(0.25)
+      expect(g).toBeLessThanOrEqual(4)
+    }
   })
 })

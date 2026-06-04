@@ -37,6 +37,30 @@ The earcon palette uses the experimentally-derived guidelines of Brewster, Wrigh
 **125 Hz to 5 kHz**, **minimum note length 0.0825 s**, **0.1 s** gap between serial earcons. These
 are exported as named constants so the timing is grounded, not guessed.
 
+## Equal-loudness normalization (ISO 226:2003)
+
+The ear is not equally sensitive across frequency: a 125 Hz tone and a 3.5 kHz tone at the same
+amplitude are perceived at very different loudness, so an un-normalized earcon palette would let
+the low spatial pings drown the high ones (or the reverse). `iso226Gain(freqHz)` corrects this. It
+evaluates the ISO 226:2003 equal-loudness contour (the standard's analytic `af`/`Lu`/`Tf`
+coefficient table, log-frequency interpolated) at a reference loudness of 60 phons, then returns
+the gain `10^((Lp(f) - 60)/20)` that brings every tone to the same perceived loudness: a frequency
+the ear is insensitive to is boosted, the most sensitive band (~3-4 kHz) is cut, and 1 kHz is
+unity by construction (the contour passes through 60 dB SPL at 1 kHz). The coefficient table was
+cross-checked digit-for-digit against ISO 226:2003 Table 1 and the canonical implementations, and
+the 1 kHz self-consistency (60 phon round-trips to 60.01 dB SPL) is asserted in a unit test. The
+spatial scan applies this per-player so every ping is equally loud regardless of its pitch.
+
+## Confidence as timbre (`confidenceVoice`)
+
+The verdict earcon already moves loudness, noise, tremolo and detune with the call's tightness.
+`confidenceVoice` adds two more perceptual axes for the knife-edge band: **vibrato** (a slow pitch
+wobble that grows from 0 on a clear call to 25 cents on a very-tight one) and **inharmonicity** (a
+partial that drifts off the harmonic series, so the tone sounds unstable as the margin shrinks).
+A clear call is a pure, steady tone; a too-close-to-call decision audibly wavers, so the listener
+hears the uncertainty before the words arrive. Tests assert vibrato and inharmonicity rise
+monotonically as confidence falls.
+
 ## What it surfaces in the demo
 
 A "Spatial scan (headphones)" button plays the HRTF scan of the current freeze-frame; the margin

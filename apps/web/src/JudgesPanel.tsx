@@ -220,6 +220,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'apps/web/src/sonify.ts',
     tier: 'live',
   },
+  {
+    t: 'ISO 226:2003 equal-loudness earcons + confidence-as-timbre (vibrato/inharmonicity)',
+    w: 'apps/web/src/sonify.ts',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -388,7 +393,7 @@ export function JudgesPanel() {
             const d = JSON.parse((e as MessageEvent).data)
             if (!d.ok) {
               es.close()
-              resolve(`declined: ${String(d.category)} — the question was withheld from the model (fail closed)`)
+              resolve(`declined: ${String(d.category)}, the question was withheld from the model (fail closed)`)
             }
           })
           es.addEventListener('verdict', () => {
