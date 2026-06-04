@@ -285,6 +285,7 @@ function streamSummary(url: string): Promise<string> {
 export function JudgesPanel() {
   const [result, setResult] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [runningAll, setRunningAll] = useState(false)
   const [calib, setCalib] = useState<CalibrationPayload | null>(null)
   const { lang } = useLang()
   const c = CHROME[lang]
@@ -506,10 +507,49 @@ export function JudgesPanel() {
         return `${res.violations.length} violation(s): ${top}`
       },
     },
+    {
+      key: 'rag_eval',
+      label: 'Run the RAG retrieval eval',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/rag_eval`)).json()
+        const s = j.scores
+        return `Hit@1 ${s.hit_at_1} / Hit@5 ${s.hit_at_5} / MRR ${s.mrr} over ${j.golden_questions} golden questions (${j.scored_retriever}); live path: ${j.online_retriever} (${j.embedding_model})`
+      },
+    },
+    {
+      key: 'vision',
+      label: 'Show the Granite Vision captions',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/diagram_captions`)).json()
+        return (j.count as number) > 0
+          ? `model ${j.model} · ${j.count} approved diagram descriptions (build-time, grounded + human-reviewed)`
+          : `model ${j.model} · 0 approved captions yet (pipeline + model wired; build-time, faithfulness-guarded)`
+      },
+    },
   ]
+
+  async function runAll() {
+    setRunningAll(true)
+    for (const r of RUNS) await run(r.key, r.fn)
+    setRunningAll(false)
+  }
 
   return (
     <div className="mt-12">
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-300">
+        <span className="font-semibold text-emerald-300">
+          {CLAIMS.filter((cl) => cl.tier === 'live').length} live, verifiable claims
+        </span>
+        {(['live', 'illustrative', 'integration'] as Tier[]).map((t) => (
+          <span
+            key={t}
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${TIER[t].cls}`}
+          >
+            {TIER[t].label}
+          </span>
+        ))}
+        <span className="text-slate-400">wired-live / same-engine illustrative / integration</span>
+      </div>
       <ul className="grid list-none gap-4 sm:grid-cols-2">
         {CLAIMS.map((c) => (
           <li
@@ -545,15 +585,24 @@ export function JudgesPanel() {
         <h3 className="text-sm font-semibold text-emerald-300">{c.runHeading}</h3>
         <p className="mt-1 text-xs text-slate-400">{c.runHelper}</p>
         <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => void runAll()}
+            disabled={busy !== null || runningAll}
+            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+          >
+            {runningAll ? 'Running all checks…' : 'Run all checks'}
+          </button>
           {RUNS.map((r) => (
             <button
               key={r.key}
               type="button"
               onClick={() => void run(r.key, r.fn)}
-              disabled={busy !== null}
+              disabled={busy !== null || runningAll}
+              aria-busy={busy === r.key}
               className="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-sky-400 disabled:opacity-50"
             >
-              {r.label}
+              {busy === r.key ? `${r.label}…` : r.label}
             </button>
           ))}
         </div>
