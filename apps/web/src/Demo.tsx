@@ -154,7 +154,7 @@ function describe(s: Stage): string {
     case 'uncertainty_budget':
       return ` — ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
     case 'geometry_descriptors':
-      return ` — line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.lateral_width_m)}m wide`
+      return ` — line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line`
     case 'law':
       return ` — Law ${String(s.law)} (${String(s.title)})`
     case 'granite':
