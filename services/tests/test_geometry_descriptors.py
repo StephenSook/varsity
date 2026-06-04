@@ -110,3 +110,20 @@ def test_grouping_and_concavity_in_payload():
     keys = {"defensive_groups", "largest_gap_m", "split_radius_m", "block_concavity_ratio"}
     assert keys <= set(p)
     assert "MST-gap" in p["method"] and "alpha-shape" in p["method"]
+
+
+def test_descriptors_survive_degenerate_defender_clouds():
+    # the exact Delaunay + MST-gap + concavity must never crash on a collapsed/collinear cloud
+    degenerate = [
+        [(95, 30), (95, 50)],  # two points
+        [(90, 40), (90, 40), (90, 40), (90, 40)],  # all identical
+        [(95, 10), (95, 30), (95, 50), (95, 70)],  # collinear vertical
+        [(80, 40), (90, 40), (100, 40)],  # collinear horizontal
+        [(90.0, 40.0), (90.001, 40.0), (90.0, 40.001)],  # a near-coincident cluster
+    ]
+    for defs in degenerate:
+        d = gd._defenders(_frame(110.0, defs))
+        gd._defensive_grouping(d)  # no crash
+        c = gd._block_concavity_ratio(d)
+        assert 0.0 <= c <= 1.0
+        gd.payload(_frame(110.0, defs))  # the full payload (>= 2 opponents) never raises
