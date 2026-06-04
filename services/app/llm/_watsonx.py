@@ -56,6 +56,7 @@ def generate(
     max_new_tokens: int = 200,
     min_new_tokens: int | None = None,
     decoding: str = "greedy",
+    moderations: dict | None = None,
 ) -> str:
     parameters: dict[str, object] = {
         "max_new_tokens": max_new_tokens,
@@ -63,16 +64,22 @@ def generate(
     }
     if min_new_tokens is not None:
         parameters["min_new_tokens"] = min_new_tokens
+    body: dict[str, object] = {
+        "model_id": model_id,
+        "input": prompt,
+        "project_id": os.environ["WATSONX_PROJECT_ID"],
+        "parameters": parameters,
+    }
+    # Optional IBM HAP guardrail (safety/hap.py): watsonx screens the prompt + completion
+    # for hate/abuse/profanity. Off by default so the deterministic input_screen floor is
+    # the always-on gate and the live path is never affected unless this is passed.
+    if moderations:
+        body["moderations"] = moderations
     resp = httpx.post(
         f"{_base_url()}/ml/v1/text/generation",
         params={"version": API_VERSION},
         headers=_auth(),
-        json={
-            "model_id": model_id,
-            "input": prompt,
-            "project_id": os.environ["WATSONX_PROJECT_ID"],
-            "parameters": parameters,
-        },
+        json=body,
         timeout=60,
     )
     resp.raise_for_status()
