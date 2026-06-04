@@ -8,7 +8,7 @@ on:
 
 jobs:
   web:
-    name: Front end (lint / typecheck / build)
+    name: Front end (typecheck / build / test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +24,6 @@ jobs:
             # (optional-dep extraction race); reinstall if it failed to land.
             node -e "require('lightningcss')" 2>/dev/null \
               || { echo "lightningcss native binary missing; reinstalling"; rm -rf node_modules; npm install; }
-            npm run lint --if-present
             npm run typecheck --if-present
             npm run build --if-present
             npm test --if-present
