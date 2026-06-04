@@ -15,6 +15,17 @@ beyond it, to the left when behind it, and the pan reinforces the verbal and ear
 a spatial-reconstruction task (14 participants, 7 blind), so spatialization is treated as a
 reinforcing cue layered with the earcon and the words, not a load-bearing channel on its own.
 
+On **HRTF personalization** (to be precise rather than wave it away as "impossible"): a genuinely
+*individualized* per-user HRTF is infeasible in a browser without measuring each user's ears, and
+the Web Audio `PannerNode` HRTF set is fixed by the browser and cannot be swapped (SOFA loading is
+the open WebAudio v2 request #17, blocked because SOFA is HDF5, not a web standard). A *modeled*
+alternative (selectable presets, or an ITD/ILD head-size slider via `ConvolverNode` HRIR
+convolution) is feasible, but it was considered and deliberately not built: for a `±50°`, front-
+hemisphere, binary-left/right *reinforcing* cue, the product's own cited evidence (Drullman &
+Bronkhorst 2000: no individualized-vs-general difference; Shafique 2025: spatialization alone did
+not help) puts its marginal benefit near zero. So this is an honest engineering decision, not a
+feasibility wall.
+
 ## The transform
 
 ```
