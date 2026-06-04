@@ -183,6 +183,21 @@ def red_team() -> dict:
     return payload()
 
 
+@app.get("/faithfulness")
+def faithfulness() -> dict:
+    """The injected-error faithfulness gold-eval, surfaced per injection class AND per decision
+    type (offside / penalty / handball): the DETERMINISTIC gate catches every STRUCTURAL injection
+    with zero leakage on every decision type, while semantic injections are the advisory Guardian
+    layer's job. Plus ALCE-style citation precision/recall per decision type. Offline,
+    deterministic, no model call - a judge-facing receipt that runs in CI."""
+    from app.citation_metrics import per_decision_demo
+    from verify.faithfulness_eval import payload
+
+    out = payload()
+    out["alce_per_decision"] = per_decision_demo()
+    return out
+
+
 _retriever: LawRetriever | None = None
 
 

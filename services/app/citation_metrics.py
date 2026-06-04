@@ -106,6 +106,37 @@ def _controls() -> dict:
     }
 
 
+def per_decision_demo() -> list[dict]:
+    """ALCE precision/recall on a well-formed grounding link per decision type, showing the
+    metric extends past offside to penalty (Law 14) and handball (Law 12) - each claim reflects
+    its cited clause's salient terms, so the deterministic entailment proxy supports it."""
+    examples = {
+        "offside": GroundingLink(
+            claim="Nearer the goal line than the second-to-last opponent.",
+            law_clause="Law 11.1 (beyond the second-to-last opponent)",
+            evidence="met in the Law 11 proof",
+            source="StatsBomb 360 freeze-frame",
+        ),
+        "penalty": GroundingLink(
+            claim="A foul by a defender inside the penalty area.",
+            law_clause="Law 14.1 (penalty area offence)",
+            evidence='retrieved Law 14 text "a penalty kick is awarded"',
+            source="VAR decision",
+        ),
+        "handball": GroundingLink(
+            claim="A deliberate handball by an outfield player inside the area.",
+            law_clause="Law 12.1 (deliberate handball)",
+            evidence='retrieved Law 12 text "handling the ball"',
+            source="VAR decision",
+        ),
+    }
+    rows = []
+    for decision, link in examples.items():
+        report = score([link])
+        rows.append({"decision": decision, "precision": report.precision, "recall": report.recall})
+    return rows
+
+
 def citation_metrics_stage(links: list[GroundingLink]) -> dict:
     """The SSE 'citation_metrics' stage payload (ALCE precision/recall + controls)."""
     report = score(links)
