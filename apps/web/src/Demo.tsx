@@ -15,6 +15,7 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
 import {
+  detectDefaultSpatialMode,
   playBuildUp,
   playMarginChord,
   playOffsideChord,
@@ -322,13 +323,16 @@ export function Demo() {
         return {
           preamble: p.preamble !== false,
           volume: typeof p.volume === 'number' ? p.volume : 1,
-          mode: p.mode === 'stereo' || p.mode === 'mono' ? p.mode : 'hrtf',
+          mode:
+            p.mode === 'stereo' || p.mode === 'mono' || p.mode === 'hrtf'
+              ? p.mode
+              : detectDefaultSpatialMode(),
         }
       }
     } catch {
       // ignore a malformed pref
     }
-    return { preamble: true, volume: 1, mode: 'hrtf' }
+    return { preamble: true, volume: 1, mode: detectDefaultSpatialMode() }
   })
   const updateAudioPrefs = (patch: Partial<typeof audioPrefs>) =>
     setAudioPrefs((p) => {

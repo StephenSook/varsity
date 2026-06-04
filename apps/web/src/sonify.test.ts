@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   BREWSTER,
@@ -6,6 +6,7 @@ import {
   confidenceEarcon,
   confidenceTexture,
   confidenceVoice,
+  detectDefaultSpatialMode,
   iso226Gain,
   iso226Spl,
   lateralAzimuth,
@@ -188,6 +189,20 @@ describe('HRTF spatial scan of the freeze-frame', () => {
     expect(plan[1].onsetMs - plan[0].onsetMs).toBe(BREWSTER.onsetGapMs)
     // the keeper is not pinged as an outfield defender
     expect(plan.filter((v) => v.role === 'defender').length).toBe(2)
+  })
+})
+
+describe('detectDefaultSpatialMode: first-run spatial default', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('defaults a coarse-pointer / touch device to HRTF', () => {
+    vi.stubGlobal('window', { matchMedia: (q: string) => ({ matches: q.includes('coarse') }) })
+    vi.stubGlobal('navigator', { maxTouchPoints: 5 })
+    expect(detectDefaultSpatialMode()).toBe('hrtf')
+  })
+  it('defaults a fine-pointer desktop to stereo', () => {
+    vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) })
+    vi.stubGlobal('navigator', { maxTouchPoints: 0 })
+    expect(detectDefaultSpatialMode()).toBe('stereo')
   })
 })
 

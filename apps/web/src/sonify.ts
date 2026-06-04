@@ -70,6 +70,17 @@ export function sonificationPlan(geo: Geometry): Voice[] {
 // stereo (better on speakers), and mono (no spatialization, for the widest compatibility).
 export type SpatialMode = 'hrtf' | 'stereo' | 'mono'
 
+// The default spatial mode when the listener has no saved preference. A coarse-pointer / touch
+// device is most often used with earbuds, where HRTF binaural panning is convincing; a desktop is
+// often on speakers, where front-hemisphere HRTF muddies more than it helps, so plain stereo is the
+// safer default. The listener can always override; this only picks the first-run default.
+export function detectDefaultSpatialMode(): SpatialMode {
+  if (typeof window === 'undefined') return 'hrtf'
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false
+  const touch = (navigator?.maxTouchPoints ?? 0) > 0
+  return coarse || touch ? 'hrtf' : 'stereo'
+}
+
 // The azimuth of the line-proximity preamble blips: the attacker's margin-based azimuth, so the
 // proximity blips come from WHERE the attacker is. Pure + testable.
 export function preambleBlipAzimuth(geo: Geometry): number {
