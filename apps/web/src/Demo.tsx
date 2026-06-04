@@ -5,6 +5,7 @@ import { graniteSpeechEnabled, listen, onDeviceAsrAvailable } from './voice'
 import { useLang, type Lang } from './i18n'
 import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
+import { PipelineWaterfall } from './PipelineWaterfall'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { usePrefersReducedMotion } from './useReducedMotion'
@@ -369,6 +370,11 @@ export function Demo() {
   const [audioActive, setAudioActive] = useState(false)
   // The all-IBM Granite Speech voice-input opt-in (experimental; falls back to Whisper on any error).
   const [graniteSpeech, setGraniteSpeech] = useState(() => graniteSpeechEnabled())
+  // A visible running log of everything the screen reader announced, so a SIGHTED judge can read
+  // exactly what a blind fan hears (the screen-reader-native experience made visible).
+  const [transcript, setTranscript] = useState<string[]>([])
+  const [showTranscript, setShowTranscript] = useState(false)
+  const [showTiming, setShowTiming] = useState(false)
   const nbspRef = useRef(false)
 
   // Set the live-region message, alternating a trailing non-breaking space so an
@@ -377,6 +383,7 @@ export function Demo() {
   function announce(message: string) {
     nbspRef.current = !nbspRef.current
     setLiveMessage(verbalizeForSpeech(message, UI[lang].bcp47) + (nbspRef.current ?' ' : ''))
+    if (message.trim()) setTranscript((prev) => [...prev.slice(-29), message.trim()])
   }
 
   // Screen-reader language dual-path. Markup conformance (per-node + page `lang`, WCAG 3.1.2)
@@ -537,6 +544,8 @@ export function Demo() {
     for (const name of STAGES) {
       source.addEventListener(name, (event) => {
         const data = JSON.parse((event as MessageEvent).data) as Stage
+        // arrival time of this stage since the request started, for the observability waterfall
+        data._arrivedMs = Math.round(performance.now() - startRef.current)
         setStages((prev) => [...prev, data])
         if (name === 'trigger') {
           setMoment({
@@ -1551,6 +1560,22 @@ export function Demo() {
         >
           {showDiag ? 'Hide diagnostics' : 'On-device diagnostics'}
         </button>
+        <button
+          type="button"
+          aria-pressed={showTranscript}
+          onClick={() => setShowTranscript((s) => !s)}
+          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+        >
+          {showTranscript ? 'Hide transcript' : 'Screen-reader transcript'}
+        </button>
+        <button
+          type="button"
+          aria-pressed={showTiming}
+          onClick={() => setShowTiming((s) => !s)}
+          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+        >
+          {showTiming ? 'Hide timing' : 'Pipeline timing'}
+        </button>
       </div>
 
       <section
@@ -1618,6 +1643,34 @@ export function Demo() {
       </section>
       <KeyboardHelp open={showHelp} />
       {showDiag && <DiagnosticsPanel />}
+      {showTiming && <PipelineWaterfall stages={stages} />}
+      {showTranscript && (
+        <section
+          aria-label="Screen-reader transcript"
+          className="mt-4 rounded-2xl bg-slate-900/60 p-5 text-left ring-1 ring-slate-700/50"
+        >
+          <h3 className="text-sm font-semibold text-emerald-300">Screen-reader transcript</h3>
+          <p className="mt-1 text-xs text-slate-400">
+            Exactly what a blind fan hears: every aria-live announcement, in order.
+          </p>
+          {transcript.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">
+              Nothing announced yet. Press Explain, and the spoken verdict appears here.
+            </p>
+          ) : (
+            <ol className="mt-3 space-y-2">
+              {transcript.map((line, i) => (
+                <li key={i} className="flex gap-3 text-sm text-slate-200">
+                  <span aria-hidden="true" className="font-mono text-xs text-slate-500">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span lang={UI[lang].bcp47}>{line}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
     </div>
   )
 }
