@@ -230,6 +230,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/observability.py',
     tier: 'live',
   },
+  {
+    t: 'Granite Vision diagram captioning (IFAB figures to alt-text, grounded + faithfulness-guarded)',
+    w: 'services/app/llm/vision.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live

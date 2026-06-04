@@ -174,6 +174,29 @@ def corpus_integrity() -> dict:
     }
 
 
+@app.get("/diagram_captions")
+def diagram_captions_endpoint() -> dict:
+    """The IFAB diagrams (the Law 11 offside figure, the Law 5/6 referee-signal graphics) that
+    plain Docling drops as <!-- image --> holes, captioned at build time by Granite Vision 3.2 into
+    accessible alt-text for a blind fan. Captions are grounded + faithfulness-guarded + human-
+    reviewed before they enter the corpus, and tiered 'diagram description' (AI-generated), never
+    official IFAB text. Empty until captions are approved (see docs/DIAGRAM-CAPTIONS.md)."""
+    from app.llm import vision
+    from app.rag import diagram_captions
+
+    chunks = diagram_captions.approved_caption_chunks()
+    return {
+        "tier": "diagram-description",
+        "model": vision.vision_model_id(),
+        "count": len(chunks),
+        "captions": chunks,
+        "note": (
+            "AI-generated diagram descriptions (build-time, Granite Vision), grounded + "
+            "faithfulness-guarded + human-reviewed; an accessibility aid, not official IFAB text."
+        ),
+    }
+
+
 @app.get("/red_team")
 def red_team() -> dict:
     """The red-team regression receipt for the oracle input screen: the deterministic
