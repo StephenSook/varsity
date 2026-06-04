@@ -9,7 +9,7 @@ import { webgpuAvailable } from './offline'
 const KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX'
 const KOKORO_VOICE = 'af_heart'
 
-export function webSpeechAvailable(): boolean {
+function webSpeechAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
@@ -97,10 +97,6 @@ export async function readAloud(
   return 'unavailable'
 }
 
-export function stopReading(): void {
-  if (webSpeechAvailable()) window.speechSynthesis.cancel()
-}
-
 /**
  * Spearcon: time-compressed speech of a rule fragment (Walker, Nance & Lindsay, ICAD 2006;
  * Walker et al., Human Factors 2013, where spearcons outperform earcons on navigation accuracy).
@@ -108,7 +104,7 @@ export function stopReading(): void {
  * `rate` (capped here) is an assets-free approximation of the pitch-corrected spearcon technique;
  * the full explanation still goes to the user's own screen reader. User-triggered only.
  */
-export function playSpearcon(text: string, opts: { lang?: string; rate?: number } = {}): boolean {
+function playSpearcon(text: string, opts: { lang?: string; rate?: number } = {}): boolean {
   if (!webSpeechAvailable()) return false
   const u = new SpeechSynthesisUtterance(text)
   u.lang = opts.lang ?? 'en'
