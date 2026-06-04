@@ -15,7 +15,24 @@ const OFFSIDE_QUERY =
 const UNITS_TO_METERS = 105 / 120
 
 // IBM Granite 4.0 Nano, ONNX-web build (Transformers.js + WebGPU ready).
+// A 3-tier on-device ladder, all IBM Granite + Apache-2.0: the deterministic floor, the
+// light Granite Nano 350M default (~0.3 GB), and an OPT-IN high-accuracy Granite 4.0 1B
+// (~1.5 GB q4; the model IBM itself ships in its Granite-4.0-Nano-WebGPU Space). The 1B is
+// off by default - it is a deliberate, gated download, never forced on the demo path.
 const GRANITE_NANO = 'onnx-community/granite-4.0-350m-ONNX-web'
+const GRANITE_1B = 'onnx-community/granite-4.0-1b-ONNX-web'
+
+export type OfflineTier = 'nano' | 'granite-1b'
+const _MODELS: Record<OfflineTier, string> = { nano: GRANITE_NANO, 'granite-1b': GRANITE_1B }
+let _tier: OfflineTier = 'nano'
+
+/** Opt into the high-accuracy on-device tier (a ~1.5 GB one-time download). */
+export function setOfflineTier(tier: OfflineTier): void {
+  _tier = tier
+}
+export function getOfflineTier(): OfflineTier {
+  return _tier
+}
 
 // Exact IFAB Law 11 wording, bundled so offline mode needs zero network.
 export const LAW_11_TEXT =
@@ -114,11 +131,11 @@ type Generator = (
   opts: unknown,
 ) => Promise<Array<{ generated_text: Array<{ content: string }> }>>
 
-let _generator: Generator | null = null
+const _generators: Partial<Record<OfflineTier, Generator>> = {}
 
 export type OfflineResult = {
   text: string
-  source: 'granite-nano-webgpu' | 'deterministic'
+  source: 'granite-nano-webgpu' | 'granite-1b-webgpu' | 'deterministic'
   geo: Geometry
   lawText: string
   retrieval: 'orama-bm25' | 'bundled'
@@ -148,15 +165,23 @@ export async function generateOffline(
     return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   }
 
+  const tier = _tier
+  const sourceTag: OfflineResult['source'] =
+    tier === 'granite-1b' ? 'granite-1b-webgpu' : 'granite-nano-webgpu'
   try {
-    opts.onStatus?.('Loading Granite Nano on-device (first run downloads the model)...')
+    opts.onStatus?.(
+      tier === 'granite-1b'
+        ? 'Loading Granite 4.0 1B on-device (first run downloads ~1.5 GB)...'
+        : 'Loading Granite Nano on-device (first run downloads the model)...',
+    )
     const { pipeline } = await import('@huggingface/transformers')
-    if (!_generator) {
-      _generator = (await pipeline('text-generation', GRANITE_NANO, {
+    if (!_generators[tier]) {
+      _generators[tier] = (await pipeline('text-generation', _MODELS[tier], {
         dtype: 'q4',
         device: 'webgpu',
       })) as unknown as Generator
     }
+    const _generator = _generators[tier]!
     const messages = [
       {
         role: 'system',
@@ -176,8 +201,12 @@ export async function generateOffline(
     const out = await _generator(messages, { max_new_tokens: 120, do_sample: false })
     const text = out?.[0]?.generated_text?.at(-1)?.content?.trim()
     if (text && text.length >= 20 && /law/i.test(text)) {
-      opts.onStatus?.('Generated on-device with Granite Nano (WebGPU).')
-      return { text, source: 'granite-nano-webgpu', geo, lawText, retrieval }
+      opts.onStatus?.(
+        tier === 'granite-1b'
+          ? 'Generated on-device with Granite 4.0 1B (WebGPU).'
+          : 'Generated on-device with Granite Nano (WebGPU).',
+      )
+      return { text, source: sourceTag, geo, lawText, retrieval }
     }
     return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   } catch {

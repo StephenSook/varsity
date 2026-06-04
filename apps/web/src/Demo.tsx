@@ -279,6 +279,8 @@ export function Demo() {
   const [offlineSource, setOfflineSource] = useState<string | null>(null)
   const [offlineRetrieval, setOfflineRetrieval] = useState<'orama-bm25' | 'bundled' | null>(null)
   const [offlineStatus, setOfflineStatus] = useState('')
+  // Opt into the high-accuracy on-device tier (Granite 4.0 1B, a ~1.5 GB one-time download).
+  const [highAccuracyOffline, setHighAccuracyOffline] = useState(false)
   const [latencyMs, setLatencyMs] = useState<number | null>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [showDiag, setShowDiag] = useState(false)
@@ -639,7 +641,8 @@ export function Demo() {
       audioCtxRef.current ??= new AudioContext()
       void audioCtxRef.current.resume()
     }
-    const { generateOffline } = await import('./offline')
+    const { generateOffline, setOfflineTier } = await import('./offline')
+    setOfflineTier(highAccuracyOffline ? 'granite-1b' : 'nano')
     const res = await generateOffline({ onStatus: setOfflineStatus })
     setGeo(res.geo)
     const ctx = audioCtxRef.current
@@ -986,6 +989,16 @@ export function Demo() {
         >
           Offline mode (on-device)
         </button>
+        <label className="flex items-center gap-2 text-xs text-slate-400">
+          <input
+            type="checkbox"
+            checked={highAccuracyOffline}
+            onChange={(e) => setHighAccuracyOffline(e.target.checked)}
+            disabled={streaming}
+            className="accent-emerald-500"
+          />
+          High-accuracy on-device model (Granite 4.0 1B, ~1.5 GB download)
+        </label>
         <button
           onClick={() => void readAloud(explanation, { lang: t.bcp47 })}
           disabled={streaming || !explanation}
@@ -1102,9 +1115,11 @@ export function Demo() {
 
       {offlineSource && (
         <p aria-hidden="true" data-testid="offline-source" className="text-xs text-emerald-400/80">
-          {offlineSource === 'granite-nano-webgpu'
-            ? 'Explained on-device by Granite Nano (WebGPU), no network.'
-            : 'Explained on-device (deterministic, no network).'}
+          {offlineSource === 'granite-1b-webgpu'
+            ? 'Explained on-device by Granite 4.0 1B (WebGPU), no network.'
+            : offlineSource === 'granite-nano-webgpu'
+              ? 'Explained on-device by Granite Nano (WebGPU), no network.'
+              : 'Explained on-device (deterministic, no network).'}
           {offlineRetrieval === 'orama-bm25' ? ' Law retrieved on-device (Orama BM25).' : ''}
           {offlineStatus ? ` ${offlineStatus}` : ''}
         </p>
