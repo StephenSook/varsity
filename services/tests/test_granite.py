@@ -72,3 +72,21 @@ def test_prompt_leak_is_rejected_then_falls_back(monkeypatch) -> None:
 def test_leak_detector_passes_clean_text() -> None:
     assert not _looks_like_prompt_leak("Selon la Loi 11, l'attaquant était hors-jeu.")
     assert _looks_like_prompt_leak("Law text: ... Decision data: ...")
+
+
+def test_watsonx_outage_degrades_to_floor_without_crashing_or_retrying(monkeypatch) -> None:
+    # A hard watsonx failure (expired key, 401/403/429/5xx, network timeout) must NOT escape and
+    # kill the SSE stream; it degrades to the deterministic Law-citing floor, and does NOT retry
+    # (a hard outage will not recover, unlike a transient empty completion).
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise RuntimeError("watsonx 429")
+
+    monkeypatch.setattr(granite_mod._watsonx, "generate", boom)
+    out = GraniteClient().explain_offside(
+        margin_meters=5.45, is_offside=True, law_text="Law 11 ..."
+    )
+    assert out.strip() != "" and "Law 11" in out and "5.45" in out  # the floor explanation
+    assert calls["n"] == 1  # one attempt, then straight to the floor (no 3x retry on a hard outage)
