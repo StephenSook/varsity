@@ -29,7 +29,16 @@ import math
 import random
 from dataclasses import dataclass
 
-from app.uncertainty import normal_cdf
+from app.uncertainty import normal_cdf, quantify
+
+
+def _withhold(margin_meters: float, straddles_zero: bool) -> bool:
+    """Speak the 'too close to call, trust the official' line ONLY when the broadcast-data coverage
+    interval straddles the line AND the calibrated band (the SAME decision the spoken verdict uses)
+    also reads the call as very tight. This keeps the two uncertainty layers telling one story: a
+    confident verdict is never paired with a 'too close to call' withholding for a margin the band
+    reads as clear or marginal."""
+    return straddles_zero and quantify(margin_meters).band == "very tight"
 
 # --- The Type-B coordinate-uncertainty budget. These are DOCUMENTED, defensible estimates, NOT a
 #     published StatsBomb spec (which does not exist). Triangulated from the broadcast-CV tracking
@@ -125,7 +134,7 @@ class UncertaintyBudget:
 
 def _note(b: dict) -> str:
     lo, hi = b["coverage_interval_m"]
-    if b["straddles_zero"]:
+    if _withhold(b["margin_m"], b["straddles_zero"]):
         return (
             f"Central margin {b['margin_m']:+.2f} m, but the honest 95% coverage interval "
             f"[{lo:+.2f}, {hi:+.2f}] m straddles the line: on our single broadcast-annotated point "
@@ -213,7 +222,7 @@ def spoken_narration(
     word, rng = ipcc_hedge(p)
     verdict = "offside" if is_offside else "onside"
     lo, hi = b.coverage_interval_m
-    if b.straddles_zero:
+    if _withhold(margin_meters, b.straddles_zero):
         return (
             f"This is a close call, carrying {b.entropy_bits:.2f} bits of uncertainty. On the "
             f"single broadcast point we have, the 95 percent coverage interval runs from "

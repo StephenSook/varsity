@@ -117,3 +117,17 @@ def test_extended_payload_carries_robustness_receipts_only_on_demand() -> None:
     assert "student_t_sensitivity" in ext and "fitted_temperature" in ext
     # the per-stream SSE stage stays light (no heavy receipts)
     assert "student_t_sensitivity" not in gum.payload(0.02, is_offside=True)
+
+
+def test_spoken_line_never_contradicts_the_verdict_band() -> None:
+    # the two uncertainty layers must tell one story: for a margin the calibrated band reads as
+    # clear/marginal, the GUM broadcast budget can still straddle zero, but the spoken line must NOT
+    # then say "trusts the official" (which would contradict the confident spoken verdict).
+    from app.uncertainty import quantify
+
+    for m in (0.30, 0.20, 0.5, 1.0):
+        assert gum.budget(m).straddles_zero  # the wider broadcast budget does straddle here
+        assert quantify(m).band != "very tight"  # but the calibrated band is not too-close
+        assert "trusts the official" not in gum.spoken_narration(m, is_offside=True)
+    # a genuinely very-tight call still withholds and defers
+    assert "trusts the official" in gum.spoken_narration(0.02, is_offside=True)
