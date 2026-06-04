@@ -482,6 +482,16 @@ export function JudgesPanel() {
       label: 'Run a live accessibility check (axe-core)',
       fn: async () => {
         const axe = (await import('axe-core')).default
+        // Let any in-flight reveal/transition settle before scanning: a contrast check sampled
+        // mid-animation computes against a fading-in element's blended color and can transiently
+        // flag it until it reaches full opacity. Flush one paint, then wait for current animations
+        // to finish, capped so a looping animation can never hang the check.
+        await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+        const anims = document.getAnimations ? document.getAnimations() : []
+        await Promise.race([
+          Promise.allSettled(anims.map((a) => a.finished)),
+          new Promise<void>((r) => setTimeout(r, 600)),
+        ])
         const res = await axe.run(document, {
           runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
         })
