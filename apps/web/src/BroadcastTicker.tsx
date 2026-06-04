@@ -45,7 +45,7 @@ export function BroadcastTicker({ latencyMs }: { latencyMs: number | null }) {
           />
           <span className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-slate-400" />
         </div>
-        <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+        <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-slate-400">
           <span className="text-emerald-400">VARSITY</span>
           <span>Broadcast</span>
         </div>
