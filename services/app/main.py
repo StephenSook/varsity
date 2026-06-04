@@ -16,11 +16,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 from app import decisions, scenarios
+from app import latency as latency_model
 from app.calibration import calibration_payload
 from app.observability import setup_tracing
 from app.pipeline import decision_stages, explanation_stages, question_stages
 from app.rag.retriever import LawRetriever
-from app.triggers.resolver import pick_transitional, resolve_live_var_events, reviewing_stage
+from app.triggers.fusion import fuse
+from app.triggers.prewarm import PreWarmCache
+from app.triggers.resolver import (
+    pick_transitional,
+    resolve_and_fuse,
+    resolve_live_var_events,
+    reviewing_stage,
+)
+from app.triggers.schema import REVIEW_STARTED, normalize_all
 
 app = FastAPI(title="VARSITY backend", version="0.1.0")
 app.add_middleware(
@@ -33,6 +42,10 @@ app.add_middleware(
 setup_tracing(app)
 
 _SENTINEL = object()
+
+# Speculative pre-warm cache for the live path: the 'reviewing' beat warms the Law +
+# geometry so the resolved explanation skips that cold work.
+_prewarm = PreWarmCache()
 
 
 @app.get("/health")
@@ -75,19 +88,37 @@ async def stream_live(
     """Live-trigger beat: emit the transitional 'VAR is reviewing' announcement, then
     the full explanation. Uses the deterministic replay floor so the demo never depends
     on a live match; real Sportmonks / API-Football events are used when available.
+
+    The 'reviewing' beat carries the multi-source fusion confidence + hedge and triggers
+    the speculative pre-warm (Law + geometry pre-computed in the review gap), so the
+    resolved explanation skips that cold work. None of this adjudicates - the outcome is
+    always the official's received decision.
     """
     frame = scenarios.load_frame(scenario)
     meta = scenarios.trigger_meta(scenario)
     events, source = resolve_live_var_events()
     transitional = pick_transitional(events)
+    fused = fuse(normalize_all(events, source))
+    review = next((f for f in fused if f.phase == REVIEW_STARTED), fused[0] if fused else None)
+    review_id = f"{source}:{scenario}"
 
     async def event_gen():
+        warm = None
         if transitional is not None:
-            yield {
-                "event": "reviewing",
-                "data": json.dumps(reviewing_stage(transitional, source)),
-            }
-        gen = explanation_stages(frame, language=language, trigger_meta=meta)
+            # Speculative pre-warm: during the 'reviewing' gap, pre-retrieve the Law and run
+            # the geometry so the resolved explanation skips that cold work.
+            await asyncio.to_thread(_prewarm.warm, review_id, frame, _law_retriever())
+            warm = _prewarm.consume(review_id)
+            stage = reviewing_stage(transitional, source)
+            if review is not None:
+                stage["confidence"] = round(review.confidence, 3)
+                stage["hedge"] = review.hedge
+            stage["prewarmed"] = warm is not None
+            yield {"event": "reviewing", "data": json.dumps(stage)}
+        prewarmed_law = warm.law if warm is not None else None
+        gen = explanation_stages(
+            frame, language=language, trigger_meta=meta, prewarmed_law=prewarmed_law
+        )
         while True:
             stage = await asyncio.to_thread(next, gen, _SENTINEL)
             if stage is _SENTINEL:
@@ -95,6 +126,28 @@ async def stream_live(
             yield {"event": stage["stage"], "data": json.dumps(stage)}
 
     return EventSourceResponse(event_gen())
+
+
+@app.get("/latency")
+def latency(elapsed_s: float | None = None) -> dict:
+    """The honest 'first in the room' latency framing: the VERIFIED broadcast-delay
+    figures (Phenix field-of-play studies), the trigger -> spoken-verdict budget, and -
+    with ``?elapsed_s=`` - the calibrated lead for a specific run. The live trigger is
+    never load-bearing; the canned StatsBomb path is the floor."""
+    return latency_model.payload(elapsed_s)
+
+
+@app.get("/fusion")
+def fusion() -> dict:
+    """Multi-source fusion confidence over the live (or replay-floor) VAR events: each
+    review gets a confidence from cross-source agreement, a hedge, and a conflict flag.
+    It raises confidence / resilience; it never adjudicates."""
+    events, source = resolve_live_var_events()
+    decisions_out = resolve_and_fuse()
+    return {
+        "primary_source": source,
+        "decisions": [d.as_dict() for d in decisions_out],
+    }
 
 
 _retriever: LawRetriever | None = None

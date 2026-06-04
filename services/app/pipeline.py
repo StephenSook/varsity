@@ -73,6 +73,7 @@ def explanation_stages(
     granite: object | None = None,
     guardian: object | None = None,
     trigger_meta: dict | None = None,
+    prewarmed_law: object | None = None,
 ) -> Iterator[dict]:
     retriever = retriever or LawRetriever()
     granite = granite or GraniteClient()
@@ -139,9 +140,13 @@ def explanation_stages(
     )
 
     with tracer.start_as_current_span("law") as span:
-        law = retriever.retrieve(OFFSIDE_QUERY)
+        # On the live path the Law is pre-retrieved during the 'reviewing' gap (speculative
+        # pre-warm), so the resolved explanation skips this retrieval; the canned path
+        # retrieves here as usual. Either way the SAME Law text grounds the explanation.
+        law = prewarmed_law or retriever.retrieve(OFFSIDE_QUERY)
         span.set_attribute("varsity.law", law.law)
         span.set_attribute("varsity.law_title", law.title)
+        span.set_attribute("varsity.law_prewarmed", prewarmed_law is not None)
     yield {"stage": "law", "law": law.law, "title": law.title, "text": law.text}
 
     with tracer.start_as_current_span("granite") as span:
