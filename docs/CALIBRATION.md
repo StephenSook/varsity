@@ -23,7 +23,7 @@ that receipt deterministically (seeded Monte-Carlo, no model call), over the *sa
 |---|---|---|
 | Expected Calibration Error (ECE) | **0.35%** | calibrated to within a third of a percent |
 | Brier score | **0.060** | low squared error of confidence vs outcome |
-| Overconfident control (sigma halved), ECE | **4.16%** | ~12x worse — the diagram discriminates |
+| Overconfident control (sigma halved), ECE | **4.16%** | ~12x worse, the diagram discriminates |
 
 The reliability diagram (predicted confidence on the x-axis, empirical accuracy on the y)
 sits on the perfect-calibration diagonal for the well-specified model; the overconfident
@@ -36,7 +36,7 @@ receipt") or `GET /calibration`.
 2. The system observes `m = t + N(0, sigma)` and reads the verdict off `m` with confidence
    `Phi(|m| / sigma)`.
 3. The verdict is **correct** iff `sign(m) == sign(t)` (offside vs onside agree).
-4. Bin predictions by confidence over `[0.5, 1.0]` (reported confidence is never below 0.5 —
+4. Bin predictions by confidence over `[0.5, 1.0]` (reported confidence is never below 0.5 , 
    the model never doubts its own verdict). ECE is the count-weighted gap between each bin's
    mean confidence and its empirical accuracy; Brier is the mean squared error of confidence
    against the {0,1} correctness outcome.
@@ -46,7 +46,7 @@ it is calibrated *by construction*. The receipt's job is therefore to confirm th
 **implementation** realizes that property (it would catch an inverted or skewed `Phi`, the
 same class of bug live-validation caught in the Guardian path) and to quantify the residual
 finite-sample / binning error. The deliberately overconfident control (sigma halved) proves
-the diagram is not vacuous — a miscalibrated model fails it.
+the diagram is not vacuous, a miscalibrated model fails it.
 
 ## Honest scope
 

@@ -39,7 +39,7 @@ export function ReliabilityDiagram({ p }: { p: CalibrationPayload }) {
   return (
     <figure className="mt-4 rounded-xl bg-slate-950/60 p-4 ring-1 ring-slate-700/50">
       <figcaption className="text-xs text-slate-300">
-        <span className="font-semibold text-emerald-300">Reliability diagram</span> — predicted
+        <span className="font-semibold text-emerald-300">Reliability diagram</span>: predicted
         confidence vs empirical accuracy over {p.samples.toLocaleString()} seeded draws. Points on
         the diagonal are perfectly calibrated. ECE{' '}
         <span className="font-mono text-emerald-300">{pctFine(p.ece)}</span>, Brier{' '}
@@ -128,7 +128,7 @@ export function ReliabilityDiagram({ p }: { p: CalibrationPayload }) {
             {populated.map((b) => (
               <tr key={b.lo}>
                 <th scope="row" className="pr-3 font-normal text-slate-400">
-                  {pct(b.lo)}–{pct(b.hi)}
+                  {pct(b.lo)}-{pct(b.hi)}
                 </th>
                 <td className="pr-3">{pct(b.confidence)}</td>
                 <td className="pr-3 text-emerald-300">{pct(b.accuracy)}</td>

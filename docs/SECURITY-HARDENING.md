@@ -20,11 +20,11 @@ poisoned Law chunk would silently corrupt an explanation the user cannot check. 
   **root hash** is taken over the sorted per-chunk digests, into a signed manifest
   (`rag/index/chunks.sig.json`, committed);
 - the retriever **verifies the canonical corpus on load and fails CLOSED** on any mismatch
-  (`CorpusIntegrityError`) — a tampered, added, or removed Law is caught before retrieval;
+  (`CorpusIntegrityError`), a tampered, added, or removed Law is caught before retrieval;
 - custom corpora (test fixtures) carry no manifest, so they skip verification;
 - re-sign after any deliberate corpus edit: `python -m app.rag.corpus_signature`.
 
-Deterministic, no model, no network — the auditable boundary OWASP wants paired with the
+Deterministic, no model, no network, the auditable boundary OWASP wants paired with the
 probabilistic Guardian. A tampered corpus is caught by arithmetic, not by a model that
 might miss it.
 
@@ -32,15 +32,15 @@ might miss it.
 
 `services/app/safety/input_screen.py` · `safety/hap.py`
 
-The "ask any rule" oracle takes a fan's free-text question and feeds it to Granite — the
+The "ask any rule" oracle takes a fan's free-text question and feeds it to Granite, the
 one place untrusted text reaches the model. Three layers:
 
 1. **Deterministic HAP screen (always-on floor).** A hate/abuse/profanity wordlist screen.
    Football vocabulary does not overlap it, so false positives are unlikely. On a hit the
-   oracle declines — no model call.
+   oracle declines, no model call.
 2. **Deterministic prompt-injection / jailbreak screen.** Targets the canonical override
    phrasings: "ignore previous instructions", system-prompt probes, role-override
-   ("you are now…", "act as…"), delimiter breakouts (`<|…|>`, ```` ```system ````, `[INST]`).
+   ("you are now...", "act as..."), delimiter breakouts (`<|...|>`, ```` ```system ````, `[INST]`).
 3. **Spotlighting (delimiting).** Even a clean question is wrapped as quoted DATA between
    `<<<FAN_QUESTION>>>` markers in the Granite prompt, which instructs the model to treat
    it strictly as a question, never as instructions. A user cannot smuggle a closing
@@ -64,7 +64,7 @@ feasibility-verified caveats:
 - `ibm-granite/granite-guardian-hap-38m` (**Apache-2.0**, a RoBERTa-4-layer binary toxicity
   classifier) is the named small HAP model. There is **no official in-browser ONNX build
   today** (only a third-party conversion), so an on-device HAP screen would need a
-  self-converted export — we do **not** claim a drop-in on-device model.
+  self-converted export, we do **not** claim a drop-in on-device model.
 
 The always-on gate is therefore the deterministic floor (offline, sub-millisecond); the
 watsonx guardrail is the optional heavier tier, enabled with one parameter.

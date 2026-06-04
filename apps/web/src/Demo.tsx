@@ -152,41 +152,41 @@ type SpeechRecognitionLike = {
 function describe(s: Stage): string {
   switch (s.stage) {
     case 'trigger':
-      return ` — ${String(s.source)}`
+      return ` · ${String(s.source)}`
     case 'geometry':
-      return ` — margin ${String(s.margin_meters)}m, ${s.is_offside ? 'offside' : 'onside'}`
+      return ` · margin ${String(s.margin_meters)}m, ${s.is_offside ? 'offside' : 'onside'}`
     case 'uncertainty_budget':
-      return ` — ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
+      return ` · ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
     case 'geometry_descriptors':
-      return ` — line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line`
+      return ` · line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line`
     case 'discourse':
       return s.connective
-        ? ` — ${String(s.connective)}`
-        : ` — ${String(s.decisions_seen)} decision(s) seen this match`
+        ? ` · ${String(s.connective)}`
+        : ` · ${String(s.decisions_seen)} decision(s) seen this match`
     case 'law':
-      return ` — Law ${String(s.law)} (${String(s.title)})`
+      return ` · Law ${String(s.law)} (${String(s.title)})`
     case 'granite':
-      return ` — ${String(s.model)}`
+      return ` · ${String(s.model)}`
     case 'guardian':
-      return ` — ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
+      return ` · ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
     case 'decision':
-      return ` — ${String(s.outcome)}`
+      return ` · ${String(s.outcome)}`
     case 'signal':
-      return ` — referee signal (Law ${String(s.law)})`
+      return ` · referee signal (Law ${String(s.law)})`
     case 'proof':
-      return ' — Law 11 rule proof'
+      return ' · Law 11 rule proof'
     case 'parallax':
-      return ` — camera parallax ~${String(s.apparent_shift_cm)} cm`
+      return ` · camera parallax ~${String(s.apparent_shift_cm)} cm`
     case 'causal':
-      return ` — ${String(s.fact)} rather than ${String(s.foil)}`
+      return ` · ${String(s.fact)} rather than ${String(s.foil)}`
     case 'critical_questions':
-      return ' — critical questions answered'
+      return ' · critical questions answered'
     case 'verification':
-      return ` — ${String(s.passed)}/${String(s.total)} critics passed`
+      return ` · ${String(s.passed)}/${String(s.total)} critics passed`
     case 'completeness':
-      return ` — ${String(s.disclosed)}/${String(s.total)} disclosures`
+      return ` · ${String(s.disclosed)}/${String(s.total)} disclosures`
     case 'provenance':
-      return ` — ${String(s.link_count)} grounded claims`
+      return ` · ${String(s.link_count)} grounded claims`
     default:
       return ''
   }
