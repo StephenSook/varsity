@@ -60,7 +60,14 @@ export default function App() {
 
   return (
     <div className="relative">
+      <a
+        href="#demo"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-emerald-500 focus:px-4 focus:py-2 focus:font-semibold focus:text-slate-950"
+      >
+        {c.skipToContent}
+      </a>
       <OnlineBadge />
+      <main>
       {/* HERO */}
       <section
         aria-label={c.heroKicker}
@@ -180,6 +187,8 @@ export default function App() {
         </Reveal>
         <JudgesPanel />
       </Section>
+
+      </main>
 
       {/* CLOSE */}
       <footer className="relative z-10 mx-auto w-full max-w-5xl px-6 py-20 text-center">
