@@ -875,21 +875,45 @@ export function Demo() {
 
   // Keyboard power mode: every core action from one keypress (ignored while typing in
   // a field). The on-screen buttons stay tab-focusable; this is the power layer on top.
+  // A ref to the latest key actions + state, so the single keydown listener (mounted once) always
+  // calls the current handlers, never a stale closure (e.g. Explain after the user changed audio or
+  // verbosity settings), without re-binding the listener on every render.
+  const keyActions = useRef({
+    explainTheCall,
+    explainOffline,
+    shareCurrent,
+    cycleVerbosity,
+    selectLang,
+    lang,
+    streaming,
+    explanation,
+  })
+  keyActions.current = {
+    explainTheCall,
+    explainOffline,
+    shareCurrent,
+    cycleVerbosity,
+    selectLang,
+    lang,
+    streaming,
+    explanation,
+  }
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const tag = (e.target as HTMLElement | null)?.tagName ?? ''
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
+      const a = keyActions.current
       const langs = ['English', 'Spanish', 'French', 'Portuguese', 'German'] as const
       const k = e.key.toLowerCase()
       if (k === 'e') {
-        if (!streaming) explainTheCall(lang)
+        if (!a.streaming) a.explainTheCall(a.lang)
       } else if (k === 'o') {
-        if (!streaming) void explainOffline()
+        if (!a.streaming) void a.explainOffline()
       } else if (k === 'r') {
-        if (explanation && !streaming) void readAloud(explanation, { lang: UI[lang].bcp47 })
+        if (a.explanation && !a.streaming) void readAloud(a.explanation, { lang: UI[a.lang].bcp47 })
       } else if (k === 'c') {
-        if (explanation && !streaming) void shareCurrent()
+        if (a.explanation && !a.streaming) void a.shareCurrent()
       } else if (k === 's') {
         setSoundOn((s) => !s)
       } else if (k === 'b') {
@@ -899,11 +923,11 @@ export function Demo() {
       } else if (k === 'l') {
         setLive((v) => !v)
       } else if (k === 'v') {
-        cycleVerbosity()
+        a.cycleVerbosity()
       } else if (e.key === '?') {
         setShowHelp((h) => !h)
       } else if (k >= '1' && k <= '5') {
-        selectLang(langs[Number(k) - 1])
+        a.selectLang(langs[Number(k) - 1])
       } else {
         return
       }
@@ -911,7 +935,7 @@ export function Demo() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lang, streaming, explanation, live, scenario])
+  }, [])
 
   // Re-announce the current verdict at the new level when verbosity changes.
   useEffect(() => {
