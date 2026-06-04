@@ -7,6 +7,7 @@ export type Lang = 'English' | 'Spanish' | 'French' | 'Portuguese' | 'German'
 
 export type Chrome = {
   heroKicker: string
+  skipToContent: string
   tagline: string
   ctaHear: string
   ctaWhy: string
@@ -35,6 +36,7 @@ export type Chrome = {
 export const CHROME: Record<Lang, Chrome> = {
   English: {
     heroKicker: 'IFAB-grounded · screen-reader-native',
+    skipToContent: 'Skip to the demo',
     tagline: 'Hear the why behind every VAR call.',
     ctaHear: 'Hear it explain a call',
     ctaWhy: 'Why it matters',
@@ -87,6 +89,7 @@ export const CHROME: Record<Lang, Chrome> = {
   },
   Spanish: {
     heroKicker: 'Basado en las Reglas IFAB · nativo para lectores de pantalla',
+    skipToContent: 'Saltar a la demostración',
     tagline: 'Escucha el porqué de cada decisión del VAR.',
     ctaHear: 'Escucha cómo explica una jugada',
     ctaWhy: 'Por qué importa',
@@ -139,6 +142,7 @@ export const CHROME: Record<Lang, Chrome> = {
   },
   French: {
     heroKicker: "Fondé sur les Lois de l'IFAB · pensé pour les lecteurs d'écran",
+    skipToContent: 'Aller à la démo',
     tagline: 'Entendez le pourquoi de chaque décision de la VAR.',
     ctaHear: "Écoutez-le expliquer une action",
     ctaWhy: "Pourquoi c'est important",
@@ -191,6 +195,7 @@ export const CHROME: Record<Lang, Chrome> = {
   },
   Portuguese: {
     heroKicker: 'Baseado nas Regras da IFAB · nativo para leitores de tela',
+    skipToContent: 'Ir para a demonstração',
     tagline: 'Ouça o porquê de cada decisão do VAR.',
     ctaHear: 'Ouça como explica um lance',
     ctaWhy: 'Por que importa',
@@ -243,6 +248,7 @@ export const CHROME: Record<Lang, Chrome> = {
   },
   German: {
     heroKicker: 'Auf IFAB-Regeln gestützt · für Screenreader gemacht',
+    skipToContent: 'Zur Demo springen',
     tagline: 'Hören Sie das Warum hinter jeder VAR-Entscheidung.',
     ctaHear: 'Hören Sie die Erklärung einer Szene',
     ctaWhy: 'Warum es zählt',
