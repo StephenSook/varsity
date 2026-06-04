@@ -3,6 +3,7 @@ import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
 import { listen, onDeviceAsrAvailable } from './voice'
 import { useLang, type Lang } from './i18n'
+import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
@@ -993,7 +994,7 @@ export function Demo() {
         </div>
         {moment?.matchName && (
           <p data-testid="moment-byline" className="text-xs text-slate-400">
-            {moment.competition ?? 'FIFA World Cup 2022'} · {moment.matchName}
+            {moment.competition ?? 'FIFA World Cup 2022'} · <MixedScriptText text={moment.matchName} />
             {typeof moment.minute === 'number' ? ` · ${moment.minute}'` : ''}
           </p>
         )}

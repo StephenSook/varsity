@@ -49,7 +49,12 @@ Sources: [NVDA #4396](https://github.com/nvaccess/nvda/issues/4396) · [w3c/aria
 
 - This matrix reflects what is verifiable from primary sources as of 2026-06-03; JAWS-live-region and
   TalkBack behavior are marked **UNVERIFIED** rather than asserted.
-- Per-character mixed-script handling (e.g. wrapping a non-Latin player name in its own `lang` span
-  with a transliteration fallback) is a further refinement, not yet implemented.
+- Per-run mixed-script handling is shipped (`apps/web/src/mixedScript.tsx`): a non-Latin team or
+  player name (e.g. المغرب, 대한민국, Россия) is split by Unicode script and each non-Latin run is
+  wrapped in its own element tagged `lang="und-<Script>"` (undetermined language, known script, the
+  honest tag since one script serves several languages), so the screen reader switches pronunciation
+  for that run. Latin content passes through unchanged. Automatic phonetic TRANSLITERATION (a Latin
+  spelling) is deliberately omitted: a correct one needs a per-script ICU table we do not bundle, and
+  a wrong transliteration would mislead.
 - The bundled-TTS path is Web Speech for non-English (Kokoro is English-first), so non-English premium
   voice quality depends on the OS voices installed.
