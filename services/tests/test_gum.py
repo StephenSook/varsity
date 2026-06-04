@@ -64,8 +64,35 @@ def test_temperature_matches_logistic_approximation() -> None:
 
 
 def test_payload_is_serializable_and_cited() -> None:
-    p = gum.payload(5.69)
+    p = gum.payload(5.69, is_offside=True)
     assert p["coverage_factor_k"] == 2.0
     assert "JCGM 100:2008" in p["sources"] and "Jaynes" in p["sources"]
     assert p["regimes"]["optical_equivalent_sigma_m"] < p["regimes"]["broadcast_annotation_sigma_m"]
     assert len(p["coverage_interval_m"]) == 2 and len(p["credible_interval_m"]) == 2
+    assert "spoken" in p and "offside" in p["spoken"]
+
+
+def test_ipcc_hedge_pairs_word_with_numeric_range() -> None:
+    word, rng = gum.ipcc_hedge(0.999)
+    assert word == "virtually certain" and rng == "99 to 100 percent"
+    assert gum.ipcc_hedge(0.92)[0] == "very likely"
+    assert gum.ipcc_hedge(0.55)[0] == "more likely than not"
+
+
+def test_spoken_narration_speaks_the_coverage_and_hedge_with_range() -> None:
+    # a clear offside: the verdict word + the IPCC hedge WITH its numeric range (Budescu) + the
+    # explicit coverage interval, all deterministic (never from the LLM)
+    clear = gum.spoken_narration(5.69, is_offside=True)
+    assert "virtually certain" in clear and "99 to 100 percent" in clear
+    assert "coverage interval" in clear and "offside" in clear
+
+
+def test_spoken_narration_is_honest_and_rich_on_a_close_call() -> None:
+    tight = gum.spoken_narration(0.02, is_offside=True)
+    assert "close call" in tight and "bits" in tight
+    assert "straddling" in tight and "trusts the official" in tight
+
+
+def test_spoken_narration_handles_the_onside_direction() -> None:
+    onside = gum.spoken_narration(-3.14, is_offside=False)
+    assert "onside" in onside and "virtually certain" in onside

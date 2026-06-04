@@ -13,7 +13,13 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 // the chunk loads).
 const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
-import { playBuildUp, playOffsideChord, playSpatialScan, type SpatialMode } from './sonify'
+import {
+  playBuildUp,
+  playMarginChord,
+  playOffsideChord,
+  playSpatialScan,
+  type SpatialMode,
+} from './sonify'
 import { StageScrubber } from './StageScrubber'
 import { playSpearcon, readAloud, synthesizeClip } from './tts'
 
@@ -217,6 +223,10 @@ export function Demo() {
   const [liveMessage, setLiveMessage] = useState('')
   const [stages, setStages] = useState<Stage[]>([])
   const [geo, setGeo] = useState<Geometry | null>(null)
+  // The deterministic GUM spoken line (coverage interval + IPCC hedge with its numeric range),
+  // captured from the uncertainty_budget stage and appended to the spoken verdict so the blind
+  // fan HEARS the honest uncertainty, not just sees it in the trace.
+  const budgetSpokenRef = useRef('')
   const [lawText, setLawText] = useState('')
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
@@ -398,6 +408,13 @@ export function Demo() {
     } else {
       void chord()
     }
+    // The Plomp-Levelt margin chord follows the spatial verdict chord: the listener hears the
+    // call's closeness as roughness (a knife-edge call beats; a clear call is consonant).
+    try {
+      playMarginChord(ctx, g, 0.1 * audioPrefs.volume, buildUp ? 3.4 : 1.8)
+    } catch {
+      /* WebAudio unavailable */
+    }
   }
 
   // Onboarding tutorial: walk a blind listener through the earcon vocabulary, one labelled
@@ -578,19 +595,23 @@ export function Demo() {
         if (name === 'law') {
           setLawText(String(data.text ?? ''))
         }
+        if (name === 'uncertainty_budget') {
+          budgetSpokenRef.current = String(data.spoken ?? '')
+        }
         if (name === 'verdict') {
           const text = String(data.text ?? '')
           setExplanation(text)
           const isDecision = Boolean(data.decision_type)
+          const spoken = isDecision
+            ? text
+            : announceText(verbosity, {
+                text,
+                isOffside: Boolean(data.is_offside),
+                marginM: Number(data.margin_meters ?? 0),
+                confidence: data.confidence ? String(data.confidence) : undefined,
+              })
           announce(
-            isDecision
-              ? text
-              : announceText(verbosity, {
-                  text,
-                  isOffside: Boolean(data.is_offside),
-                  marginM: Number(data.margin_meters ?? 0),
-                  confidence: data.confidence ? String(data.confidence) : undefined,
-                }),
+            !isDecision && budgetSpokenRef.current ? `${spoken} ${budgetSpokenRef.current}` : spoken,
           )
           if (data.law_text) setLawText(String(data.law_text))
           if (!isDecision) {

@@ -110,7 +110,10 @@ def explanation_stages(
 
     # GUM uncertainty budget: the honest broadcast-data coverage interval, Bayesian credible
     # interval, Shannon entropy, and Monte-Carlo cross-check (the rigorous superset of the band).
-    yield {"stage": "uncertainty_budget", **gum.payload(geo.margin_meters)}
+    yield {
+        "stage": "uncertainty_budget",
+        **gum.payload(geo.margin_meters, is_offside=geo.is_offside),
+    }
 
     # Descriptive geometry: the defensive line's tilt + thickness + width + an exact-rational
     # "ahead-of-line" predicate. Describes the spatial context; never redefines the offside line.

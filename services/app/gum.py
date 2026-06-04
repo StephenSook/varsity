@@ -181,10 +181,58 @@ def budget(
     )
 
 
-def payload(margin_meters: float) -> dict:
+# IPCC AR6 calibrated language WITH the numeric range. Budescu et al. (2009 Psych. Science;
+# 2014 Nature Climate Change) showed lay listeners under-interpret the words toward 50%, so we
+# pair the word with the percentage in spoken text - the documented mitigation, and exactly right
+# for a blind-fan audience who cannot see a number on screen.
+_IPCC_BANDS: list[tuple[float, str, str]] = [
+    (0.99, "virtually certain", "99 to 100 percent"),
+    (0.95, "extremely likely", "95 to 100 percent"),
+    (0.90, "very likely", "90 to 95 percent"),
+    (0.66, "likely", "66 to 90 percent"),
+    (0.50, "more likely than not", "50 to 66 percent"),
+]
+
+
+def ipcc_hedge(p: float) -> tuple[str, str]:
+    """Map a probability to the IPCC verbal hedge AND its numeric range."""
+    for threshold, word, rng in _IPCC_BANDS:
+        if p >= threshold:
+            return word, rng
+    return "more likely than not", "50 to 66 percent"
+
+
+def spoken_narration(
+    margin_meters: float, is_offside: bool, *, sigma_m: float = SIGMA_MARGIN_GUM_M
+) -> str:
+    """A DETERMINISTIC spoken line for the aria-live verdict, length set by the entropy tier. The
+    numbers come from the geometry, never from the LLM (the spoken uncertainty must not be a model
+    confabulation). It describes the data's support for the received call; it never adjudicates."""
+    b = budget(margin_meters, sigma_m=sigma_m)
+    p = b.p_offside if is_offside else (1.0 - b.p_offside)
+    word, rng = ipcc_hedge(p)
+    verdict = "offside" if is_offside else "onside"
+    lo, hi = b.coverage_interval_m
+    if b.straddles_zero:
+        return (
+            f"This is a close call, carrying {b.entropy_bits:.2f} bits of uncertainty. On the "
+            f"single broadcast point we have, the 95 percent coverage interval runs from "
+            f"{lo:+.1f} to {hi:+.1f} metres, straddling the line, so VARSITY trusts the official's "
+            f"{verdict} call."
+        )
+    # The coverage interval is always spoken (the headline honest number); the entropy tier adds
+    # the close-call detail above. A clear call is short; a close call gets the full treatment.
+    return (
+        f"On the data this is {word}, {rng}, {verdict}. The margin's 95 percent coverage interval "
+        f"runs from {lo:+.1f} to {hi:+.1f} metres."
+    )
+
+
+def payload(margin_meters: float, *, is_offside: bool = False) -> dict:
     """The judge-facing JSON for the /uncertainty endpoint + the SSE stage."""
     b = budget(margin_meters)
     return {
+        "spoken": spoken_narration(margin_meters, is_offside),
         "margin_m": b.margin_m,
         "sigma_margin_m": b.sigma_margin_m,
         "expanded_uncertainty_m": b.expanded_uncertainty_m,
