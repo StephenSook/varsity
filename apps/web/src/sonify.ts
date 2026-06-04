@@ -499,8 +499,18 @@ export function spatialScanPlan(geo: Geometry): ScanVoice[] {
 
 // Play the spatial scan over the chosen mode (HRTF / stereo / mono). Manual-verified (WebAudio is
 // not observable in headless Playwright); the plan above is the unit-tested core.
+// A single shared AudioContext for the standalone players (the spatial scan), so repeated presses
+// never leak a new context (browsers cap concurrent AudioContexts at ~6). Lazily created, and
+// resumed if the autoplay policy left it suspended.
+let _sharedCtx: AudioContext | null = null
+export function sharedAudioContext(): AudioContext {
+  if (!_sharedCtx) _sharedCtx = new AudioContext()
+  if (_sharedCtx.state === 'suspended') void _sharedCtx.resume()
+  return _sharedCtx
+}
+
 export function playSpatialScan(geo: Geometry, mode: SpatialMode = 'hrtf'): void {
-  const ctx = new AudioContext()
+  const ctx = sharedAudioContext()
   for (const v of spatialScanPlan(geo)) {
     const t0 = ctx.currentTime + v.onsetMs / 1000
     const sp = makeSpatial(ctx, mode)
