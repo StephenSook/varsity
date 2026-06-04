@@ -21,7 +21,9 @@ import {
   playOffsideChord,
   playSpatialScan,
   type SpatialMode,
+  vizAnalyser,
 } from './sonify'
+import { VerdictViz } from './VerdictViz'
 import { StageScrubber } from './StageScrubber'
 import { playSpearcon, readAloud, synthesizeClip } from './tts'
 
@@ -354,6 +356,7 @@ export function Demo() {
   const liveRef = useRef<HTMLDivElement>(null)
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
+  const [audioActive, setAudioActive] = useState(false)
   const nbspRef = useRef(false)
 
   // Set the live-region message, alternating a trailing non-breaking space so an
@@ -406,6 +409,11 @@ export function Demo() {
   })
 
   function sonifyGeometry(ctx: AudioContext, g: Geometry) {
+    // Prime the decorative spectrum analyser on the output bus, then mark audio active so the
+    // aria-hidden verdict visualization animates while the chord plays.
+    vizAnalyser(ctx)
+    setAudioActive(true)
+    window.setTimeout(() => setAudioActive(false), buildUp ? 4200 : 2600)
     const w = window as unknown as { __varsitySonification?: unknown }
     const chord = () =>
       playOffsideChord(ctx, g, audioOpts(g.confidence))
@@ -1444,6 +1452,12 @@ export function Demo() {
           <figcaption className="mt-2 text-sm text-slate-400" lang={t.bcp47}>
             {t.caption(geo.margin_meters.toFixed(2), geo.is_offside)}
           </figcaption>
+          <div className="mt-3 flex justify-center">
+            <VerdictViz
+              getAnalyser={() => (audioCtxRef.current ? vizAnalyser(audioCtxRef.current) : null)}
+              active={audioActive}
+            />
+          </div>
         </figure>
       )}
 

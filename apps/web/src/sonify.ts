@@ -70,6 +70,34 @@ export function sonificationPlan(geo: Geometry): Voice[] {
 // stereo (better on speakers), and mono (no spatialization, for the widest compatibility).
 export type SpatialMode = 'hrtf' | 'stereo' | 'mono'
 
+// A single output bus per AudioContext: every voice routes through it to the speakers, so one
+// decorative AnalyserNode can tap the REAL audio (an analyser placed after the destination would
+// see nothing). Cached per context via a WeakMap so it is created once and never leaks.
+const _BUS = new WeakMap<AudioContext, GainNode>()
+export function outputBus(ctx: AudioContext): GainNode {
+  let bus = _BUS.get(ctx)
+  if (!bus) {
+    bus = ctx.createGain()
+    bus.connect(ctx.destination)
+    _BUS.set(ctx, bus)
+  }
+  return bus
+}
+
+// A decorative spectrum analyser fed from the output bus, for the aria-hidden verdict visualization.
+const _ANALYSER = new WeakMap<AudioContext, AnalyserNode>()
+export function vizAnalyser(ctx: AudioContext): AnalyserNode {
+  let an = _ANALYSER.get(ctx)
+  if (!an) {
+    an = ctx.createAnalyser()
+    an.fftSize = 128
+    an.smoothingTimeConstant = 0.8
+    outputBus(ctx).connect(an)
+    _ANALYSER.set(ctx, an)
+  }
+  return an
+}
+
 // The default spatial mode when the listener has no saved preference. A coarse-pointer / touch
 // device is most often used with earbuds, where HRTF binaural panning is convincing; a desktop is
 // often on speakers, where front-hemisphere HRTF muddies more than it helps, so plain stereo is the
@@ -253,7 +281,7 @@ export async function playOffsideChord(
     g.gain.setValueAtTime(0, t0)
     g.gain.linearRampToValueAtTime(peak * 0.6, t0 + 0.02)
     g.gain.linearRampToValueAtTime(0, t0 + sweepDur)
-    osc.connect(g).connect(ctx.destination)
+    osc.connect(g).connect(outputBus(ctx))
     osc.start(t0)
     osc.stop(t0 + sweepDur + 0.02)
     phaseA = sweepDur + 0.05 // a small gap after the sweep
@@ -278,7 +306,7 @@ export async function playOffsideChord(
     g.gain.linearRampToValueAtTime(0, start + blipDur)
     const sp = makeSpatial(ctx, mode)
     sp.rampAz(0, blipAz, start, start + ramp) // 30 ms ramp into place: no click on the jump
-    osc.connect(g).connect(sp.node).connect(ctx.destination)
+    osc.connect(g).connect(sp.node).connect(outputBus(ctx))
     osc.start(start)
     osc.stop(start + blipDur + 0.02)
   }
@@ -305,7 +333,7 @@ export async function playOffsideChord(
     gain.gain.linearRampToValueAtTime(peak, now + 0.04)
     gain.gain.linearRampToValueAtTime(0, now + dur)
 
-    osc.connect(gain).connect(sp.node).connect(ctx.destination)
+    osc.connect(gain).connect(sp.node).connect(outputBus(ctx))
     osc.start(now)
     osc.stop(now + dur + 0.02)
   }
@@ -346,7 +374,7 @@ export async function playOffsideChord(
         gain.connect(trem)
         out = trem
       }
-      out.connect(ctx.destination)
+      out.connect(outputBus(ctx))
       osc.start(vStart)
       osc.stop(vStart + vDur + 0.02)
     }
@@ -373,7 +401,7 @@ export async function playOffsideChord(
       ng.gain.setValueAtTime(0, vStart)
       ng.gain.linearRampToValueAtTime(ePeak * ce.noiseMix, vStart + attack)
       ng.gain.linearRampToValueAtTime(0, vStart + vDur)
-      src.connect(bp).connect(ng).connect(ctx.destination)
+      src.connect(bp).connect(ng).connect(outputBus(ctx))
       src.start(vStart)
       src.stop(vStart + vDur + 0.02)
     }
@@ -486,7 +514,7 @@ export function playSpatialScan(geo: Geometry, mode: SpatialMode = 'hrtf'): void
     // ISO 226 equal-loudness: each ping is gain-corrected so every player sounds equally loud.
     env.gain.linearRampToValueAtTime(0.22 * iso226Gain(v.freq), t0 + 0.02)
     env.gain.exponentialRampToValueAtTime(0.001, t0 + 0.25)
-    osc.connect(env).connect(sp.node).connect(ctx.destination)
+    osc.connect(env).connect(sp.node).connect(outputBus(ctx))
     osc.start(t0)
     osc.stop(t0 + 0.3)
   }
@@ -503,7 +531,7 @@ export function playMarginChord(ctx: AudioContext, geo: Geometry, gain = 0.1, de
   mix.gain.linearRampToValueAtTime(gain, t0 + 0.05)
   mix.gain.setValueAtTime(gain, t0 + 1.0)
   mix.gain.exponentialRampToValueAtTime(0.001, t0 + 1.4)
-  mix.connect(ctx.destination)
+  mix.connect(outputBus(ctx))
   for (const hz of [refHz, partnerHz]) {
     const osc = new OscillatorNode(ctx, { type: 'sine', frequency: hz })
     osc.connect(mix)
@@ -536,7 +564,7 @@ export async function playBuildUp(
   refGain.gain.linearRampToValueAtTime(peak * 0.4, now + 0.3)
   refGain.gain.setValueAtTime(peak * 0.4, now + dur - 0.3)
   refGain.gain.linearRampToValueAtTime(0, now + dur)
-  ref.connect(refGain).connect(ctx.destination)
+  ref.connect(refGain).connect(outputBus(ctx))
   ref.start(now)
   ref.stop(now + dur + 0.02)
 
@@ -558,7 +586,7 @@ export async function playBuildUp(
   attGain.gain.setValueAtTime(0, now)
   attGain.gain.linearRampToValueAtTime(peak * 0.5, now + dur * 0.6)
   attGain.gain.linearRampToValueAtTime(peak * 0.75, now + dur)
-  att.connect(attGain).connect(attPan).connect(ctx.destination)
+  att.connect(attGain).connect(attPan).connect(outputBus(ctx))
   att.start(now)
   att.stop(now + dur + 0.02)
 
@@ -574,7 +602,7 @@ export async function playBuildUp(
     g.gain.setValueAtTime(0, now + click)
     g.gain.linearRampToValueAtTime(peak * 0.6, now + click + 0.006)
     g.gain.exponentialRampToValueAtTime(0.0001, now + click + 0.05)
-    osc.connect(g).connect(ctx.destination)
+    osc.connect(g).connect(outputBus(ctx))
     osc.start(now + click)
     osc.stop(now + click + 0.06)
     click += interval
