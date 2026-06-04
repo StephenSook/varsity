@@ -33,7 +33,7 @@ sequenceDiagram
     Note over Web,CF: VAR offside event (Sportmonks "Goal Under Review" or canned 360 frame)
     Web->>CF: explain(decision)
     CF->>Geo: compute_offside_margin(freeze_frame)
-    Geo-->>CF: { is_offside: true, margin_meters: 5.45 }
+    Geo-->>CF: { is_offside: true, margin_meters: 5.69 }
     CF->>RAG: retrieve_law("offside ... second-last defender")
     RAG-->>CF: Law 11 (exact IFAB text)
     CF->>Narr: a2a_narrator.message/send({ margin, law_text })
