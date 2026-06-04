@@ -60,6 +60,20 @@ def test_bootstrap_is_deterministic():
     assert bootstrap_ece_ci(pairs) == bootstrap_ece_ci(pairs)
 
 
+def test_precomputed_report_matches_the_live_model():
+    # the committed receipt the endpoint serves MUST equal what the real model computes (so it can
+    # never be faked or drift); compute_payload() is the deterministic generator.
+    import json
+
+    from app.calibration import _PRECOMPUTED, compute_payload
+
+    assert _PRECOMPUTED.exists(), "the precomputed calibration receipt is missing"
+    committed = json.loads(_PRECOMPUTED.read_text())
+    live = compute_payload()
+    for key in ("ece", "brier", "log_loss", "overconfident_ece", "ece_ci95", "samples", "bins"):
+        assert committed[key] == live[key], f"{key}: committed != model"
+
+
 def test_calibration_endpoint_serves_the_receipt():
     from fastapi.testclient import TestClient
 

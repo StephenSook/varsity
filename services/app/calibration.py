@@ -25,12 +25,19 @@ it never adjudicates.
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 from app.uncertainty import SIGMA_MARGIN_M, normal_cdf
+
+# The deterministic receipt is precomputed and committed here so the live endpoint never recomputes
+# the full bootstrap (slow under a throttled free-tier CPU). Regenerate with
+# `python -m app.calibration`.
+_PRECOMPUTED = Path(__file__).parent / "calibration_report.json"
 
 # A reliability diagram + ECE + Brier are only as stable as the sample is large; fixed seed +
 # count make the receipt reproducible (same numbers every run, which CI asserts).
@@ -222,8 +229,8 @@ def build_report(
     )
 
 
-def calibration_payload() -> dict:
-    """The judge-facing JSON receipt for the ``/calibration`` endpoint."""
+def compute_payload() -> dict:
+    """Compute the judge-facing receipt live from the model (the deterministic seeded generator)."""
     r = build_report()
     return {
         "sigma_model_cm": round(r.sigma_model_m * 100, 1),
@@ -249,3 +256,30 @@ def calibration_payload() -> dict:
             "VARSITY calibration receipt (seeded Monte-Carlo over the uncertainty noise model)"
         ),
     }
+
+
+def calibration_payload() -> dict:
+    """The judge-facing receipt for ``/calibration``. Served from the committed, precomputed
+    deterministic report so the throttled free-tier CPU never recomputes the full bootstrap; falls
+    back to a live computation if the file is absent (dev). The committed file is the exact output
+    of ``compute_payload()`` (deterministic + seeded), regenerated with
+    ``python -m app.calibration`` and guarded by a test, so it is the real receipt cached as a
+    build artifact."""
+    if _PRECOMPUTED.exists():
+        try:
+            data = json.loads(_PRECOMPUTED.read_text())
+            data["precomputed"] = True
+            return data
+        except (OSError, ValueError):
+            pass
+    return compute_payload()
+
+
+def write_precomputed() -> None:
+    """Regenerate the committed receipt (run on a normal CPU; the free tier is too slow)."""
+    _PRECOMPUTED.write_text(json.dumps(compute_payload(), indent=2) + "\n")
+
+
+if __name__ == "__main__":
+    write_precomputed()
+    print(f"wrote {_PRECOMPUTED}")
