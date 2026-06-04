@@ -26,6 +26,11 @@ class VarEvent:
     minute: int | None
     type_name: str
     detail: str | None
+    # The feed's own integer event id (the dedup key - Sportmonks events have no
+    # per-event timestamp, so dedup on ``id``, never on minute) and its own ordering
+    # (``sort_order``, the correct sort key; several events can share a minute).
+    event_id: int | None = None
+    sort_order: int | None = None
 
     @property
     def transitional(self) -> bool:
@@ -53,6 +58,8 @@ def parse_var_events(fixture_id: int, events: list[dict]) -> list[VarEvent]:
                     minute=e.get("minute"),
                     type_name=name,
                     detail=detail,
+                    event_id=e.get("id"),
+                    sort_order=e.get("sort_order"),
                 )
             )
     return out

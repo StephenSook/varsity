@@ -165,6 +165,26 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   { t: 'Spatial audio, haptics, 5 languages, read-aloud', w: 'apps/web/src/sonify.ts', tier: 'live' },
+  {
+    t: 'Normalized VARDecisionEvent schema + feed adapters',
+    w: 'services/app/triggers/schema.py',
+    tier: 'live',
+  },
+  {
+    t: 'Multi-source fusion confidence (never adjudicates)',
+    w: 'services/app/triggers/fusion.py',
+    tier: 'live',
+  },
+  {
+    t: 'Speculative pre-warm of the explanation pipeline',
+    w: 'services/app/triggers/prewarm.py',
+    tier: 'live',
+  },
+  {
+    t: 'Honest latency framing (verified Phenix figures)',
+    w: 'services/app/latency.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -280,6 +300,32 @@ export function JudgesPanel() {
           .map((r) => `${r.lang}: ${r.offside_term}`)
           .join(' · ')
         return `Terminology-Hit-Rate ${(Number(j.overall_term_hit_rate) * 100).toFixed(0)}% over ${j.languages} languages · ${rows}`
+      },
+    },
+    {
+      key: 'fusion',
+      label: 'Run multi-source fusion',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/fusion`)).json()
+        return (
+          `source ${String(j.primary_source)} · ` +
+          (j.decisions as Record<string, unknown>[])
+            .map((d) => `${d.phase} conf ${Number(d.confidence).toFixed(2)} (${d.hedge})`)
+            .join(' · ')
+        )
+      },
+    },
+    {
+      key: 'latency',
+      label: 'Show the latency budget',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/latency?elapsed_s=6.5`)).json()
+        const run = j.run as Record<string, unknown>
+        const leads = run.leads_s as Record<string, number>
+        return (
+          `${String(run.headline)} · within ${j.budget_s}s budget: ${run.within_budget ? 'yes' : 'no'} · ` +
+          `leads OTA ${leads.ota}s / cable ${leads.cable}s / streaming ${leads.streaming}s (Phenix)`
+        )
       },
     },
     {
