@@ -45,6 +45,7 @@ def test_stages_order() -> None:
     assert stages == [
         "trigger",
         "geometry",
+        "uncertainty_budget",
         "signal",
         "proof",
         "verbalizer",

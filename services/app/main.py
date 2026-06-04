@@ -198,6 +198,18 @@ def faithfulness() -> dict:
     return out
 
 
+@app.get("/uncertainty")
+def uncertainty(margin_m: float = 5.69) -> dict:
+    """The GUM uncertainty budget for an offside margin: the honest broadcast-data expanded
+    uncertainty + coverage interval (BIPM JCGM 100:2008, k=2 ~ 95%), the Bayesian credible
+    interval, the Shannon entropy of the call in bits, a Monte-Carlo cross-check (JCGM 101:2008),
+    and the two-regime comparison (optical-tracking-equivalent vs broadcast-annotation). It
+    DESCRIBES the precision of the received decision's geometry; it never adjudicates."""
+    from app import gum
+
+    return gum.payload(margin_m)
+
+
 _retriever: LawRetriever | None = None
 
 
