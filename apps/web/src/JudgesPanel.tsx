@@ -591,7 +591,7 @@ export function JudgesPanel() {
             disabled={busy !== null || runningAll}
             className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-50"
           >
-            {runningAll ? 'Running all checks…' : 'Run all checks'}
+            {runningAll ? 'Running all checks...' : 'Run all checks'}
           </button>
           {RUNS.map((r) => (
             <button
@@ -602,7 +602,7 @@ export function JudgesPanel() {
               aria-busy={busy === r.key}
               className="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-sky-400 disabled:opacity-50"
             >
-              {busy === r.key ? `${r.label}…` : r.label}
+              {busy === r.key ? `${r.label}...` : r.label}
             </button>
           ))}
         </div>
