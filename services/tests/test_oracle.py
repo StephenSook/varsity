@@ -27,6 +27,7 @@ def test_question_stages_order_and_grounding() -> None:
     )
     assert [s["stage"] for s in stages] == [
         "trigger",
+        "screen",
         "law",
         "granite",
         "guardian",

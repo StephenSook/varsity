@@ -27,6 +27,7 @@ from app.llm.granite import GraniteClient
 from app.llm.guardian import GuardianClient
 from app.observability import tracer
 from app.rag.retriever import LawRetriever
+from app.safety import input_screen
 from app.signals import referee_signal
 from app.uncertainty import quantify
 
@@ -346,6 +347,23 @@ def question_stages(
     guardian = guardian or GuardianClient()
 
     yield {"stage": "trigger", "source": "Fan question", "question": question}
+
+    # LLM01 input hardening: screen the untrusted free-text BEFORE any model call. On a
+    # HAP / prompt-injection hit, FAIL CLOSED - decline (the question is withheld from the
+    # model) and emit the terminal verdict so the screen reader still gets a spoken reply.
+    screened = input_screen.screen(question)
+    yield {"stage": "screen", "ok": screened.ok, "category": screened.category}
+    if not screened.ok:
+        yield {
+            "stage": "verdict",
+            "text": input_screen.decline_message(language),
+            "question": "[withheld]",
+            "law_text": "",
+            "safe": True,
+            "declined": True,
+            "screen_category": screened.category,
+        }
+        return
 
     with tracer.start_as_current_span("law") as span:
         law = retriever.retrieve(question)
