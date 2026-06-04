@@ -225,6 +225,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'apps/web/src/sonify.ts',
     tier: 'live',
   },
+  {
+    t: 'OpenTelemetry per-request span tree (geometry to law to granite to guardian)',
+    w: 'services/app/observability.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
