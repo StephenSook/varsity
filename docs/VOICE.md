@@ -32,6 +32,13 @@ a ~1.5 GB+ speech-conditioned LLM with no official ASR pipeline, so VARSITY ship
 ASR path rather than overstating it as the default. A self-hosted Granite Speech endpoint (the IBM
 hosted ASR product is the separate Watson Speech to Text) is the server-side all-IBM option.
 
+The Granite Speech opt-in is now wired: the "All-IBM voice" checkbox in the audio settings (or the
+`?graniteSpeech=1` query param) sets `localStorage['varsity-granite-speech']='1'`, and `listen()`
+then routes transcription through the `GraniteSpeechForConditionalGeneration` generate path. It is
+OFF by default and **always falls back to the verified Whisper path on any error**, so the working
+voice loop is never at risk. Treat it as experimental: verify it in a real WebGPU browser before
+relying on it (the generate-path signature is confirmed per Transformers.js release).
+
 ## Privacy
 
 The on-device path keeps the microphone audio on the device (no server). This is consistent with
