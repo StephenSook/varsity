@@ -59,3 +59,13 @@ def test_band_sigma_is_the_honest_broadcast_budget_not_optical() -> None:
     assert quantify(0.30).confidence_band == "too_close_to_call"
     # ... while the clear demo call (5.69 m) stays clear: the core demo is unaffected.
     assert quantify(5.69).confidence_band == "clear"
+
+
+def test_measured_literature_envelope_brackets_the_point_sigma() -> None:
+    # the measured-literature sigma envelope (low/high inputs) must bracket the point estimate, so
+    # the sensitivity receipt sweeps a range the point value sits inside.
+    from app.uncertainty import margin_sigma_bounds
+
+    lo, hi = margin_sigma_bounds()
+    assert lo < SIGMA_MARGIN_M < hi
+    assert 0.2 < lo < 0.35 and 1.0 < hi < 1.3  # ~[0.26, 1.18] from the measured input ranges

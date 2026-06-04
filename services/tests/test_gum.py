@@ -152,3 +152,21 @@ def test_spoken_line_for_data_contradicting_the_official_is_not_falsely_confiden
     line = gum.spoken_narration(-3.0, is_offside=True)
     assert "more likely than not" not in line
     assert "unlikely" in line
+
+
+def test_sigma_sensitivity_demo_is_robust_across_the_measured_envelope() -> None:
+    # the clear demo call (5.69 m) reads "clear" at EVERY sigma in the measured-literature envelope,
+    # so the verdict does not hinge on the exact (partly-unmeasured) sigma.
+    s = gum.sigma_sensitivity(5.69)
+    assert s["band_robust"] is True
+    assert s["bands_seen"] == ["clear"]
+    lo, hi = s["sigma_envelope_m"]
+    assert lo < s["point_sigma_m"] < hi  # the point estimate sits inside the envelope
+
+
+def test_sigma_sensitivity_surfaces_a_margin_dependent_call_honestly() -> None:
+    # a 30 cm call is NOT robust across the envelope (marginal at the optimistic end, too-close at
+    # the pessimistic end); the receipt must surface that rather than hide it behind one number.
+    s = gum.sigma_sensitivity(0.30)
+    assert s["band_robust"] is False
+    assert len(s["bands_seen"]) > 1
