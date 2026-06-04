@@ -207,7 +207,7 @@ def uncertainty(margin_m: float = 5.69) -> dict:
     DESCRIBES the precision of the received decision's geometry; it never adjudicates."""
     from app import gum
 
-    return gum.payload(margin_m)
+    return gum.payload(margin_m, extended=True)
 
 
 _retriever: LawRetriever | None = None
