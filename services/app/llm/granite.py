@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 
@@ -13,6 +14,13 @@ from app.uncertainty import SIGMA_MARGIN_M
 from app.verification import TOO_CLOSE_HEDGE
 
 DEFAULT_MODEL = "ibm/granite-4-h-small"
+_log = logging.getLogger(__name__)
+
+
+class _WatsonxDegraded(Exception):
+    """Raised when the watsonx call fails outright (outage/auth/timeout). The accept loops catch it
+    and degrade to the deterministic floor WITHOUT retrying (a hard outage will not recover, unlike
+    a transient empty completion, which is still retried)."""
 # The honest broadcast measurement-noise figure (cm) injected into the too-close floors + prompt,
 # so it tracks the band sigma in uncertainty.py instead of being hardcoded.
 _NOISE_CM = round(SIGMA_MARGIN_M * 100)
@@ -190,13 +198,21 @@ class GraniteClient:
         min_new_tokens: int | None = None,
         decoding: str = "greedy",
     ) -> str:
-        return _watsonx.generate(
-            self.config.model_id,
-            prompt,
-            max_new_tokens=max_new_tokens,
-            min_new_tokens=min_new_tokens,
-            decoding=decoding,
-        )
+        try:
+            return _watsonx.generate(
+                self.config.model_id,
+                prompt,
+                max_new_tokens=max_new_tokens,
+                min_new_tokens=min_new_tokens,
+                decoding=decoding,
+            )
+        except Exception as exc:
+            # A watsonx outage (missing/expired key, 401/403/429/5xx, or a network timeout) must
+            # NOT kill the SSE stream and leave the blind fan with nothing. Signal a hard failure so
+            # the caller's accept-gate degrades to the deterministic Law-citing floor (the same
+            # degrade-don't-crash posture GuardianClient uses). Log for observability.
+            _log.exception("watsonx generate failed; degrading to the deterministic floor")
+            raise _WatsonxDegraded() from exc
 
     def explain_offside(
         self,
@@ -253,7 +269,10 @@ class GraniteClient:
         # floor, which always quotes the Law and, when too-close, always hedges. Faithfulness +
         # calibration by construction.
         for _ in range(3):
-            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            try:
+                text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            except _WatsonxDegraded:
+                break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
                 if not within_noise or TOO_CLOSE_HEDGE.search(text):
                     return text
@@ -288,7 +307,10 @@ class GraniteClient:
         # Fail closed to the deterministic floor unless the reply is substantive, non-leaked,
         # and cites the Law number (every decision explanation must cite its Law).
         for _ in range(3):
-            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            try:
+                text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            except _WatsonxDegraded:
+                break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
                 return text
         return _fallback_decision(law=law, outcome=outcome, language=language)
@@ -318,7 +340,10 @@ class GraniteClient:
             f"\n\nLaw text:\n{law_text}\n\n{spotlight(question)}\n\nAnswer:"
         )
         for _ in range(3):
-            text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            try:
+                text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
+            except _WatsonxDegraded:
+                break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text):
                 return text
         return _fallback_answer(law=law, title=title, law_text=law_text, language=language)
