@@ -32,7 +32,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'discourse', 'signal', 'proof', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'verdict'] as const
+const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'discourse', 'signal', 'proof', 'verbalizer', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'citation_metrics', 'verdict'] as const
 
 // Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
 const LAW11_SPEARCONS = [
@@ -175,6 +175,8 @@ function describe(s: Stage): string {
       return ` · referee signal (Law ${String(s.law)})`
     case 'proof':
       return ' · Law 11 rule proof'
+    case 'verbalizer':
+      return ` · faithful proof prose (${String(s.verdict)})`
     case 'parallax':
       return ` · camera parallax ~${String(s.apparent_shift_cm)} cm`
     case 'causal':
@@ -187,6 +189,8 @@ function describe(s: Stage): string {
       return ` · ${String(s.disclosed)}/${String(s.total)} disclosures`
     case 'provenance':
       return ` · ${String(s.link_count)} grounded claims`
+    case 'citation_metrics':
+      return ` · citation precision ${String(s.precision)}, recall ${String(s.recall)}`
     default:
       return ''
   }
