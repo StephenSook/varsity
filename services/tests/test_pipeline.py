@@ -46,6 +46,7 @@ def test_stages_order() -> None:
         "trigger",
         "geometry",
         "uncertainty_budget",
+        "geometry_descriptors",
         "signal",
         "proof",
         "verbalizer",

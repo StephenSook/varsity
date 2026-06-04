@@ -210,6 +210,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/gum.py',
     tier: 'live',
   },
+  {
+    t: 'Descriptive geometry: exact orient2d + line tilt/thickness',
+    w: 'services/app/geometry_descriptors.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
