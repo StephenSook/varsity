@@ -215,6 +215,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/geometry_descriptors.py',
     tier: 'live',
   },
+  {
+    t: 'HRTF spatial scan + Plomp-Levelt margin chord (psychoacoustics)',
+    w: 'apps/web/src/sonify.ts',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live

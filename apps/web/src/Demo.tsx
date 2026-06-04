@@ -13,7 +13,7 @@ import { usePrefersReducedMotion } from './useReducedMotion'
 // the chunk loads).
 const OffsidePitch3D = lazy(() => import('./OffsidePitch3D'))
 import { shareExplanation } from './share'
-import { playBuildUp, playOffsideChord, type SpatialMode } from './sonify'
+import { playBuildUp, playOffsideChord, playSpatialScan, type SpatialMode } from './sonify'
 import { StageScrubber } from './StageScrubber'
 import { playSpearcon, readAloud, synthesizeClip } from './tts'
 
@@ -1003,6 +1003,14 @@ export function Demo() {
           />
           High-accuracy on-device model (Granite 4.0 1B, ~1.5 GB download)
         </label>
+        <button
+          onClick={() => geo && playSpatialScan(geo)}
+          disabled={streaming || !geo}
+          aria-label="Play a spatial-audio scan of the freeze-frame over headphones"
+          className="rounded-full border border-sky-500/60 px-6 py-3 font-medium text-sky-300 transition-colors hover:bg-sky-500/10 disabled:opacity-40"
+        >
+          Spatial scan (headphones)
+        </button>
         <button
           onClick={() => void readAloud(explanation, { lang: t.bcp47 })}
           disabled={streaming || !explanation}
