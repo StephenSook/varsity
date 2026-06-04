@@ -59,3 +59,11 @@ def test_retriever_verifies_the_real_corpus_on_load() -> None:
     # The default retriever loads + verifies the signed corpus (no raise == verified).
     r = LawRetriever()
     assert r.corpus_root is not None and len(r.corpus_root) == 64
+
+
+def test_retriever_fails_closed_when_the_canonical_corpus_is_unsigned(monkeypatch) -> None:
+    # A missing manifest must FAIL CLOSED on the canonical path: an attacker who can poison
+    # chunks.json could otherwise just delete the signature (easier than forging it).
+    monkeypatch.setattr(cs, "load_manifest", lambda _p: None)
+    with pytest.raises(cs.CorpusIntegrityError):
+        LawRetriever()
