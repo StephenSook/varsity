@@ -22,6 +22,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.geometry import HALFWAY_X  # single source of truth for the midline (x > 60)
+from app.uncertainty import SIGMA_MARGIN_M
+
+# The honest measurement-noise figure (cm), tracking the band sigma instead of a hardcoded number.
+_NOISE_CM = round(SIGMA_MARGIN_M * 100)
 
 
 @dataclass(frozen=True)
@@ -62,7 +66,7 @@ def prove(
     beyond_def_claim = (
         f"Nearer the goal line than the second-to-last opponent (by {margin_cm} cm"
         + (
-            ", within the ~13 cm measurement noise - a borderline level call"
+            f", within the ~{_NOISE_CM} cm measurement noise - a borderline level call"
             if within_noise
             else ""
         )

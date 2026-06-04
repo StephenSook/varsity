@@ -39,7 +39,7 @@ PITCH_LENGTH_UNITS = 120.0
 
 # A tiny tolerance so an EXACTLY level attacker (float noise at the line) is treated as onside,
 # never a self-contradicting "offside by 0.00 m". The cm-scale "too close to call" is handled
-# honestly by the uncertainty band (the ~13 cm "VARSITY's Call"), not a hard verdict flip here.
+# honestly by the uncertainty band (the "VARSITY's Call"), not a hard verdict flip here.
 LEVEL_EPS_UNITS = 1e-9
 
 # Attack is always left-to-right, so the opponents' half is x > the midline (Law 11.1:

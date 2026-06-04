@@ -1,16 +1,22 @@
 """Uncertainty quantification for the offside margin - the "VARSITY's Call" band.
 
-The received margin is an estimate: the freeze-frame coordinates carry measurement error.
-Propagating that error gives an honest band on the margin, a Bayesian confidence in the
-verdict, a calibrated verbal likelihood, and a contrastive counterfactual. VARSITY
-DESCRIBES the received decision's sensitivity to measurement noise; it never adjudicates.
+The received margin is an estimate. VARSITY consumes a SINGLE manually-annotated (x, y) per
+player from StatsBomb 360 (broadcast video), not optical multi-camera tracking, so the honest
+1-sigma on the margin is the broadcast-annotation budget (~0.55 m), NOT the optical-tracking
+figure. The band drives VARSITY's spoken confidence, its structured p_verdict, and its
+within-noise gate off that ONE honest sigma, so every layer tells the same story as the gum.py
+budget. The optical-tracking equivalent (~0.13 m) is kept only as the "if we had a 12-camera
+SAOT rig" comparison, so the band can never claim a precision the coarse data does not support.
+VARSITY DESCRIBES the received decision's sensitivity to measurement noise; it never adjudicates.
 
-Per-player optical-tracking position RMSE is ~9 cm (Linke, Link & Lames, "Football-specific
-validity of TRACAB's optical video tracking systems", PLOS ONE 2020, 15(3):e0230179 -
-Gen4 0.09 m / Gen5 0.08 m; corroborated by Blauberger et al., Sensors 2021, 9 cm/player).
-StatsBomb 360 gives a single (x, y) per player (not a skeleton), so the propagated 1-sigma
-on the margin is sigma_M = sqrt(sigma_A^2 + sigma_D^2) ~= 13 cm - wider than the Premier
-League's ~5 cm "thicker-lines" tolerance, which is the honest, fan-shocking finding.
+Sources: per-player optical RMSE ~9 cm (Linke, Link & Lames, "Football-specific validity of
+TRACAB's optical video tracking systems", PLOS ONE 2020, 15(3):e0230179 - Gen4 0.09 m;
+corroborated by Blauberger et al., Sensors 2021). The broadcast-annotation Type-B budget is a
+DOCUMENTED, defensible estimate (NOT a published StatsBomb spec), triangulated from Cranga et al.
+2025 (broadcast-CV position RMSE 1.68-16.39 m across providers), SciSports ("several meters off"),
+and StatsBomb's homography article; the same-frame homography systematic error largely CANCELS in
+the differential margin, and the body-anchor shape term reflects Law 11 measuring the
+furthest-forward body part rather than the single annotated point.
 """
 
 from __future__ import annotations
@@ -18,10 +24,41 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-# Per-player position RMSE (m), conservative Gen4 figure from Linke et al. 2020.
-PLAYER_RMSE_M = 0.09
-# Propagated 1-sigma on the margin M = X_A - X_D for independent per-player errors.
-SIGMA_MARGIN_M = round(math.sqrt(2.0) * PLAYER_RMSE_M, 3)  # ~= 0.127 m
+# --- The HONEST broadcast-annotation budget: what VARSITY actually consumes. DOCUMENTED Type-B
+#     estimates, NOT a published StatsBomb spec. The differential margin is much tighter than the
+#     absolute coordinate because the same-frame homography error cancels (correlation r). gum.py
+#     imports these primitives, so the band and the GUM budget share ONE source (no drift). ---
+U_COORD_BROADCAST_M = 0.60  # per-coordinate Type-B std for a broadcast-annotated point (absolute)
+HOMOGRAPHY_CORRELATION = 0.70  # r: same-frame homography systematic error cancels in the difference
+U_SHAPE_M = 0.30  # body-anchor: Law 11 furthest-forward part vs the annotated point
+# Optical-tracking-equivalent reference (the optimistic regime), kept ONLY as the honest
+# "if we had a 12-camera SAOT rig" comparison - NOT the uncertainty of our actual data.
+U_COORD_OPTICAL_M = 0.09  # TRACAB Gen4 per-player RMSE (Linke et al., PLOS ONE 2020)
+
+
+def combined_position_uncertainty(u_a: float, u_d: float, r: float) -> float:
+    """GUM law of propagation for m = x_a - x_d with correlation r:
+    u_c^2 = u_a^2 + u_d^2 - 2*r*u_a*u_d (the cross term shrinks the differential)."""
+    return math.sqrt(max(u_a**2 + u_d**2 - 2.0 * r * u_a * u_d, 0.0))
+
+
+def margin_standard_uncertainty_m() -> float:
+    """Combined standard uncertainty u_c on the margin: correlated position + body-anchor shape."""
+    u_pos = combined_position_uncertainty(
+        U_COORD_BROADCAST_M, U_COORD_BROADCAST_M, HOMOGRAPHY_CORRELATION
+    )
+    return math.sqrt(u_pos**2 + U_SHAPE_M**2)
+
+
+# The band's default sigma is the HONEST broadcast-regime combined standard uncertainty (~0.55 m),
+# so the spoken confidence, the structured p_verdict, and the within-noise gate tell the SAME story
+# as the gum.py budget. A 30 cm offside is then honestly "too close to call" on broadcast data,
+# while the clear demo call (5.69 m) stays clear; gum.py uses the same value.
+SIGMA_MARGIN_M = round(margin_standard_uncertainty_m(), 3)  # ~= 0.553 m
+# The optical-equivalent margin sigma (~0.13 m), kept only as the honest "if we had SAOT" reference.
+SIGMA_MARGIN_OPTICAL_M = round(
+    combined_position_uncertainty(U_COORD_OPTICAL_M, U_COORD_OPTICAL_M, 0.0), 3
+)
 
 # IPCC AR6 calibrated likelihood language (Mastrandrea et al. 2010). Mapped from the
 # Bayesian verdict probability, inserted deterministically (the model never picks the hedge).

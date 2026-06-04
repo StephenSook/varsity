@@ -2,14 +2,15 @@
 
 import math
 
-from app import gum
+from app import gum, uncertainty
 
 
 def test_propagation_minus_sign_shrinks_the_difference() -> None:
     # GUM Eq (16) for a difference: u_c^2 = u_a^2 + u_d^2 - 2 r u_a u_d. Positive correlation
-    # (shared homography error) must REDUCE the combined uncertainty of the margin.
-    independent = gum.combined_position_uncertainty(0.6, 0.6, 0.0)
-    correlated = gum.combined_position_uncertainty(0.6, 0.6, 0.7)
+    # (shared homography error) must REDUCE the combined uncertainty of the margin. The primitive
+    # now lives in uncertainty.py (one source the GUM budget builds on).
+    independent = uncertainty.combined_position_uncertainty(0.6, 0.6, 0.0)
+    correlated = uncertainty.combined_position_uncertainty(0.6, 0.6, 0.7)
     assert correlated < independent
     assert math.isclose(independent, math.sqrt(0.72), rel_tol=1e-6)  # sqrt(2)*0.6
 
@@ -125,7 +126,9 @@ def test_spoken_line_never_contradicts_the_verdict_band() -> None:
     # then say "trusts the official" (which would contradict the confident spoken verdict).
     from app.uncertainty import quantify
 
-    for m in (0.30, 0.20, 0.5, 1.0):
+    # margins above the band sigma (~0.55 m) but inside the GUM coverage interval (~1.1 m): the
+    # budget straddles zero while the band reads clear/marginal, so the two layers must not clash.
+    for m in (0.6, 0.75, 0.9, 1.0):
         assert gum.budget(m).straddles_zero  # the wider broadcast budget does straddle here
         assert quantify(m).band != "very tight"  # but the calibrated band is not too-close
         assert "trusts the official" not in gum.spoken_narration(m, is_offside=True)

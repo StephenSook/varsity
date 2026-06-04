@@ -45,7 +45,10 @@ DEFAULT_SAMPLES = 40000
 DEFAULT_BINS = 10
 DEFAULT_SEED = 11
 # True (noise-free) margins span very-tight through clear calls, so the confidence sweeps 0.5->1.
-TRUE_MARGIN_RANGE_M = 0.6
+# Scaled to ~4.7 band sigmas (the original 0.6 m span at the optical sigma) so the receipt stays in
+# the regime where the flat-prior Phi(|M|/sigma) is calibrated; a FIXED range would couple the ECE
+# to sigma (a wide sigma near the range edge breaks the flat-prior identity via prior truncation).
+TRUE_MARGIN_RANGE_M = round(SIGMA_MARGIN_M * 4.724, 3)
 # Reported confidence Phi(|M|/sigma) is always >= 0.5 (the model never doubts its own verdict),
 # so the reliability diagram lives on [0.5, 1.0], not [0, 1].
 CONF_LO = 0.5

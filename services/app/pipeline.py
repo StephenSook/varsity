@@ -38,7 +38,7 @@ OFFSIDE_QUERY = "offside attacker nearer the goal line than the second-last defe
 
 
 def _confidence(margin_meters: float) -> str:
-    """How clear-cut the call is, grounded in the ~13 cm measurement-noise band (uncertainty)."""
+    """How clear-cut the call is, grounded in the honest measurement-noise band (uncertainty)."""
     return quantify(margin_meters).band
 
 
