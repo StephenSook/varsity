@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BREWSTER,
   MAX_AZIMUTH_DEG,
   confidenceEarcon,
   confidenceTexture,
+  lateralAzimuth,
   lineProximityPreamble,
   lineSweepSpec,
+  marginChord,
   marginToNormalized,
   pitchToAzimuth,
   preambleBlipAzimuth,
   sonificationPlan,
+  spatialScanPlan,
   verdictChord,
   verdictTimbre,
 } from './sonify'
@@ -128,5 +132,58 @@ describe('spatial sonification plan', () => {
   it('spatialises the preamble blips at the attacker azimuth (right=beyond, left=behind)', () => {
     expect(preambleBlipAzimuth(geo(100, 98))).toBeGreaterThan(0)
     expect(preambleBlipAzimuth(geo(95, 98))).toBeLessThan(0)
+  })
+})
+
+describe('Plomp-Levelt margin chord', () => {
+  it('a knife-edge margin is rough (small detuning inside the critical band)', () => {
+    const c = marginChord(0.0)
+    expect(c.rough).toBe(true)
+    expect(c.deltaHz).toBeLessThan(100) // inside the ~100 Hz Bark critical band near 500 Hz
+  })
+
+  it('a clear margin is consonant (detuning widens past a critical band)', () => {
+    const c = marginChord(2.0)
+    expect(c.rough).toBe(false)
+    expect(c.deltaHz).toBeGreaterThan(100)
+  })
+
+  it('the sign of the margin puts the partner tone above (offside) or below (onside)', () => {
+    expect(marginChord(1.5).partnerHz).toBeGreaterThan(500) // offside
+    expect(marginChord(-1.5).partnerHz).toBeLessThan(500) // onside
+  })
+})
+
+describe('HRTF spatial scan of the freeze-frame', () => {
+  const scanGeo = {
+    attacker_x: 100,
+    offside_line_x: 98,
+    is_offside: true,
+    players: [
+      { x: 50, y: 40, teammate: true, actor: true },
+      { x: 100, y: 20, teammate: true }, // attacker, left
+      { x: 98, y: 60, teammate: false }, // defender, right
+      { x: 96, y: 30, teammate: false }, // defender, left-ish
+      { x: 119, y: 40, teammate: false, keeper: true }, // keeper excluded from the line tone set
+    ],
+  } as unknown as Parameters<typeof spatialScanPlan>[0]
+
+  it('lateral position maps to a front-hemisphere azimuth', () => {
+    expect(lateralAzimuth(40)).toBe(0) // centre
+    expect(lateralAzimuth(0)).toBeLessThan(0) // far left
+    expect(lateralAzimuth(80)).toBeGreaterThan(0) // far right
+  })
+
+  it('scans defenders then attackers then the centred offside line, on the Brewster onset grid', () => {
+    const plan = spatialScanPlan(scanGeo)
+    const roles = plan.map((v) => v.role)
+    expect(roles.slice(0, 2)).toEqual(['defender', 'defender'])
+    expect(roles).toContain('attacker')
+    expect(plan[plan.length - 1].role).toBe('line')
+    expect(plan[plan.length - 1].azimuthDeg).toBe(0) // the line is centred
+    // onsets are separated by Brewster's 300 ms gap
+    expect(plan[1].onsetMs - plan[0].onsetMs).toBe(BREWSTER.onsetGapMs)
+    // the keeper is not pinged as an outfield defender
+    expect(plan.filter((v) => v.role === 'defender').length).toBe(2)
   })
 })

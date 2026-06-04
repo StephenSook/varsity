@@ -392,6 +392,94 @@ export function buildUpTrajectory(geo: Geometry, steps = 24): BuildUpStep[] {
   return out
 }
 
+// --- Phase C: psychoacoustics harvest (the audio-perception research report) -----------------
+
+// Brewster, Wright & Edwards (1995) earcon guidelines + McGookin & Brewster (2004): a 300 ms
+// onset-to-onset gap so a listener can segregate and identify successive spatialized pings.
+export const BREWSTER = {
+  pitchLoHz: 125,
+  pitchHiHz: 5000,
+  minNoteMs: 82.5, // 0.0825 s minimum note length
+  serialGapMs: 100,
+  onsetGapMs: 300,
+} as const
+
+// The Plomp & Levelt (1965) "offside chord": map the MARGIN (not the confidence) to critical-band
+// roughness. Near a 500 Hz reference the Bark critical bandwidth (Zwicker 1961) is ~100 Hz, and
+// maximum roughness sits at ~1/4 of it. A knife-edge margin detunes the partner tone ~25 Hz into
+// the rough zone (audible beating); a clear margin widens it past a critical band into consonance;
+// the sign of the margin puts the partner above (offside) or below (onside) the reference. This is
+// the margin's VALUE made audible, distinct from confidenceTexture (which maps the band).
+export const CHORD_REF_HZ = 500
+const CRITICAL_BAND_HZ = 100
+
+export function marginChord(marginMeters: number): {
+  refHz: number
+  partnerHz: number
+  deltaHz: number
+  rough: boolean
+} {
+  const m = Math.abs(marginMeters)
+  const deltaHz = Math.round(25 + 175 * Math.tanh(m / 0.5))
+  const partnerHz = marginMeters >= 0 ? CHORD_REF_HZ + deltaHz : CHORD_REF_HZ - deltaHz
+  return { refHz: CHORD_REF_HZ, partnerHz, deltaHz, rough: deltaHz < CRITICAL_BAND_HZ }
+}
+
+// A player's lateral position (y, 0-80 yards) as a front-hemisphere azimuth (left to right).
+export function lateralAzimuth(yYards: number): number {
+  return pitchToAzimuth(clamp((yYards - 40) / 40, -1, 1))
+}
+
+export type ScanVoice = {
+  role: 'defender' | 'attacker' | 'line'
+  azimuthDeg: number
+  freq: number
+  onsetMs: number
+}
+
+// A full HRTF spatial SCAN of the freeze-frame: each visible player pinged at its lateral
+// position, defenders (darker, 440 Hz) then attackers (brighter, 660 Hz), then the offside line
+// (centred, 523 Hz), each onset separated by Brewster's 300 ms gap so a blind fan can "scan" the
+// geometry with their ears. Pure + testable; the WebAudio playback is manual-verified.
+export function spatialScanPlan(geo: Geometry): ScanVoice[] {
+  const defenders = geo.players.filter((p) => !p.teammate && !p.keeper)
+  const attackers = geo.players.filter((p) => p.teammate && !p.actor)
+  const out: ScanVoice[] = []
+  let t = 0
+  for (const d of defenders) {
+    out.push({ role: 'defender', azimuthDeg: lateralAzimuth(d.y), freq: 440, onsetMs: t })
+    t += BREWSTER.onsetGapMs
+  }
+  for (const a of attackers) {
+    out.push({ role: 'attacker', azimuthDeg: lateralAzimuth(a.y), freq: 660, onsetMs: t })
+    t += BREWSTER.onsetGapMs
+  }
+  out.push({ role: 'line', azimuthDeg: 0, freq: 523, onsetMs: t })
+  return out
+}
+
+// Play the spatial scan over the chosen mode (HRTF / stereo / mono). Manual-verified (WebAudio is
+// not observable in headless Playwright); the plan above is the unit-tested core.
+export function playSpatialScan(geo: Geometry, mode: SpatialMode = 'hrtf'): void {
+  const ctx = new AudioContext()
+  for (const v of spatialScanPlan(geo)) {
+    const t0 = ctx.currentTime + v.onsetMs / 1000
+    const sp = makeSpatial(ctx, mode)
+    sp.setAz(v.azimuthDeg)
+    const osc = new OscillatorNode(ctx, {
+      type: v.role === 'attacker' ? 'sawtooth' : v.role === 'line' ? 'sine' : 'triangle',
+      frequency: v.freq,
+    })
+    const env = new GainNode(ctx, { gain: 0 })
+    env.gain.setValueAtTime(0, t0)
+    env.gain.linearRampToValueAtTime(0.22, t0 + 0.02)
+    env.gain.exponentialRampToValueAtTime(0.001, t0 + 0.25)
+    osc.connect(env).connect(sp.node).connect(ctx.destination)
+    osc.start(t0)
+    osc.stop(t0 + 0.3)
+  }
+}
+
 // Play the build-up: a Geiger-counter click track that accelerates as the attacker
 // nears the offside line, a rising attacker tone that pans from behind the line toward
 // (and across, if offside) it, over a faint centred defender-line reference. ~3.5s, then
