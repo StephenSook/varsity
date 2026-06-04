@@ -125,6 +125,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
+    t: 'On-device voice input: ask a rule by voice, transcribed in-browser (Whisper/WebGPU), the answer all-IBM',
+    w: 'apps/web/src/voice.ts',
+    tier: 'live',
+  },
+  {
     t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
