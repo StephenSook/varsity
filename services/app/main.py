@@ -20,7 +20,8 @@ from app import latency as latency_model
 from app.calibration import calibration_payload
 from app.observability import setup_tracing
 from app.pipeline import decision_stages, explanation_stages, question_stages
-from app.rag.retriever import LawRetriever
+from app.rag import corpus_signature
+from app.rag.retriever import CORPUS, SIGNATURE, LawRetriever
 from app.triggers.fusion import fuse
 from app.triggers.prewarm import PreWarmCache
 from app.triggers.resolver import (
@@ -147,6 +148,26 @@ def fusion() -> dict:
     return {
         "primary_source": source,
         "decisions": [d.as_dict() for d in decisions_out],
+    }
+
+
+@app.get("/corpus_integrity")
+def corpus_integrity() -> dict:
+    """RAG-poisoning defense (LLM08): verify the IFAB Law corpus against its signed
+    SHA-256 manifest. Deterministic, no model, no network - a tampered Law is caught by
+    arithmetic, not a probabilistic check. The retriever fails CLOSED on a mismatch."""
+    chunks = json.loads(CORPUS.read_text())
+    manifest = corpus_signature.load_manifest(SIGNATURE)
+    if manifest is None:
+        return {"signed": False}
+    ok, mismatches = corpus_signature.verify(chunks, manifest)
+    return {
+        "signed": True,
+        "verified": ok,
+        "algorithm": manifest["algorithm"],
+        "count": manifest["count"],
+        "root": manifest["root"],
+        "mismatches": mismatches,
     }
 
 
