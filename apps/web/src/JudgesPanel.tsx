@@ -460,7 +460,9 @@ export function JudgesPanel() {
         {CLAIMS.map((c) => (
           <li
             key={c.t}
-            className="glass flex h-full items-start gap-3 rounded-2xl p-5 text-left ring-1 ring-slate-700/40"
+            className={`flex h-full items-start gap-3 rounded-2xl p-5 text-left ${
+              c.tier === 'live' ? 'glass-certified' : 'glass ring-1 ring-slate-700/40'
+            }`}
           >
             <span aria-hidden="true" className="mt-1 text-emerald-400">
               ✓
