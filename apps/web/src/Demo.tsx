@@ -68,7 +68,7 @@ const UI: Record<
     bcp47: 'en',
     langLabel: 'Explanation language',
     explain: 'Explain the call',
-    explaining: 'Explaining…',
+    explaining: 'Explaining...',
     reannounce: 'Re-announce in English',
     caption: (m, off) =>
       `Offside line at the second-to-last defender · attacker ${m} m ${off ? 'ahead' : 'behind'}`,
@@ -78,7 +78,7 @@ const UI: Record<
     bcp47: 'es',
     langLabel: 'Idioma de la explicación',
     explain: 'Explicar la jugada',
-    explaining: 'Explicando…',
+    explaining: 'Explicando...',
     reannounce: 'Volver a anunciar en español',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
@@ -88,7 +88,7 @@ const UI: Record<
     bcp47: 'fr',
     langLabel: "Langue de l'explication",
     explain: "Expliquer l'action",
-    explaining: 'Explication…',
+    explaining: 'Explication...',
     reannounce: 'Réannoncer en français',
     caption: (m, off) =>
       `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
@@ -98,7 +98,7 @@ const UI: Record<
     bcp47: 'pt',
     langLabel: 'Idioma da explicação',
     explain: 'Explicar o lance',
-    explaining: 'Explicando…',
+    explaining: 'Explicando...',
     reannounce: 'Anunciar novamente em português',
     caption: (m, off) =>
       `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
@@ -108,7 +108,7 @@ const UI: Record<
     bcp47: 'de',
     langLabel: 'Sprache der Erklärung',
     explain: 'Die Szene erklären',
-    explaining: 'Erkläre…',
+    explaining: 'Erkläre...',
     reannounce: 'Erneut auf Deutsch ansagen',
     caption: (m, off) =>
       `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
@@ -833,7 +833,7 @@ export function Demo() {
 
   async function shareCurrent() {
     if (!explanation) return
-    setShareStatus('Preparing clip…')
+    setShareStatus('Preparing clip...')
     const clip = await synthesizeClip(explanation, { lang: UI[lang].bcp47 })
     const result = await shareExplanation(explanation, clip)
     const msg: Record<string, string> = {

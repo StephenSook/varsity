@@ -276,7 +276,7 @@ export function JudgesPanel() {
 
   async function run(key: string, fn: () => Promise<string>) {
     setBusy(key)
-    setResult((r) => ({ ...r, [key]: 'Running against the live backend…' }))
+    setResult((r) => ({ ...r, [key]: 'Running against the live backend...' }))
     try {
       const out = await fn()
       setResult((r) => ({ ...r, [key]: out }))
@@ -325,7 +325,7 @@ export function JudgesPanel() {
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 140)
-        return `${String(j.citation_id)} (${String(j.title)}): "${text}…"`
+        return `${String(j.citation_id)} (${String(j.title)}): "${text}..."`
       },
     },
     {
@@ -388,7 +388,7 @@ export function JudgesPanel() {
         if (!j.signed) return 'corpus is not signed'
         return (
           `${j.verified ? 'VERIFIED' : 'TAMPERED'} · ${j.count} chunks · ` +
-          `${String(j.algorithm)} root ${String(j.root).slice(0, 16)}… (fail-closed on mismatch)`
+          `${String(j.algorithm)} root ${String(j.root).slice(0, 16)}... (fail-closed on mismatch)`
         )
       },
     },
