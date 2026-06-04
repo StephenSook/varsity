@@ -25,6 +25,7 @@ from app.rag.retriever import CORPUS, SIGNATURE, LawRetriever
 from app.triggers.fusion import fuse
 from app.triggers.prewarm import PreWarmCache
 from app.triggers.resolver import (
+    live_clients,
     pick_transitional,
     resolve_and_fuse,
     resolve_live_var_events,
@@ -97,7 +98,8 @@ async def stream_live(
     """
     frame = scenarios.load_frame(scenario)
     meta = scenarios.trigger_meta(scenario)
-    events, source = resolve_live_var_events()
+    sportmonks, apifootball = live_clients()
+    events, source = resolve_live_var_events(sportmonks=sportmonks, apifootball=apifootball)
     transitional = pick_transitional(events)
     fused = fuse(normalize_all(events, source))
     review = next((f for f in fused if f.phase == REVIEW_STARTED), fused[0] if fused else None)
@@ -143,8 +145,9 @@ def fusion() -> dict:
     """Multi-source fusion confidence over the live (or replay-floor) VAR events: each
     review gets a confidence from cross-source agreement, a hedge, and a conflict flag.
     It raises confidence / resilience; it never adjudicates."""
-    events, source = resolve_live_var_events()
-    decisions_out = resolve_and_fuse()
+    sportmonks, apifootball = live_clients()
+    events, source = resolve_live_var_events(sportmonks=sportmonks, apifootball=apifootball)
+    decisions_out = resolve_and_fuse(sportmonks=sportmonks, apifootball=apifootball)
     return {
         "primary_source": source,
         "decisions": [d.as_dict() for d in decisions_out],
