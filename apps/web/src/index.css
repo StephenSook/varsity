@@ -64,3 +64,49 @@ body {
     stroke-dashoffset: 0;
   }
 }
+
+/* Keyboard focus must always be clearly visible on the dark glass. :focus-visible (not :focus)
+   keeps the ring off mouse clicks, so the pointer-user visual design is undisturbed. WCAG 2.4.7
+   Focus Visible + 2.4.13 Focus Appearance. */
+:focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+}
+
+/* Windows High Contrast Mode / forced-colors: the translucent glass panes + rgba hairline borders
+   are stripped (cards lose their edges) and emerald-only selection state vanishes. Give panes a
+   system-colour border, keep the certified edge as a LinkText accent, and force the focus ring to
+   the system Highlight colour so keyboard focus survives HCM. */
+@media (forced-colors: active) {
+  .glass,
+  .glass-certified {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .glass-certified {
+    border-left: 3px solid LinkText;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/* prefers-contrast: more (e.g. macOS Increase Contrast): firm up the secondary slate text and the
+   glass edges, and drop the pane translucency so text-on-glass clears AA comfortably. Only active
+   when the user requests more contrast, so the default visuals are untouched. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-slate-400: #cbd5e1;
+    --color-slate-500: #cbd5e1;
+  }
+  .glass,
+  .glass-certified {
+    background: #0a0f1c;
+    border-color: rgba(148, 163, 184, 0.55);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
