@@ -32,8 +32,8 @@ Sources:
   *opponent*, whoever that is (usually but not always the keeper).
 - **Level is onside.** An exactly-level attacker is onside, with a tiny tolerance so float noise at
   the line never produces a self-contradicting "offside by 0.00 m". The cm-scale "too close to call"
-  is surfaced honestly by the uncertainty band (the ~13 cm "VARSITY's Call"), not a hard verdict
-  flip - VARSITY never overrides the official.
+  is surfaced honestly by the uncertainty band (the honest broadcast "VARSITY's Call"), not a hard
+  verdict flip - VARSITY never overrides the official.
 - The margin is the **goal-line-normal (x-axis) distance**, not a Euclidean distance (which would
   inflate it with irrelevant lateral separation).
 

@@ -24,13 +24,22 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-# --- The HONEST broadcast-annotation budget: what VARSITY actually consumes. DOCUMENTED Type-B
-#     estimates, NOT a published StatsBomb spec. The differential margin is much tighter than the
-#     absolute coordinate because the same-frame homography error cancels (correlation r). gum.py
+# --- The HONEST broadcast-annotation budget VARSITY actually consumes. Each input is now anchored
+#     to a MEASURED published figure where one exists; the genuinely-unmeasured pieces are flagged
+#     Type-B. See docs/UNCERTAINTY_SOURCES.md for the fetch-verified, verbatim-quoted ledger. gum.py
 #     imports these primitives, so the band and the GUM budget share ONE source (no drift). ---
-U_COORD_BROADCAST_M = 0.60  # per-coordinate Type-B std for a broadcast-annotated point (absolute)
-HOMOGRAPHY_CORRELATION = 0.70  # r: same-frame homography systematic error cancels in the difference
-U_SHAPE_M = 0.30  # body-anchor: Law 11 furthest-forward part vs the annotated point
+# MEASURED-anchored: single-view homography projection error mean 0.65 m (PnLCalib, Gutierrez-Perez
+# & Agudo, CVIU 2026, WC14-test) and detected-player RMSE 0.44-1.14 m (Crang et al. 2025, arXiv
+# 2508.19477, vs TRACAB Gen5 on a 2022 World Cup match); 0.60 sits at the centre of that range.
+U_COORD_BROADCAST_M = 0.60  # per-coordinate std, broadcast-annotated point (MEASURED-anchored)
+# TYPE-B (unmeasured): no study measures the same-frame difference correlation for two football
+# points. Szulc & Iwanowski 2026 (arXiv 2604.10805) show homography error is range-dependent, so
+# the cancellation is PARTIAL; a lower r (wider sigma) is the more conservative reading.
+HOMOGRAPHY_CORRELATION = 0.70  # r: same-frame systematic error PARTIALLY cancels in the difference
+# Localization floor MEASURED: 8 cm per-joint vs Vicon in a WC stadium (WorldPose, Jiang et al.,
+# CVPR 2025) and +/-10 cm broadcast-TV blur (Mather, Perception 2020); FIFA SAOT skeletal X
+# threshold <0.10 m. The extra furthest-forward-part SELECTION offset is unmeasured Type-B.
+U_SHAPE_M = 0.30  # body-anchor: Law 11 furthest-forward part vs the annotated point (~0.10 + ~0.20)
 # Optical-tracking-equivalent reference (the optimistic regime), kept ONLY as the honest
 # "if we had a 12-camera SAOT rig" comparison - NOT the uncertainty of our actual data.
 U_COORD_OPTICAL_M = 0.09  # TRACAB Gen4 per-player RMSE (Linke et al., PLOS ONE 2020)
@@ -59,6 +68,31 @@ SIGMA_MARGIN_M = round(margin_standard_uncertainty_m(), 3)  # ~= 0.553 m
 SIGMA_MARGIN_OPTICAL_M = round(
     combined_position_uncertainty(U_COORD_OPTICAL_M, U_COORD_OPTICAL_M, 0.0), 3
 )
+
+# The MEASURED-literature ENVELOPE on each input, used by the sensitivity receipt (gum.sigma_
+# sensitivity) to show the verdict is robust across the plausible spread, not just the point value.
+U_COORD_LO_M = 0.44  # best detected-player RMSE / PnLCalib median (Crang 2025; PnLCalib 2026)
+U_COORD_HI_M = 1.14  # worst detected-player RMSE (Crang 2025); broadcast extraction ~1 m (Theiner)
+HOMOGRAPHY_CORRELATION_LO = 0.50  # weaker (partial) cancellation - the conservative end
+HOMOGRAPHY_CORRELATION_HI = 0.85  # stronger same-frame cancellation - the optimistic end
+U_SHAPE_LO_M = 0.10  # measured localization floor only (WorldPose 8 cm / Mather +/-10 cm)
+U_SHAPE_HI_M = 0.30  # localization + the unmeasured furthest-forward-part selection offset
+
+
+def margin_sigma_bounds() -> tuple[float, float]:
+    """The MEASURED-literature envelope on the combined margin sigma: the optimistic end (low
+    per-point error, strong cancellation, localization-only shape) and the pessimistic end (high
+    per-point error, weak cancellation, full shape term). The point estimate SIGMA_MARGIN_M sits
+    inside this band; gum.sigma_sensitivity shows the verdict is robust across it."""
+    lo = math.sqrt(
+        combined_position_uncertainty(U_COORD_LO_M, U_COORD_LO_M, HOMOGRAPHY_CORRELATION_HI) ** 2
+        + U_SHAPE_LO_M**2
+    )
+    hi = math.sqrt(
+        combined_position_uncertainty(U_COORD_HI_M, U_COORD_HI_M, HOMOGRAPHY_CORRELATION_LO) ** 2
+        + U_SHAPE_HI_M**2
+    )
+    return round(lo, 3), round(hi, 3)
 
 # IPCC AR6 calibrated likelihood language (Mastrandrea et al. 2010). Mapped from the
 # Bayesian verdict probability, inserted deterministically (the model never picks the hedge).

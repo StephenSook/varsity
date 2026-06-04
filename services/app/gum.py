@@ -35,6 +35,7 @@ from app.uncertainty import (
     SIGMA_MARGIN_OPTICAL_M,
     U_COORD_BROADCAST_M,
     U_SHAPE_M,
+    margin_sigma_bounds,
     normal_cdf,
     quantify,
 )
@@ -285,6 +286,32 @@ def fitted_temperature(*, sigma_m: float = SIGMA_MARGIN_GUM_M) -> dict:
     }
 
 
+def sigma_sensitivity(margin_meters: float, *, points: int = 5) -> dict:
+    """How the verdict's confidence band behaves across the MEASURED-literature sigma envelope
+    (uncertainty.margin_sigma_bounds). This converts the single-point sigma into a RANGE-robust
+    claim: if the call reads the SAME confidence band at every sigma in the envelope, the conclusion
+    does not hinge on the exact (partly-unmeasured) sigma; where it does not, that is surfaced
+    honestly rather than hidden behind one number."""
+    lo, hi = margin_sigma_bounds()
+    sigmas = [round(lo + (hi - lo) * i / (points - 1), 3) for i in range(points)]
+    rows = [
+        {
+            "sigma_m": s,
+            "confidence_band": quantify(margin_meters, sigma_meters=s).confidence_band,
+            "p_offside": round(normal_cdf(abs(margin_meters) / s), 3) if s > 0 else 1.0,
+        }
+        for s in sigmas
+    ]
+    bands = {r["confidence_band"] for r in rows}
+    return {
+        "sigma_envelope_m": [lo, hi],
+        "point_sigma_m": SIGMA_MARGIN_M,
+        "rows": rows,
+        "band_robust": len(bands) == 1,
+        "bands_seen": sorted(bands),
+    }
+
+
 def payload(margin_meters: float, *, is_offside: bool = False, extended: bool = False) -> dict:
     """The judge-facing JSON for the /uncertainty endpoint + the SSE stage. ``extended`` adds the
     heavier robustness receipts (Student-t sensitivity + the fitted-temperature self-consistency)
@@ -314,17 +341,32 @@ def payload(margin_meters: float, *, is_offside: bool = False, extended: bool = 
         },
         "budget_inputs": {
             "u_coord_broadcast_m": U_COORD_BROADCAST_M,
+            "u_coord_measured_source": (
+                "PnLCalib (Gutierrez-Perez & Agudo, CVIU 2026) single-view projection error mean "
+                "0.65 m; Crang et al. 2025 (arXiv 2508.19477) detected-player RMSE 0.44-1.14 m"
+            ),
             "homography_correlation": HOMOGRAPHY_CORRELATION,
+            "homography_correlation_basis": (
+                "Type-B (unmeasured): partial same-frame cancellation; Szulc & Iwanowski 2026 "
+                "(arXiv 2604.10805) show range-dependent error, so a lower r is more conservative"
+            ),
             "u_shape_m": U_SHAPE_M,
+            "u_shape_measured_source": (
+                "localization floor measured: WorldPose (Jiang et al., CVPR 2025) 8 cm per-joint "
+                "vs Vicon; Mather (Perception 2020) +/-10 cm; FIFA SAOT X threshold <0.10 m"
+            ),
         },
         "note": b.note,
         "sources": (
             "GUM (BIPM JCGM 100:2008) + Supplement 1 (JCGM 101:2008); Jaynes 1957 (Phys. Rev. "
             "106:620); Shannon binary entropy; Guo et al. 2017 (ICML) temperature scaling. The "
-            "coordinate Type-B budget is a documented estimate, not a published StatsBomb spec."
+            "coordinate budget is now MEASURED-anchored (PnLCalib/Crang/WorldPose); the "
+            "same-frame correlation + the furthest-forward-part offset stay Type-B. Full verbatim "
+            "ledger: docs/UNCERTAINTY_SOURCES.md. Not a StatsBomb-specific empirical calibration."
         ),
     }
     if extended:
+        out["sigma_sensitivity"] = sigma_sensitivity(margin_meters)
         out["student_t_sensitivity"] = student_t_sensitivity(margin_meters)
         out["fitted_temperature"] = fitted_temperature()
     return out

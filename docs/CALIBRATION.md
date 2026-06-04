@@ -6,11 +6,12 @@ VARSITY reports a confidence in every received verdict:
 P(verdict correct) = Phi(|M| / sigma)
 ```
 
-where `M` is the measured offside margin and `sigma ~= 12.7 cm` is the propagated
-per-player measurement noise (`services/app/uncertainty.py`; TRACAB optical RMSE ~9 cm
-per player, Linke et al. PLOS ONE 2020, propagated over the attacker/defender pair). That
-confidence drives the IPCC verbal hedge ("very likely", "about as likely as not") and the
-"VARSITY's Call" band that the narration speaks.
+where `M` is the measured offside margin and `sigma ~= 55 cm` is the honest broadcast-annotation
+combined standard uncertainty (`services/app/uncertainty.py`; measured-anchored, see
+`docs/UNCERTAINTY_SOURCES.md`). The optical-tracking equivalent (~12.7 cm, TRACAB RMSE ~9 cm per
+player, Linke et al. PLOS ONE 2020) is kept only as a comparison. That confidence drives the IPCC
+verbal hedge ("very likely", "about as likely as not") and the "VARSITY's Call" band that the
+narration speaks.
 
 A reported confidence is only honest if it is **calibrated**: the verdicts called "90%
 confident" should be correct about 90% of the time. `services/app/calibration.py` produces
