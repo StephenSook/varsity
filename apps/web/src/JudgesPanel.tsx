@@ -200,6 +200,11 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/verify/red_team_eval.py',
     tier: 'live',
   },
+  {
+    t: 'Faithfulness gold-eval: per-class, per-decision, ALCE',
+    w: 'services/verify/faithfulness_eval.py',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -389,6 +394,20 @@ export function JudgesPanel() {
           `leakage ${j.structural_leakage} · ${j.false_positives} false positives · ` +
           `${j.documented_screen_misses} honest screen-misses (defended downstream)`
         )
+      },
+    },
+    {
+      key: 'faithfulness',
+      label: 'Run the faithfulness gold-eval',
+      fn: async () => {
+        const j = await (await fetch(`${BACKEND}/faithfulness`)).json()
+        const decisions = (j.per_decision as Record<string, number>[])
+          .map((d) => `${d.decision} ${d.structural_caught}/${d.structural_total}`)
+          .join(', ')
+        const alce = (j.alce_per_decision as Record<string, number>[])
+          .map((a) => `${a.decision} P${a.precision}/R${a.recall}`)
+          .join(', ')
+        return `structural leakage ${j.structural_leakage} · caught per decision: ${decisions} · ALCE: ${alce}`
       },
     },
     {

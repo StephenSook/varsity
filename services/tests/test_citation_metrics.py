@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.citation_metrics import citation_metrics_stage, score, supports
+from app.citation_metrics import citation_metrics_stage, per_decision_demo, score, supports
 from app.law11 import proof_payload, prove
 from app.provenance import GroundingLink, link_from_law, links_from_proof
 
@@ -61,6 +61,14 @@ def test_dangling_claim_drops_recall():
         source="",
     )
     assert score([real, dangling]).recall == 0.5
+
+
+def test_alce_per_decision_covers_offside_penalty_handball():
+    rows = per_decision_demo()
+    decisions = {r["decision"] for r in rows}
+    assert decisions == {"offside", "penalty", "handball"}
+    for r in rows:  # each well-formed example is fully supported (claim reflects its clause)
+        assert r["precision"] == 1.0 and r["recall"] == 1.0
 
 
 def test_stage_carries_discriminating_controls():
