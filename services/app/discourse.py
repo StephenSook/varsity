@@ -54,7 +54,8 @@ def connective(state: MatchState, *, key: str, is_offside: bool, band: str) -> s
     if last.is_offside == is_offside:
         parts.append("the same outcome as the previous review")
     else:
-        parts.append(f"in contrast to the previous {'offside' if last.is_offside else 'onside'} review")
+        prev = "offside" if last.is_offside else "onside"
+        parts.append(f"in contrast to the previous {prev} review")
     return "; ".join(parts)
 
 

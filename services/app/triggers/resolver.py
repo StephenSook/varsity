@@ -25,7 +25,7 @@ def _real_key(name: str) -> str:
 
 
 def live_clients() -> tuple[object | None, object | None]:
-    """Instantiate the live VAR-feed clients whose API keys are actually present (not a placeholder).
+    """Instantiate the live VAR-feed clients whose API keys are present (not a placeholder).
 
     With no real keys this returns (None, None) and the resolver falls to the deterministic replay
     floor, so the canned demo is unaffected; with keys present the real Sportmonks / API-Football
