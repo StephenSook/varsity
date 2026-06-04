@@ -25,8 +25,11 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.rag import corpus_signature
+
 INDEX_DIR = Path(__file__).resolve().parent / "index"
 CORPUS = INDEX_DIR / "chunks.json"
+SIGNATURE = INDEX_DIR / "chunks.sig.json"
 FAISS_INDEX = INDEX_DIR / "laws.faiss"
 GRANITE_EMBED_MODEL = "ibm/granite-embedding-278m-multilingual"
 _WORD = re.compile(r"[a-z]+")
@@ -46,8 +49,18 @@ def _tokens(text: str) -> list[str]:
 
 
 class LawRetriever:
-    def __init__(self, corpus_path: Path | None = None) -> None:
-        data = json.loads((corpus_path or CORPUS).read_text())
+    def __init__(self, corpus_path: Path | None = None, *, verify_integrity: bool = True) -> None:
+        path = corpus_path or CORPUS
+        data = json.loads(path.read_text())
+        # LLM08 RAG-poisoning defense: verify the canonical corpus against its signed
+        # SHA-256 manifest and FAIL CLOSED on a mismatch (a tampered Law would otherwise
+        # silently corrupt an explanation a blind user cannot visually fact-check). Custom
+        # corpora (test fixtures) carry no manifest, so verification is skipped for them.
+        self.corpus_root: str | None = None
+        if verify_integrity and path == CORPUS:
+            manifest = corpus_signature.load_manifest(SIGNATURE)
+            if manifest is not None:
+                self.corpus_root = corpus_signature.verify_or_raise(data, manifest)
         self.chunks = [LawChunk(law=c["law"], title=c["title"], text=c["text"]) for c in data]
         self._index = None  # lazy-loaded FAISS index (online path only)
         self._build_bm25()
