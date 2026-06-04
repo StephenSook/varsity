@@ -9,7 +9,7 @@ geometry; it never adjudicates.
 
 ## The honest two-regime picture
 
-Our coordinates are a single **broadcast-annotated** `(x, y)` per player from StatsBomb 360 , 
+Our coordinates are a single **broadcast-annotated** `(x, y)` per player from StatsBomb 360, 
 not limb-level optical tracking. So there are two regimes, and we report both:
 
 - **Optical-equivalent (optimistic):** if this were TRACAB-grade optical tracking (~9 cm per
@@ -25,11 +25,11 @@ VARSITY leads with the honest regime. The point of the report (the Innovation an
 
 ## The GUM budget (BIPM JCGM 100:2008)
 
-The margin is `m = x_attacker − x_defender`. Its combined standard uncertainty follows the GUM
-law of propagation for a **difference** (Eq. 16 with sensitivity coefficients +1, −1):
+The margin is `m = x_attacker - x_defender`. Its combined standard uncertainty follows the GUM
+law of propagation for a **difference** (Eq. 16 with sensitivity coefficients +1, -1):
 
 ```
-u_c²(m) = u_a² + u_d² − 2·r·u_a·u_d
+u_c²(m) = u_a² + u_d² - 2·r·u_a·u_d
 ```
 
 The **minus** sign is correct for a subtraction: positive correlation `r` (shared common-mode
@@ -44,7 +44,7 @@ The documented Type-B inputs (in `gum.py`):
 
 | Input | Value | Basis |
 |---|---|---|
-| `U_COORD_BROADCAST_M` | 0.60 m per coordinate | broadcast-CV tracking RMSE (Cranga et al. 2025, 1.68–16.39 m across providers), SciSports ("several metres off"), StatsBomb's homography article |
+| `U_COORD_BROADCAST_M` | 0.60 m per coordinate | broadcast-CV tracking RMSE (Cranga et al. 2025, 1.68-16.39 m across providers), SciSports ("several metres off"), StatsBomb's homography article |
 | `HOMOGRAPHY_CORRELATION` `r` | 0.70 | same-frame systematic error cancels in the differential |
 | `U_SHAPE_M` | 0.30 m | IFAB Law 11 furthest-forward part vs the annotated point |
 | `K_COVERAGE` `k` | 2 | ~95% coverage (normal, large DoF) |
@@ -62,7 +62,7 @@ interval cannot: "there is 95% posterior probability the true margin lies in thi
 
 ## Shannon entropy → narration verbosity
 
-The Shannon binary entropy `H₂(p) = −p·log₂p − (1−p)·log₂(1−p)` in **bits** is the honest measure
+The Shannon binary entropy `H₂(p) = -p·log₂p - (1-p)·log₂(1-p)` in **bits** is the honest measure
 of how uncertain the call is: 1 bit at `p = 0.5` (a coin flip), 0 bits at a certain call. It
 **drives narration length**: under ~0.2 bits → concise, under ~0.7 bits → standard, otherwise
 the full hedged narration ("rich"). More bits of uncertainty, more words.
@@ -87,7 +87,7 @@ narration and a demo. A Wilson 95% interval bounds the simulation proportion.
 
 - It is an **implementation + budget**, surfaced live at `GET /uncertainty` and as the
   `uncertainty_budget` SSE stage. The tight demo scenario (0.02 m) has a coverage interval that
-  **straddles zero** (`[−1.09, +1.13] m`), honestly too close to call, with ~1.0 bit of entropy;
+  **straddles zero** (`[-1.09, +1.13] m`), honestly too close to call, with ~1.0 bit of entropy;
   the clear scenarios stay clear with ~0 bits.
 - It is **not** field calibration against limb-tracked ground truth (StatsBomb 360 has none), and
   the Type-B budget is a documented estimate, not a measured spec.
