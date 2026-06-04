@@ -20,6 +20,22 @@ draft). The criteria the experience leans on most:
 - **1.2.x Captions / audio description**: the demo video ships open + closed captions
   and an audio-description track (submission deliverable).
 
+The three criteria **new in WCAG 2.2 AA** are addressed explicitly, not just claimed:
+
+- **2.4.7 Focus Visible + 2.4.13 Focus Appearance**: a global `:focus-visible` ring (2px
+  signal-green, 2px offset) on every interactive control, with a `forced-colors` variant
+  using the system `Highlight` colour (`apps/web/src/index.css`).
+- **2.4.11 Focus Not Obscured (Minimum)**: no sticky overlay hides a focused control; the
+  one fixed element (the online badge) sits clear of the focus path, and a skip link jumps
+  past it straight to the demo.
+- **2.5.8 Target Size (Minimum)**: interactive controls meet the 24x24 CSS-px minimum; the
+  CI axe gate (`tests/e2e/a11y.spec.ts`) and the live `/judges` check both run the
+  `wcag22aa` tag, so this is enforced, not asserted.
+
+Beyond AA, two low-vision affordances: **forced colors** (Windows High Contrast Mode gets
+system-colour pane borders + focus rings) and **`prefers-contrast: more`** (firms up
+secondary text and drops pane translucency), both gated so the default visuals are untouched.
+
 ## The `aria-live` decision (assertive vs polite)
 
 The verdict region is **`aria-live="assertive"`**, deliberately. The common guidance is

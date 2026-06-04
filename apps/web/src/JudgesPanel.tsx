@@ -493,7 +493,7 @@ export function JudgesPanel() {
           new Promise<void>((r) => setTimeout(r, 600)),
         ])
         const res = await axe.run(document, {
-          runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+          runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
         })
         const passes = res.passes.length
         if (res.violations.length === 0) {

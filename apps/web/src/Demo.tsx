@@ -1551,7 +1551,7 @@ export function Demo() {
           type="button"
           aria-pressed={showHelp}
           onClick={() => setShowHelp((h) => !h)}
-          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+          className="inline-flex min-h-6 items-center text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
         >
           Keyboard shortcuts (press ?)
         </button>
@@ -1559,7 +1559,7 @@ export function Demo() {
           type="button"
           aria-pressed={showDiag}
           onClick={() => setShowDiag((d) => !d)}
-          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+          className="inline-flex min-h-6 items-center text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
         >
           {showDiag ? 'Hide diagnostics' : 'On-device diagnostics'}
         </button>
@@ -1567,7 +1567,7 @@ export function Demo() {
           type="button"
           aria-pressed={showTranscript}
           onClick={() => setShowTranscript((s) => !s)}
-          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+          className="inline-flex min-h-6 items-center text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
         >
           {showTranscript ? 'Hide transcript' : 'Screen-reader transcript'}
         </button>
@@ -1575,7 +1575,7 @@ export function Demo() {
           type="button"
           aria-pressed={showTiming}
           onClick={() => setShowTiming((s) => !s)}
-          className="text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
+          className="inline-flex min-h-6 items-center text-xs text-slate-400 underline-offset-2 hover:text-emerald-300 hover:underline"
         >
           {showTiming ? 'Hide timing' : 'Pipeline timing'}
         </button>
