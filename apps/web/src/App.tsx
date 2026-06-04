@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { Demo } from './Demo'
 import { CHROME, useLang } from './i18n'
 import { JudgesPanel } from './JudgesPanel'
+import { LazyBoundary } from './LazyBoundary'
 import { OnlineBadge } from './OnlineBadge'
 import { Reveal } from './Reveal'
 import { useLenis } from './useLenis'
@@ -67,9 +68,11 @@ export default function App() {
       >
         {!reducedMotion && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
-            <Suspense fallback={null}>
-              <Hero3D />
-            </Suspense>
+            <LazyBoundary fallback={null}>
+              <Suspense fallback={null}>
+                <Hero3D />
+              </Suspense>
+            </LazyBoundary>
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-[#0a0f1c]/40 via-transparent to-[#0a0f1c]" />
