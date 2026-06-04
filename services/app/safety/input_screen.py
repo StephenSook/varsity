@@ -50,6 +50,35 @@ _INJECTION = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# Multilingual injection markers (the oracle answers in 5 languages, so the floor screens
+# them too). Found by red-teaming the live oracle: an English-only screen missed a Spanish
+# injection (the downstream Law-grounding held, but the floor should catch it). High-signal
+# override verbs in es/fr/pt/de; tuned to avoid the legit "ignorar la senal" form.
+_INJECTION_INTL = re.compile(
+    r"ignor[ae]\s+(?:todas?|las|toutes?|les)\b"  # es "ignora todas/las", fr "ignore les/toutes"
+    r"|olvida\s+(?:todo|las|tus|las\s+instruc)"  # es "olvida todo/las instrucciones"
+    r"|revela\s+(?:tu|el|su)\s+(?:prompt|instruc)"  # es "revela tu prompt"
+    r"|oublie[z]?\s+(?:tout|les|toutes)"  # fr "oublie tout"
+    r"|r[ée]v[èe]le\s+(?:ton|le|tes)\s+(?:prompt|instruction)"  # fr "revele ton prompt"
+    r"|esque[cç]a\s+(?:tudo|as|todas)"  # pt "esqueca tudo"
+    r"|revele\s+(?:o|seu|teu)\s+(?:prompt|instru)"  # pt "revele o prompt"
+    r"|ignoriere\s+(?:alle|alles|die)"  # de "ignoriere alle"
+    r"|vergiss\s+(?:alle|alles|die)"  # de "vergiss alle"
+    r"|zeige\s+(?:mir\s+)?(?:dein|den)\s+(?:prompt|anweisung)",  # de "zeige deinen prompt"
+    re.IGNORECASE,
+)
+
+# Leetspeak normalization: red-teaming found "1gnore prev1ous 1nstruct1ons" slipped the
+# floor. We screen a de-leeted shadow copy too (the original text is unchanged), so common
+# digit/symbol substitutions cannot dodge the patterns.
+_LEET = str.maketrans(
+    {"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"}
+)
+
+
+def _deleet(text: str) -> str:
+    return text.translate(_LEET)
+
 # Spotlighting delimiters: the prompt instructs the model to treat everything between them
 # strictly as the fan's question (data), never as instructions to follow.
 SPOTLIGHT_OPEN = "<<<FAN_QUESTION>>>"
@@ -89,11 +118,18 @@ class ScreenResult:
 
 
 def screen(text: str) -> ScreenResult:
-    """Deterministic HAP + prompt-injection screen. Returns ok=False to FAIL CLOSED."""
+    """Deterministic HAP + prompt-injection screen. Returns ok=False to FAIL CLOSED.
+
+    Screens the raw text AND a de-leeted shadow copy (so "1gnore" is caught), against the
+    English and multilingual injection patterns. No regex floor is complete - a homoglyph or
+    a novel paraphrase can still slip; those are defended downstream by spotlighting +
+    Law-grounding (see docs/RED-TEAM.md), not hidden.
+    """
     t = text or ""
-    if _HAP.search(t):
+    variants = (t, _deleet(t))
+    if any(_HAP.search(v) for v in variants):
         return ScreenResult(False, "hap", "abusive language")
-    if _INJECTION.search(t):
+    if any(_INJECTION.search(v) or _INJECTION_INTL.search(v) for v in variants):
         return ScreenResult(False, "injection", "prompt-injection pattern")
     return ScreenResult(True, None, "clean")
 
