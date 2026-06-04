@@ -16,6 +16,7 @@ import {
   marginToNormalized,
   pitchToAzimuth,
   preambleBlipAzimuth,
+  renderMarginChordSamples,
   sonificationPlan,
   spatialScanPlan,
   verdictChord,
@@ -189,6 +190,31 @@ describe('HRTF spatial scan of the freeze-frame', () => {
     expect(plan[1].onsetMs - plan[0].onsetMs).toBe(BREWSTER.onsetGapMs)
     // the keeper is not pinged as an outfield defender
     expect(plan.filter((v) => v.role === 'defender').length).toBe(2)
+  })
+})
+
+describe('renderMarginChordSamples: deterministic audio-output regression', () => {
+  const tight = geo(60.05, 60) // a knife-edge margin: rough, beating chord
+  const clear = geo(70, 60) // a clear margin: consonant chord
+  it('renders a non-silent, byte-identical buffer for the same input', () => {
+    const a = renderMarginChordSamples(tight)
+    const b = renderMarginChordSamples(tight)
+    expect(a.length).toBe(b.length)
+    let maxAbs = 0
+    let diff = 0
+    for (let i = 0; i < a.length; i++) {
+      maxAbs = Math.max(maxAbs, Math.abs(a[i]))
+      diff = Math.max(diff, Math.abs(a[i] - b[i]))
+    }
+    expect(maxAbs).toBeGreaterThan(0.001) // the chord actually produced sound
+    expect(diff).toBe(0) // and it is byte-identical run to run (regression guard)
+  })
+  it('a tight (rough) chord and a clear (consonant) chord render to different audio', () => {
+    const t = renderMarginChordSamples(tight)
+    const c = renderMarginChordSamples(clear)
+    let diff = 0
+    for (let i = 0; i < t.length; i++) diff = Math.max(diff, Math.abs(t[i] - c[i]))
+    expect(diff).toBeGreaterThan(0.01)
   })
 })
 
