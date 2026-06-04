@@ -8,6 +8,7 @@ import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { PipelineWaterfall } from './PipelineWaterfall'
 import { KeyboardHelp } from './KeyboardHelp'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
+import { LazyBoundary } from './LazyBoundary'
 import { usePrefersReducedMotion } from './useReducedMotion'
 
 // The 3D pitch is heavy + decorative, so it is code-split and only mounted when motion
@@ -1506,9 +1507,11 @@ export function Demo() {
           {reducedMotion ? (
             <OffsidePitch geo={geo} />
           ) : (
-            <Suspense fallback={<OffsidePitch geo={geo} />}>
-              <OffsidePitch3D geo={geo} />
-            </Suspense>
+            <LazyBoundary fallback={<OffsidePitch geo={geo} />}>
+              <Suspense fallback={<OffsidePitch geo={geo} />}>
+                <OffsidePitch3D geo={geo} />
+              </Suspense>
+            </LazyBoundary>
           )}
           <figcaption className="mt-2 text-sm text-slate-400" lang={t.bcp47}>
             {t.caption(geo.margin_meters.toFixed(2), geo.is_offside)}
