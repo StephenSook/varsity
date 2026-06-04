@@ -25,7 +25,7 @@ import {
 } from './sonify'
 import { VerdictViz } from './VerdictViz'
 import { StageScrubber } from './StageScrubber'
-import { playSpearcon, readAloud, synthesizeClip } from './tts'
+import { playPitchCorrectedSpearcon, readAloud, synthesizeClip } from './tts'
 
 // Backend SSE base. Override with VITE_BACKEND_URL for a deployed backend.
 const BACKEND =
@@ -1142,7 +1142,7 @@ export function Demo() {
               key={fragment}
               type="button"
               aria-label={`Play rule shortcut: ${fragment}`}
-              onClick={() => playSpearcon(fragment, { lang: UI[lang].bcp47 })}
+              onClick={() => void playPitchCorrectedSpearcon(fragment, { lang: UI[lang].bcp47 })}
               className="rounded-full border border-slate-600/60 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-600/20"
             >
               {fragment}

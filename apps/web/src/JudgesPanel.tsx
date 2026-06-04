@@ -130,7 +130,7 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
-    t: 'Spearcon rule shortcuts (time-compressed speech, power-user navigation)',
+    t: 'Pitch-corrected spearcon rule shortcuts (Kokoro speech, time-compressed, pitch preserved)',
     w: 'apps/web/src/tts.ts',
     tier: 'live',
   },
