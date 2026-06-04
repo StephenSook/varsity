@@ -18,6 +18,17 @@ A blind football fan is often the last person in the room to understand a VAR ca
 
 The first system that is **all four at once**: real-time, screen-reader-native, IFAB-Laws-grounded, and fan-facing, with offside coverage. Prior art (X-VARS, CVPR 2024; SoccerRef-Agents, 2026) is offline, referee-facing, and foul-only. VARSITY is what those would look like if they shipped to the fan who needs it.
 
+## How VARSITY maps to the judging criteria
+
+The challenge scores four criteria. Each maps to evidence you can run against the **live deployment** ([web-chi-wine-13.vercel.app](https://web-chi-wine-13.vercel.app)) from the in-page "prove it" panel, which calls the live backend ([varsity-api.onrender.com](https://varsity-api.onrender.com)) and shows the real result inline.
+
+| Criterion | How VARSITY earns it (each runs live) |
+|---|---|
+| **1. Technical Execution** | A measured-not-asserted, defense-in-depth pipeline: a deterministic Law-11 proof tree (`law11.py`) feeds a multi-critic gate (deterministic-hard + advisory Granite Guardian, `verification.py`), calibrated uncertainty (`GET /calibration`, ECE 0.35% vs a 4.16% overconfident control), a SHA-256-signed RAG corpus that fails closed (`GET /corpus_integrity`), per-class + per-decision faithfulness with **zero structural leakage** (`GET /faithfulness`), ALCE citation precision/recall, and an oracle red-team regression at **13/13 caught, 0 leakage** (`GET /red_team`). IBM Granite + Granite Guardian + Docling + a Context Forge MCP federation, with an OpenTelemetry span tree per request. RAG Hit@5 = 1.00. |
+| **2. Innovation** | The first system that is **all four at once** (real-time, screen-reader-native, IFAB-grounded, fan-facing) with offside coverage. Original AI-for-accessibility moves: **audible uncertainty** (the verdict earcon roughens as the call tightens, so a blind fan *hears* the confidence), the **honesty moat** (every claim is a live button), listener-centred HRTF spatial audio that animates the offside crossing, multi-source fusion confidence + speculative pre-warm + honest latency framing (`/fusion`, `/latency`), and a fully on-device, all-IBM, offline explanation. |
+| **3. Challenge Fit** | Real **World Cup 2022** StatsBomb 360 freeze-frames, named (Canada v Morocco), with three real outcomes (offside 5.69 m / onside / too-close-to-call), in a World-Cup-2026 framing. It addresses a real-world problem confirmed first-hand by a **blind supporter** on an audio-description community list, and complements (never replaces) audio description, in five languages. |
+| **4. Implementation & Feasibility** | **Deployed and running** (Vercel + Render), CI-gated (lint + typecheck + tests + build + axe-core a11y on every push). It fails closed (the deterministic floor still quotes the Law if the model errs), runs fully on-device with no per-call cost, targets a trigger-to-spoken budget under 10 s against the verified ~18-22 s OTA broadcast delay, and ships an external-service contract table plus an honest, partnership-first path to a real deployment (`docs/LEGAL.md`). |
+
 ## Capability honesty
 
 Every capability is labeled by how it is wired, and each is verifiable in this repository. We do not claim a roadmap item as if it were built.
@@ -28,7 +39,7 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 
 | Capability | Tier | Where / how to verify |
 |---|---|---|
-| Offside-margin geometry from StatsBomb 360 freeze-frames | Wired-live | `services/app/geometry.py` + `services/tests/test_geometry.py` (real 2022 World Cup frame, 5.45 m) |
+| Offside-margin geometry from StatsBomb 360 freeze-frames | Wired-live | `services/app/geometry.py` (StatsBomb yards, `METERS_PER_UNIT = 0.9144`) over `services/tests/fixtures/wc2022_offside_frame.json` (a real 2022 World Cup frame); the live `GET /scenarios` reports **5.69 m offside / -3.14 m onside / 0.02 m too-close** |
 | IFAB-Laws RAG: Docling to FAISS, IBM Granite embeddings online + BM25 offline | Wired-live | `services/app/rag/` over the real **IFAB Laws of the Game 2025/26** (18 Docling-ingested chunks incl. the VAR protocol); evaluated in `docs/benchmarks/rag-eval.md` |
 | RAG retrieval evaluation (Hit-Rate@k + MRR over a golden IFAB set) | Wired-live | `services/evals/` + `docs/benchmarks/rag-eval.md`; CI-gated (Hit@5 = 1.00, every offside query routes to Law 11) |
 | IBM Granite reasoning via watsonx (rule-grounded explanation citing the Law) | Wired-live | `services/app/llm/granite.py` (5 languages, prompt-leak guard); live run this session |
@@ -43,9 +54,16 @@ Every capability is labeled by how it is wired, and each is verifiable in this r
 | Broadcast-delay ticker (Phenix-cited offset, live-measured delta) | Wired-live | `apps/web/src/BroadcastTicker.tsx`; lead = the OTA broadcast offset minus VARSITY's measured latency |
 | Keyboard power-mode + stage scrubber + verbosity modes | Wired-live | `apps/web/src/Demo.tsx`, `StageScrubber.tsx`, `KeyboardHelp.tsx`; every action by one keypress, any step re-narrated |
 | Shareable on-device audio clip | Wired-live | `apps/web/src/share.ts`, `tts.ts`; Kokoro WAV via the Web Share API with download / clipboard fallback |
-| On-device offline mode (Transformers.js + WebGPU, Granite 4.0 Nano) | Wired-live | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent |
+| On-device offline mode: a 3-tier all-IBM ladder (deterministic floor / Granite 4.0 Nano 350M / opt-in Granite 4.0 1B) | Wired-live | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser via Transformers.js + WebGPU, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent; the 1B tier is a gated ~1.5 GB opt-in |
 | Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | Wired-live | `apps/web/src/tts.ts`; the accessibility path stays the user's own screen reader |
 | 3D / GSAP cinematic hero | Wired-live | `apps/web/src/Hero3D.tsx` (React Three Fiber pitch, lazy-loaded, `aria-hidden`, motion-gated) + a GSAP intro |
+| Multi-critic verification gate (deterministic-hard + advisory Guardian) over a neuro-symbolic Law-11 proof tree | Wired-live | `services/app/verification.py`, `law11.py`, `verbalizer.py`; the hard gate is dispositive, a Guardian false-positive is reported but never flips it |
+| Calibrated uncertainty band ("VARSITY's Call") + ECE / Brier reliability receipt | Wired-live | `services/app/uncertainty.py`, `calibration.py`; `GET /calibration` (ECE 0.35% vs a 4.16% overconfident control, 40k seeded draws); too-close calls withhold the number and defer to the official |
+| SHA-256-signed IFAB corpus, fail-closed verify-at-load (LLM08) | Wired-live | `services/app/rag/corpus_signature.py`; `GET /corpus_integrity` (verified, 18 chunks, root + 0 mismatches) |
+| Oracle input hardening: HAP + prompt-injection screen + spotlighting (LLM01) | Wired-live | `services/app/safety/input_screen.py`; the free-text oracle fails closed; `GET /red_team` (13/13 attacks caught, 0 leakage, honest residual documented) |
+| Faithfulness gold-eval (per injection class, per decision type) + ALCE citation precision/recall | Wired-live | `services/verify/faithfulness_eval.py`, `services/app/citation_metrics.py`; `GET /faithfulness` (zero structural leakage on offside / penalty / handball) |
+| Multi-decision engine + "ask any rule" oracle (offside geometry; penalty / handball off the same RAG + Granite + Guardian path) | Wired-live | `services/app/decisions.py`, `pipeline.py`; `GET /decisions`, `GET /law_clause`, `GET /stream/ask` |
+| Live-feed resilience: normalized `VARDecisionEvent` schema + multi-source fusion confidence + speculative pre-warm + honest latency | Wired-live | `services/app/triggers/` (schema/fusion/prewarm), `services/app/latency.py`; `GET /fusion`, `GET /latency` (Phenix-cited delays, < 10 s budget) |
 
 ## Architecture
 
@@ -96,7 +114,7 @@ The IFAB retrieval is measured, not asserted. A golden set of 20 VAR/offside que
 | BM25 (offline / CI, deterministic) | 0.90 | 1.00 | 1.00 | 0.942 |
 | Granite embeddings + FAISS (online) | 0.95 | 0.95 | 1.00 | 0.963 |
 
-Every offside question routes to **Law 11 at rank 1**, and the two offline near-misses (goal-line to goal-kick, referee to VAR) recover by rank 2-3. CI fails if Hit@5 drops below 1.0.
+Every offside question routes to **Law 11 at rank 1**, and the two offline near-misses (goal-line to goal-kick, referee to VAR) recover by rank 2-3. CI fails if Hit@5 drops below 1.0. The deterministic **BM25 path is the committed, CI-gated artifact** (`services/evals/scores.json`); the online Granite-embeddings figures were measured separately against watsonx and are not persisted in CI (they need live credentials).
 
 ## Tech
 
