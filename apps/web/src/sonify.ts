@@ -523,21 +523,48 @@ export function playSpatialScan(geo: Geometry, mode: SpatialMode = 'hrtf'): void
 // Play the Plomp-Levelt margin chord at the verdict moment: a 500 Hz reference + a partner tone
 // detuned by the margin. A knife-edge call detunes inside the critical band, so the listener HEARS
 // the closeness as roughness/beating; a clear call is a smooth, consonant dyad. Manual-verified.
+// The margin-chord amplitude envelope, shared between the live playback and the offline render so a
+// regression test renders exactly what the speakers play.
+export const MARGIN_CHORD_ENV = { attackSec: 0.05, sustainEndSec: 1.0, endSec: 1.4 } as const
+
 export function playMarginChord(ctx: AudioContext, geo: Geometry, gain = 0.1, delaySec = 0): void {
   const { refHz, partnerHz } = marginChord(marginMeters(geo))
+  const { attackSec, sustainEndSec, endSec } = MARGIN_CHORD_ENV
   const t0 = ctx.currentTime + delaySec
   const mix = new GainNode(ctx, { gain: 0 })
   mix.gain.setValueAtTime(0, t0)
-  mix.gain.linearRampToValueAtTime(gain, t0 + 0.05)
-  mix.gain.setValueAtTime(gain, t0 + 1.0)
-  mix.gain.exponentialRampToValueAtTime(0.001, t0 + 1.4)
+  mix.gain.linearRampToValueAtTime(gain, t0 + attackSec)
+  mix.gain.setValueAtTime(gain, t0 + sustainEndSec)
+  mix.gain.exponentialRampToValueAtTime(0.001, t0 + endSec)
   mix.connect(outputBus(ctx))
   for (const hz of [refHz, partnerHz]) {
     const osc = new OscillatorNode(ctx, { type: 'sine', frequency: hz })
     osc.connect(mix)
     osc.start(t0)
-    osc.stop(t0 + 1.4)
+    osc.stop(t0 + endSec)
   }
+}
+
+// A pure, deterministic offline render of the margin chord to a sample buffer, for audio-regression
+// testing. The browser OfflineAudioContext is not available in the node test runner (and the
+// standardized-audio-context package needs a native browser backend), so we render the documented
+// chord spec directly. It reuses marginChord() and MARGIN_CHORD_ENV, so the buffer carries the SAME
+// two sines and the SAME amplitude envelope the speakers play: a regression in either is detected.
+export function renderMarginChordSamples(geo: Geometry, sampleRate = 8000, gain = 0.2): Float32Array {
+  const { refHz, partnerHz } = marginChord(marginMeters(geo))
+  const { attackSec, sustainEndSec, endSec } = MARGIN_CHORD_ENV
+  const n = Math.round(endSec * sampleRate)
+  const out = new Float32Array(n)
+  const floor = 0.001
+  for (let i = 0; i < n; i++) {
+    const t = i / sampleRate
+    let env: number
+    if (t < attackSec) env = (t / attackSec) * gain
+    else if (t < sustainEndSec) env = gain
+    else env = gain * Math.pow(floor / gain, (t - sustainEndSec) / (endSec - sustainEndSec))
+    out[i] = (env * (Math.sin(2 * Math.PI * refHz * t) + Math.sin(2 * Math.PI * partnerHz * t))) / 2
+  }
+  return out
 }
 
 // Play the build-up: a Geiger-counter click track that accelerates as the attacker
