@@ -235,6 +235,21 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     w: 'services/app/llm/vision.py',
     tier: 'live',
   },
+  {
+    t: 'Screen-reader transcript: every aria-live announcement, made visible to sighted judges',
+    w: 'apps/web/src/Demo.tsx',
+    tier: 'live',
+  },
+  {
+    t: 'Live per-stage pipeline-timing waterfall (each SSE stage timestamped in-browser)',
+    w: 'apps/web/src/PipelineWaterfall.tsx',
+    tier: 'live',
+  },
+  {
+    t: 'Live in-browser axe-core WCAG 2.1 AA check (run it now below)',
+    w: 'apps/web/src/JudgesPanel.tsx',
+    tier: 'live',
+  },
 ]
 
 // Stream the full pipeline and summarise the real stages, so a judge sees the live
@@ -460,6 +475,25 @@ export function JudgesPanel() {
       fn: async () => {
         const j = await (await fetch(`${BACKEND}/health`)).json()
         return `backend ${String(j.status)} (${String(j.service)})`
+      },
+    },
+    {
+      key: 'axe',
+      label: 'Run a live accessibility check (axe-core)',
+      fn: async () => {
+        const axe = (await import('axe-core')).default
+        const res = await axe.run(document, {
+          runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] },
+        })
+        const passes = res.passes.length
+        if (res.violations.length === 0) {
+          return `0 violations across ${passes} WCAG 2.1 AA checks (axe-core, run live in your browser)`
+        }
+        const top = res.violations
+          .slice(0, 3)
+          .map((v) => `${v.id} (${v.nodes.length})`)
+          .join(', ')
+        return `${res.violations.length} violation(s): ${top}`
       },
     },
   ]
