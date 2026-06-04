@@ -224,6 +224,33 @@ def faithfulness() -> dict:
     return out
 
 
+@app.get("/rag_eval")
+def rag_eval() -> dict:
+    """Retrieval-quality receipt for the IFAB-Law RAG: Hit@k + MRR over a 20-question golden set.
+    The committed numbers are the BM25 OFFLINE floor (the deterministic, dependency-free retriever
+    that CI runs without a watsonx key); the LIVE product retrieves with IBM Granite embeddings +
+    FAISS. The embedding model id and the two retriever paths are returned as SEPARATE fields so the
+    floor numbers are never mis-attributed to the embedding model (a faithfulness discipline)."""
+    from pathlib import Path
+
+    from app.rag.retriever import GRANITE_EMBED_MODEL
+
+    path = Path(__file__).resolve().parent.parent / "evals" / "scores.json"
+    scores = json.loads(path.read_text())
+    return {
+        "scores": scores,
+        "scored_retriever": scores.get("path"),  # what produced these numbers: "bm25 (offline)"
+        "online_retriever": "IBM Granite embeddings + FAISS",
+        "embedding_model": GRANITE_EMBED_MODEL,
+        "golden_questions": scores.get("n"),
+        "note": (
+            "Hit@k / MRR over a 20-question golden set. The numbers are the BM25 offline floor "
+            "(the deterministic retriever CI runs, no watsonx key); the live product retrieves "
+            "with IBM Granite embeddings + FAISS. Stated apart so the floor is not mis-credited."
+        ),
+    }
+
+
 @app.get("/uncertainty")
 def uncertainty(margin_m: float = 5.69) -> dict:
     """The GUM uncertainty budget for an offside margin: the honest broadcast-data expanded

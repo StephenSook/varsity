@@ -9,3 +9,15 @@ def test_health() -> None:
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+def test_rag_eval_receipt_separates_the_bm25_floor_from_the_granite_path() -> None:
+    # The retrieval receipt must serve the committed Hit@k/MRR AND clearly label that those numbers
+    # are the BM25 offline floor, NOT the Granite-embeddings online path, so the floor is never
+    # mis-credited to the embedding model (the project's own faithfulness rule).
+    client = TestClient(app)
+    body = client.get("/rag_eval").json()
+    assert body["scored_retriever"] == "bm25 (offline)"
+    assert "Granite" in body["online_retriever"]
+    assert body["embedding_model"] == "ibm/granite-embedding-278m-multilingual"
+    assert body["scores"]["hit_at_5"] == 1.0 and body["golden_questions"] == 20
