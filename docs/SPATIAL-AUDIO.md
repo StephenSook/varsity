@@ -61,7 +61,7 @@ fan hears the confidence a sighted fan reads off the margin. Two cross-modal fin
 - **Broadband noise encodes blur/uncertainty.** A pure clean tone reads as sharp/certain and
   broadband noise as blurry/uncertain (Ferguson & Brewster, *CHI* 2018 doi:10.1145/3173574.3174185
   and *ICMI* 2017 doi:10.1145/3136755.3136783: "broadband noise at 0% and a pure clean tone at
-  100%… the blur of an image being related to the roughness or noise content of a sound"). A clear
+  100%... the blur of an image being related to the roughness or noise content of a sound"). A clear
   call is a pure tone; a too-close call adds an audible noise layer.
 
 | Parameter | clear | tight | too-close |
