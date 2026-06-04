@@ -102,3 +102,12 @@ data the `/admin/observability` view visualizes).
 `/admin/observability/*`) carries the same fan-out data if the UI does not render;
 or fall back to OpenTelemetry -> Jaeger / Grafana Tempo. The gateway stays in the
 architecture either way.
+
+## Gateway-mediated A2A round-trip
+
+`narrate_via_a2a` (in `a2a_agent/client.py`) reaches the narrator on its own port. To drive the same
+agent THROUGH the gateway, `a2a_agent/gateway.py` builds the A2A `message/send` JSON-RPC envelope
+(the protobuf-mapped JSON: a typed `{"kind": "text", "text": ...}` part plus a `messageId`, which a
+flat body does not satisfy) and POSTs it to the gateway's federated-agent RPC path. The envelope
+builder and the narration extractor are pure and unit-tested (`tests/test_a2a_gateway.py`); the POST
+is verify-first, confirm the RPC path against the running gateway version before relying on it.
