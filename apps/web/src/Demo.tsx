@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
-import { listen, onDeviceAsrAvailable } from './voice'
+import { graniteSpeechEnabled, listen, onDeviceAsrAvailable } from './voice'
 import { useLang, type Lang } from './i18n'
 import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
@@ -357,6 +357,8 @@ export function Demo() {
   const sourceRef = useRef<EventSource | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const [audioActive, setAudioActive] = useState(false)
+  // The all-IBM Granite Speech voice-input opt-in (experimental; falls back to Whisper on any error).
+  const [graniteSpeech, setGraniteSpeech] = useState(() => graniteSpeechEnabled())
   const nbspRef = useRef(false)
 
   // Set the live-region message, alternating a trailing non-breaking space so an
@@ -1513,6 +1515,22 @@ export function Demo() {
             onChange={(e) => updateAudioPrefs({ preamble: e.target.checked })}
           />
           Preamble cue
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          <input
+            type="checkbox"
+            checked={graniteSpeech}
+            onChange={(e) => {
+              const on = e.target.checked
+              setGraniteSpeech(on)
+              try {
+                localStorage.setItem('varsity-granite-speech', on ? '1' : '0')
+              } catch {
+                /* storage unavailable */
+              }
+            }}
+          />
+          All-IBM voice (Granite Speech, experimental)
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-300">
           Volume

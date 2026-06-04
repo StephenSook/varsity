@@ -13,10 +13,27 @@
 
 import { webgpuReady } from './offline'
 
-// The on-device ASR model: Whisper-base (multilingual, runs in Transformers.js with WebGPU). To run
-// the all-IBM Granite Speech path instead, swap to GraniteSpeechForConditionalGeneration with
-// onnx-community/granite-speech-4.1-2b-ONNX (a ~1.5GB+ opt-in, not the practical default).
+// The on-device ASR default: Whisper-base (multilingual, runs in Transformers.js with WebGPU). The
+// all-IBM Granite Speech path is an explicit opt-in (see GRANITE_SPEECH_MODEL + graniteSpeechEnabled).
 const MODEL = 'onnx-community/whisper-base'
+
+// The all-IBM opt-in: Granite Speech 4.1 (~1.5GB) runs on-device via the
+// GraniteSpeechForConditionalGeneration generate() path + WebGPU. It is experimental (no official
+// ASR pipeline; the exact processor signature is verified per Transformers.js release), so it is
+// OFF by default and ALWAYS falls back to the verified Whisper path on any error. Enable it with
+// localStorage['varsity-granite-speech']='1' or the ?graniteSpeech=1 query param (a settings toggle
+// in the audio panel sets the flag). See docs/VOICE.md for the verify-in-WebGPU caveat.
+const GRANITE_SPEECH_MODEL = 'onnx-community/granite-speech-4.1-2b-ONNX'
+
+export function graniteSpeechEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    if (new URLSearchParams(window.location.search).get('graniteSpeech') === '1') return true
+    return window.localStorage?.getItem('varsity-granite-speech') === '1'
+  } catch {
+    return false
+  }
+}
 
 // Map our BCP-47 narration codes to the recognizer's language name.
 const _ASR_LANG: Record<string, string> = {
@@ -91,6 +108,48 @@ async function decodeToMono16k(blob: Blob): Promise<Float32Array> {
 
 let _asr: ((audio: Float32Array, opts: unknown) => Promise<{ text?: string }>) | null = null
 
+// The all-IBM Granite Speech generate() path. Experimental and verified per Transformers.js release;
+// any failure here is caught by the caller, which falls back to the verified Whisper path.
+let _granite: { processor: GraniteProc; model: GraniteModel } | null = null
+interface GraniteProc {
+  (prompt: string, audio: Float32Array): Promise<Record<string, unknown>>
+  tokenizer: { apply_chat_template: (m: unknown, o: unknown) => string }
+  batch_decode: (out: unknown, o: unknown) => string[]
+}
+interface GraniteModel {
+  generate: (o: Record<string, unknown>) => Promise<unknown>
+}
+
+async function transcribeGranite(audio: Float32Array): Promise<string> {
+  const tjs = (await import('@huggingface/transformers')) as unknown as {
+    AutoProcessor: { from_pretrained: (m: string) => Promise<GraniteProc> }
+    GraniteSpeechForConditionalGeneration: {
+      from_pretrained: (m: string, o: unknown) => Promise<GraniteModel>
+    }
+  }
+  if (!_granite) {
+    const processor = await tjs.AutoProcessor.from_pretrained(GRANITE_SPEECH_MODEL)
+    const model = await tjs.GraniteSpeechForConditionalGeneration.from_pretrained(
+      GRANITE_SPEECH_MODEL,
+      { dtype: { embed_tokens: 'fp16', audio_tower: 'fp16', language_model: 'q4' }, device: 'webgpu' },
+    )
+    _granite = { processor, model }
+  }
+  const { processor, model } = _granite
+  const messages = [
+    { role: 'system', content: 'You are Granite, developed by IBM.' },
+    { role: 'user', content: '<|audio|>can you transcribe the speech into a written format?' },
+  ]
+  const prompt = processor.tokenizer.apply_chat_template(messages, {
+    tokenize: false,
+    add_generation_prompt: true,
+  })
+  const inputs = await processor(prompt, audio)
+  const out = await model.generate({ ...inputs, max_new_tokens: 200 })
+  const decoded = processor.batch_decode(out, { skip_special_tokens: true })
+  return (decoded[0] ?? '').split('\n').pop()?.trim() ?? ''
+}
+
 /** Record a question and transcribe it fully on-device. Returns a controller so the UI can stop
  *  recording early, plus a promise resolving to the transcript. */
 export function listen(
@@ -103,6 +162,14 @@ export function listen(
     const blob = await rec.done
     onStatus?.('Transcribing on-device...')
     const audio = await decodeToMono16k(blob)
+    if (graniteSpeechEnabled()) {
+      try {
+        onStatus?.('Transcribing on-device (Granite Speech)...')
+        return await transcribeGranite(audio)
+      } catch {
+        onStatus?.('Granite Speech unavailable; using Whisper...')
+      }
+    }
     const { pipeline } = await import('@huggingface/transformers')
     if (!_asr) {
       _asr = (await pipeline('automatic-speech-recognition', MODEL, {
