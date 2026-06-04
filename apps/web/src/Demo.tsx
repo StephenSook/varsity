@@ -59,6 +59,7 @@ const UI: Record<
     langLabel: string
     explain: string
     explaining: string
+    error: string
     reannounce: string
     caption: (m: string, off: boolean) => string
   }
@@ -69,6 +70,7 @@ const UI: Record<
     langLabel: 'Explanation language',
     explain: 'Explain the call',
     explaining: 'Explaining...',
+    error: 'Sorry, the explanation could not load. Please check your connection and try again.',
     reannounce: 'Re-announce in English',
     caption: (m, off) =>
       `Offside line at the second-to-last defender · attacker ${m} m ${off ? 'ahead' : 'behind'}`,
@@ -79,6 +81,7 @@ const UI: Record<
     langLabel: 'Idioma de la explicación',
     explain: 'Explicar la jugada',
     explaining: 'Explicando...',
+    error: 'No se pudo cargar la explicación. Comprueba tu conexión e inténtalo de nuevo.',
     reannounce: 'Volver a anunciar en español',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
@@ -89,6 +92,7 @@ const UI: Record<
     langLabel: "Langue de l'explication",
     explain: "Expliquer l'action",
     explaining: 'Explication...',
+    error: "Impossible de charger l'explication. Vérifiez votre connexion et réessayez.",
     reannounce: 'Réannoncer en français',
     caption: (m, off) =>
       `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
@@ -99,6 +103,7 @@ const UI: Record<
     langLabel: 'Idioma da explicação',
     explain: 'Explicar o lance',
     explaining: 'Explicando...',
+    error: 'Não foi possível carregar a explicação. Verifique sua conexão e tente novamente.',
     reannounce: 'Anunciar novamente em português',
     caption: (m, off) =>
       `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
@@ -109,6 +114,7 @@ const UI: Record<
     langLabel: 'Sprache der Erklärung',
     explain: 'Die Szene erklären',
     explaining: 'Erkläre...',
+    error: 'Die Erklärung konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.',
     reannounce: 'Erneut auf Deutsch ansagen',
     caption: (m, off) =>
       `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
@@ -390,6 +396,16 @@ export function Demo() {
     if (typeof document !== 'undefined') document.documentElement.lang = UI[lang].bcp47
   }, [lang])
 
+  // Close any in-flight stream + the audio context on unmount, so a route change or a dev
+  // double-mount never leaks an open EventSource connection or an AudioContext.
+  useEffect(() => {
+    return () => {
+      sourceRef.current?.close()
+      const ctx = audioCtxRef.current
+      if (ctx && ctx.state !== 'closed') void ctx.close()
+    }
+  }, [])
+
   function applyVerbosity(next: Verbosity) {
     if (typeof localStorage !== 'undefined') localStorage.setItem('varsity-verbosity', next)
     setVerbosity(next)
@@ -668,6 +684,9 @@ export function Demo() {
     source.onerror = () => {
       setStreaming(false)
       source.close()
+      // The verdict handler closes the source on success, so onerror here means a genuine stream
+      // failure: tell the blind fan in their language rather than leaving them in silence.
+      announce(UI[lang].error)
     }
   }
 
@@ -786,6 +805,9 @@ export function Demo() {
     source.onerror = () => {
       setStreaming(false)
       source.close()
+      // The verdict handler closes the source on success, so onerror here means a genuine stream
+      // failure: tell the blind fan in their language rather than leaving them in silence.
+      announce(UI[lang].error)
     }
   }
 
