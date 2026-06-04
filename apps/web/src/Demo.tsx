@@ -1089,6 +1089,7 @@ export function Demo() {
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <button
+          id="explain-cta"
           onClick={() => explainTheCall(lang)}
           disabled={streaming}
           className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
@@ -1500,6 +1501,20 @@ export function Demo() {
             </>
           )}
         </section>
+      )}
+
+      {streaming && !geo && (
+        // Sighted-only placeholder for the ~1-2s before the first stage streams in, so the canvas
+        // area is not blank dead air. aria-hidden + no aria-live: the blind fan's announcements come
+        // from the separate assertive region, never from here.
+        <div aria-hidden="true" className="w-full max-w-2xl text-center">
+          <div
+            className={`h-48 w-full rounded-2xl bg-slate-800/40 ring-1 ring-slate-700/40 ${
+              reducedMotion ? '' : 'animate-pulse'
+            }`}
+          />
+          <p className="mt-2 text-sm text-slate-400">{t.explaining}</p>
+        </div>
       )}
 
       {geo && (

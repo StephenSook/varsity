@@ -96,6 +96,16 @@ export default function App() {
           <div data-hero-item className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <a
               href="#demo"
+              onClick={() => {
+                // The verb "Hear" must be deliverable, not just a scroll: after the smooth scroll
+                // settles, move focus to the Explain control so one keypress actually plays the
+                // call. preventScroll keeps it from fighting the in-flight scroll; never auto-click
+                // (the audio gesture-gate stays with the user).
+                window.setTimeout(
+                  () => document.getElementById('explain-cta')?.focus({ preventScroll: true }),
+                  700,
+                )
+              }}
               className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400"
             >
               {c.ctaHear}
