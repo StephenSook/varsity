@@ -117,3 +117,29 @@ export function playSpearcon(text: string, opts: { lang?: string; rate?: number 
   window.speechSynthesis.speak(u)
   return true
 }
+
+/**
+ * The true pitch-corrected spearcon (Walker, Nance & Lindsay, ICAD 2006): render the rule fragment
+ * as speech (on-device Kokoro), then TIME-COMPRESS it while PRESERVING PITCH, so the formants stay
+ * intact and the shortcut is recognisable, not a chipmunk artefact. Native pitch-preserving time
+ * stretch via the media element's `preservesPitch` (a WSOLA-class algorithm), unlike the Web Speech
+ * `rate` path (which resamples and shifts pitch). Falls back to the Web Speech approximation when
+ * Kokoro or the audio element is unavailable. User-triggered only.
+ */
+export async function playPitchCorrectedSpearcon(
+  text: string,
+  opts: { lang?: string; rate?: number } = {},
+): Promise<boolean> {
+  try {
+    const url = URL.createObjectURL(await synthKokoro(text))
+    const audio = new Audio(url)
+    audio.preservesPitch = true // keep the pitch/formants; only compress time (the real spearcon)
+    audio.playbackRate = Math.min(opts.rate ?? 3, 4)
+    audio.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true })
+    await audio.play()
+    return true
+  } catch {
+    // honest fallback: the assets-free Web Speech rate approximation
+    return playSpearcon(text, opts)
+  }
+}
