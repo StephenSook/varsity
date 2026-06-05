@@ -90,3 +90,42 @@ def test_watsonx_outage_degrades_to_floor_without_crashing_or_retrying(monkeypat
     )
     assert out.strip() != "" and "Law 11" in out and "5.45" in out  # the floor explanation
     assert calls["n"] == 1  # one attempt, then straight to the floor (no 3x retry on a hard outage)
+
+
+def test_explain_decision_outage_degrades_to_floor_without_retrying(monkeypatch) -> None:
+    # The SAME hard-outage contract on the penalty/handball path (pipeline.py -> /stream/decision):
+    # a watsonx failure degrades to the deterministic Law-citing floor, with no 3x retry.
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise RuntimeError("watsonx 503")
+
+    monkeypatch.setattr(granite_mod._watsonx, "generate", boom)
+    out = GraniteClient().explain_decision(
+        incident="An attacker is tripped inside the penalty area.",
+        outcome="Penalty awarded",
+        law="14",
+        law_text="Law 14 ...",
+    )
+    assert out.strip() != "" and "14" in out  # the deterministic, Law-citing floor
+    assert calls["n"] == 1  # one attempt, no retry on a hard outage
+
+
+def test_answer_question_outage_degrades_to_floor_without_retrying(monkeypatch) -> None:
+    # The SAME hard-outage contract on the free-text oracle path (pipeline.py -> /stream/ask).
+    calls = {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        raise RuntimeError("watsonx timeout")
+
+    monkeypatch.setattr(granite_mod._watsonx, "generate", boom)
+    out = GraniteClient().answer_question(
+        question="Why was that offside?",
+        law="11",
+        title="Offside",
+        law_text="Law 11 ...",
+    )
+    assert out.strip() != "" and "11" in out  # the deterministic, Law-grounded floor
+    assert calls["n"] == 1  # one attempt, no retry on a hard outage
