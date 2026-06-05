@@ -77,6 +77,16 @@ def test_models_registry_names_the_ibm_models_and_never_returns_the_key() -> Non
     assert "WATSONX_API_KEY" not in str(body)  # the key value is never returned
 
 
+def test_live_now_is_honest_without_a_feed_key() -> None:
+    # In CI there is no API_FOOTBALL_KEY, so /live/now must report configured=False + the floor
+    # note, never crash or fabricate a live match. With a key it returns real live fixtures.
+    client = TestClient(app)
+    body = client.get("/live/now").json()
+    assert isinstance(body["configured"], bool)
+    assert "fixtures" in body and isinstance(body["fixtures"], list)
+    assert "note" in body
+
+
 def test_challenge_fit_serves_primary_sourced_facts_with_their_urls() -> None:
     # Challenge Fit must be grounded, not asserted: the WHO and FIFA figures each carry the page
     # they were verified against, so a judge can check them.
