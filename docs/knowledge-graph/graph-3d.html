@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VARSITY - 3D Knowledge Graph</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0f1c; overflow: hidden; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+  #header {
+    position: absolute; top: 20px; left: 24px; z-index: 10;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  #header h1 {
+    color: #34d399; font-size: 18px; font-weight: 700; letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
+  }
+  #header p { color: #64748b; font-size: 11px; letter-spacing: 1px; }
+
+  #legend {
+    position: absolute; bottom: 24px; left: 24px; z-index: 10;
+    background: rgba(10, 15, 28, 0.92); border: 1px solid #1e293b;
+    border-radius: 10px; padding: 16px 20px; backdrop-filter: blur(12px);
+  }
+  .legend-title {
+    color: #94a3b8; font-size: 9px; font-weight: 700;
+    letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase;
+  }
+  .legend-item { display: flex; align-items: center; gap: 10px; margin: 6px 0; color: #cbd5e1; font-size: 11px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  #info-panel {
+    position: absolute; bottom: 24px; right: 24px; z-index: 10;
+    background: rgba(10, 15, 28, 0.92); border: 1px solid #1e293b;
+    border-radius: 10px; padding: 16px 20px; backdrop-filter: blur(12px);
+    max-width: 380px; display: none; white-space: pre-wrap;
+  }
+  #info-panel .info-title { color: #34d399; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  #info-panel .info-group { color: #64748b; font-size: 10px; letter-spacing: 1.5px; margin-bottom: 8px; text-transform: uppercase; }
+  #info-panel .info-desc { color: #cbd5e1; font-size: 11px; line-height: 1.6; }
+
+  #controls {
+    position: absolute; top: 20px; right: 24px; z-index: 10;
+    display: flex; gap: 8px;
+  }
+  #controls button {
+    background: rgba(10, 15, 28, 0.85); border: 1px solid #1e293b;
+    color: #cbd5e1; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+    font-family: inherit; font-size: 11px; letter-spacing: 1px;
+    backdrop-filter: blur(8px); transition: all 0.2s;
+  }
+  #controls button:hover { border-color: #34d399; color: #34d399; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>VARSITY &middot; KNOWLEDGE GRAPH</h1>
+  <p>ARCHITECTURE &amp; DATA FLOW &middot; HOVER TO TRACE CONNECTIONS &middot; CLICK FOR DETAILS</p>
+</div>
+
+<div id="controls">
+  <button id="btn-reset">RESET VIEW</button>
+  <button id="btn-spin">AUTO-ROTATE</button>
+</div>
+
+<div id="legend">
+  <div class="legend-title">System Layers</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fb923c; box-shadow:0 0 12px #fb923c"></div>Trigger / Input</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#34d399; box-shadow:0 0 12px #34d399"></div>Geometry &amp; Confidence</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#38bdf8; box-shadow:0 0 12px #38bdf8"></div>Law Retrieval (RAG)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa; box-shadow:0 0 12px #a78bfa"></div>Granite Reasoning &amp; Federation</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22d3ee; box-shadow:0 0 12px #22d3ee"></div>Accessible Delivery</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; box-shadow:0 0 12px #fbbf24"></div>IBM On-Device</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f472b6; box-shadow:0 0 12px #f472b6"></div>Provability &amp; Safety</div>
+</div>
+
+<div id="info-panel">
+  <div class="info-group" id="info-group"></div>
+  <div class="info-title" id="info-title"></div>
+  <div class="info-desc" id="info-desc"></div>
+</div>
+
+<div id="graph"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.181.0",
+    "three/": "https://esm.sh/three@0.181.0/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import ForceGraph3D from 'https://esm.sh/3d-force-graph@1.73.4?external=three';
+import SpriteText from 'https://esm.sh/three-spritetext?external=three';
+
+const COLORS = {
+  input:    '#fb923c',
+  geometry: '#34d399',
+  rag:      '#38bdf8',
+  reason:   '#a78bfa',
+  delivery: '#22d3ee',
+  ibm:      '#fbbf24',
+  proof:    '#f472b6',
+};
+
+const GROUP_LABELS = {
+  input: 'TRIGGER / INPUT', geometry: 'GEOMETRY & CONFIDENCE', rag: 'LAW RETRIEVAL (RAG)',
+  reason: 'GRANITE REASONING & FEDERATION', delivery: 'ACCESSIBLE DELIVERY',
+  ibm: 'IBM ON-DEVICE', proof: 'PROVABILITY & SAFETY',
+};
+
+const nodes = [
+  // Trigger / input
+  { id: 'trigger',  name: 'VAR Review Fires',       group: 'input',    val: 18, desc: 'A Video Assistant Referee review begins.\nThe trigger that starts the whole loop. VARSITY explains a received decision, it never predicts or adjudicates one.' },
+  { id: 'statsbomb',name: 'StatsBomb 360 Frame',    group: 'input',    val: 14, desc: 'A real World Cup 2022 freeze-frame (Canada v Morocco).\nPlayer x-y positions and role booleans. The deterministic floor the demo runs on.' },
+  { id: 'livenow',  name: 'Live feed /live/now',    group: 'input',    val: 13, desc: 'API-Football: the matches in play right now, with their VAR events.\nFree-tier, on-demand cached. Honest feed_ok states: no key, feed failure, quiet window, live.' },
+  { id: 'replay',   name: 'Replay Buffer',          group: 'input',    val: 11, desc: 'Cached recent decisions.\nA live-feed failure never breaks the demo; the canned path stays the floor.' },
+
+  // Geometry & confidence
+  { id: 'geometry', name: 'Offside Geometry Engine',group: 'geometry', val: 20, desc: 'Pure-Python offside margin in meters from the freeze-frame.\norient2d exact predicate, Theil-Sen line, convex hull. The number is computed, never hardcoded.' },
+  { id: 'margin',   name: 'Offside Margin (m)',     group: 'geometry', val: 16, desc: 'The signed distance past the second-to-last defender.\n+5.69 m offside, -3.14 m onside, 0.02 m too-close. StatsBomb yards times 0.9144.' },
+  { id: 'calib',    name: 'Confidence Calibration', group: 'geometry', val: 16, desc: 'The calibrated VARSITY Call band.\nGUM uncertainty budget, sigma about 0.55 m, ECE 0.34 percent vs a 4.16 percent overconfident control, IPCC verbal scale. A too-close call withholds the number and defers.' },
+
+  // Law retrieval (RAG)
+  { id: 'rag',      name: 'IFAB-Laws RAG',          group: 'rag',      val: 17, desc: 'Docling to FAISS over the real IFAB Laws of the Game 2025/26.\n18 chunks. Granite embeddings online, BM25 offline floor. Hit@5 = 1.00.' },
+  { id: 'proof',    name: 'Law 11 Proof Tree',      group: 'rag',      val: 15, desc: 'Neuro-symbolic forward-chaining over Law 11.\nAuditable rule traversal. Codes non-adjudication: it explains a received decision, it never decides one.' },
+
+  // Granite reasoning & federation
+  { id: 'granite',  name: 'IBM Granite (watsonx)',  group: 'reason',   val: 20, desc: 'granite-4-h-small reasoning.\nTurns the geometry and the Law into a plain-language why, in five languages. Degrades to a Law-citing floor on a watsonx outage instead of crashing.' },
+  { id: 'guardian', name: 'Granite Guardian',       group: 'reason',   val: 16, desc: 'granite-guardian-3-8b.\nGroundedness and Law-citation safety on the output path. A Guardian false-positive is reported but never flips the dispositive hard gate.' },
+  { id: 'critic',   name: 'Multi-Critic Gate',      group: 'reason',   val: 14, desc: 'Deterministic-hard gate (dispositive) plus advisory Guardian over the proof tree.\nFails closed: an ungrounded explanation never reaches the fan.' },
+  { id: 'forge',    name: 'Context Forge Gateway',  group: 'reason',   val: 17, desc: 'IBM Context Forge MCP gateway.\nFederates four backends: the geometry MCP, the IFAB-RAG MCP, the A2A narrator, and the Granite coordinator on top.' },
+  { id: 'a2a',      name: 'A2A Narrator Agent',     group: 'reason',   val: 13, desc: 'A real message/send round-trip.\nThe narrator reachable through the gateway as a federated agent.' },
+
+  // Accessible delivery
+  { id: 'sse',      name: 'SSE Pipeline',           group: 'delivery', val: 15, desc: 'FastAPI server-sent events.\nA named-event stream from the backend straight into the browser live region.' },
+  { id: 'arialive', name: 'aria-live Verdict',      group: 'delivery', val: 18, desc: 'A pre-registered assertive aria-live region.\nThe fan hears the rule-grounded verdict in real time, before the broadcast picture catches up.' },
+  { id: 'sr',       name: 'Screen Reader (output)', group: 'delivery', val: 16, desc: 'The fan own screen reader.\nThe product speaks through it, in their language. Audio is the product, not a custom voice bolted on.' },
+  { id: 'langs',    name: '5-Language Narration',   group: 'delivery', val: 13, desc: 'EN, ES, FR, PT, DE.\nGenerated native; the lang attribute switches the spoken voice. Built for a global tournament.' },
+  { id: 'earcon',   name: 'Spatial Earcons (HRTF)', group: 'delivery', val: 13, desc: 'Listener-centred HRTF audio.\nThe attacker tone moves past the offside line, and the verdict earcon roughens as the call tightens, so a blind fan hears the confidence.' },
+  { id: 'keyboard', name: 'Keyboard + WCAG 2.2 AA', group: 'delivery', val: 13, desc: 'Full keyboard power-mode, forced-colors, focus-visible, target-size.\nThe axe-core CI gate runs the wcag22aa tag on every push.' },
+
+  // IBM on-device
+  { id: 'nano',     name: 'Granite Nano (offline)', group: 'ibm',      val: 14, desc: 'Granite 4.0 Nano in the browser via Transformers.js and WebGPU.\nA Law-grounded explanation with zero backend calls. Accessibility that survives no signal.' },
+  { id: 'vision',   name: 'Granite Vision + Docling',group: 'ibm',     val: 12, desc: 'Build-time captioning of IFAB diagrams plus Docling ingestion.\nAll-IBM, end to end.' },
+
+  // Provability & safety
+  { id: 'judges',   name: '/judges Honesty Page',   group: 'proof',    val: 18, desc: 'Every claim is a live button a judge clicks.\nThe honesty moat: nothing is asserted that the code cannot run live.' },
+  { id: 'corpus',   name: 'SHA-256 Signed Corpus',  group: 'proof',    val: 13, desc: 'The IFAB corpus is signed and verified at load.\nFails closed if it is tampered (LLM08).' },
+  { id: 'redteam',  name: 'Red-Team 13/13',         group: 'proof',    val: 13, desc: 'The free-text oracle survives 13 of 13 prompt-injection attacks, 0 leakage.\nA CI regression keeps it that way (LLM01).' },
+  { id: 'otel',     name: 'OpenTelemetry Trace',    group: 'proof',    val: 14, desc: 'GET /trace: the real geometry to law to granite to guardian span tree with per-stage durations, runnable live in your own browser.' },
+];
+
+const links = [
+  // input into the engines
+  { source: 'livenow',   target: 'trigger'  },
+  { source: 'replay',    target: 'trigger'  },
+  { source: 'trigger',   target: 'geometry' },
+  { source: 'trigger',   target: 'rag'      },
+  { source: 'statsbomb', target: 'geometry' },
+
+  // geometry & confidence
+  { source: 'geometry',  target: 'margin'   },
+  { source: 'margin',    target: 'calib'    },
+  { source: 'geometry',  target: 'granite'  },
+  { source: 'margin',    target: 'granite'  },
+  { source: 'calib',     target: 'arialive' },
+
+  // law retrieval
+  { source: 'rag',       target: 'proof'    },
+  { source: 'proof',     target: 'granite'  },
+  { source: 'rag',       target: 'granite'  },
+  { source: 'vision',    target: 'rag'      },
+  { source: 'corpus',    target: 'rag'      },
+
+  // federation
+  { source: 'geometry',  target: 'forge'    },
+  { source: 'rag',       target: 'forge'    },
+  { source: 'a2a',       target: 'forge'    },
+  { source: 'forge',     target: 'granite'  },
+  { source: 'otel',      target: 'forge'    },
+
+  // reasoning + safety gate
+  { source: 'granite',   target: 'guardian' },
+  { source: 'guardian',  target: 'critic'   },
+  { source: 'proof',     target: 'critic'   },
+  { source: 'redteam',   target: 'granite'  },
+
+  // delivery to the screen reader
+  { source: 'guardian',  target: 'sse'      },
+  { source: 'critic',    target: 'sse'      },
+  { source: 'sse',       target: 'arialive' },
+  { source: 'arialive',  target: 'sr'       },
+  { source: 'langs',     target: 'sr'       },
+  { source: 'earcon',    target: 'sr'       },
+  { source: 'keyboard',  target: 'sr'       },
+  { source: 'nano',      target: 'arialive' },
+
+  // the honesty page exercises the system live
+  { source: 'judges',    target: 'granite'  },
+  { source: 'judges',    target: 'otel'     },
+  { source: 'judges',    target: 'rag'      },
+];
+
+// Pre-compute neighbors for hover highlighting
+nodes.forEach(n => { n.neighbors = []; n.links = []; });
+links.forEach(link => {
+  const a = nodes.find(n => n.id === link.source);
+  const b = nodes.find(n => n.id === link.target);
+  if (a && b) {
+    a.neighbors.push(b);
+    b.neighbors.push(a);
+    a.links.push(link);
+    b.links.push(link);
+  }
+});
+
+const highlightNodes = new Set();
+const highlightLinks = new Set();
+let hoverNode = null;
+
+function getSourceNode(link) {
+  const sid = typeof link.source === 'object' ? link.source.id : link.source;
+  return nodes.find(n => n.id === sid);
+}
+
+const graphEl = document.getElementById('graph');
+let spinning = true;
+
+const Graph = ForceGraph3D()(graphEl)
+  .graphData({ nodes, links })
+  .backgroundColor('#0a0f1c')
+  .width(window.innerWidth)
+  .height(window.innerHeight)
+  .showNavInfo(false)
+
+  .nodeColor(node => {
+    if (highlightNodes.size === 0) return COLORS[node.group];
+    return highlightNodes.has(node) ? COLORS[node.group] : COLORS[node.group] + '30';
+  })
+  .nodeVal(n => n.val)
+  .nodeRelSize(5)
+  .nodeOpacity(0.9)
+  .nodeResolution(24)
+
+  .nodeThreeObject(node => {
+    const sprite = new SpriteText(node.name);
+    sprite.color = COLORS[node.group];
+    sprite.backgroundColor = 'rgba(10, 15, 28, 0.65)';
+    sprite.padding = 1.5;
+    sprite.borderRadius = 2;
+    sprite.textHeight = 2.5;
+    sprite.material.depthWrite = false;
+    sprite.position.y = 10;
+    return sprite;
+  })
+  .nodeThreeObjectExtend(true)
+
+  .nodeLabel(n =>
+    `<div style="color:${COLORS[n.group]};background:rgba(10,15,28,0.9);padding:6px 12px;border-radius:6px;font-family:'SF Mono',monospace;font-size:11px;border:1px solid ${COLORS[n.group]}44;max-width:300px;line-height:1.5">${n.desc.split('\n')[0]}</div>`
+  )
+
+  .linkColor(link => {
+    const sn = getSourceNode(link);
+    const base = sn ? COLORS[sn.group] : '#ffffff';
+    if (highlightLinks.size === 0) return base + '44';
+    return highlightLinks.has(link) ? base + 'cc' : base + '12';
+  })
+  .linkWidth(link => highlightLinks.has(link) ? 2.5 : 0.6)
+  .linkOpacity(0.3)
+  .linkDirectionalParticles(link => highlightLinks.has(link) ? 6 : 2)
+  .linkDirectionalParticleWidth(link => highlightLinks.has(link) ? 3 : 1.5)
+  .linkDirectionalParticleSpeed(0.005)
+  .linkDirectionalParticleColor(link => {
+    const sn = getSourceNode(link);
+    return sn ? COLORS[sn.group] : '#ffffff';
+  })
+  .linkDirectionalArrowLength(5)
+  .linkDirectionalArrowRelPos(1)
+  .linkDirectionalArrowColor(link => {
+    const sn = getSourceNode(link);
+    return sn ? COLORS[sn.group] + '88' : '#ffffff88';
+  })
+  .linkCurvature(0.15)
+
+  .onNodeHover(node => {
+    if ((!node && !highlightNodes.size) || (node && hoverNode === node)) return;
+    highlightNodes.clear();
+    highlightLinks.clear();
+    if (node) {
+      highlightNodes.add(node);
+      node.neighbors.forEach(n => highlightNodes.add(n));
+      node.links.forEach(l => highlightLinks.add(l));
+    }
+    hoverNode = node || null;
+    updateHighlight();
+    graphEl.style.cursor = node ? 'pointer' : 'default';
+  })
+
+  .onNodeClick(node => {
+    document.getElementById('info-group').textContent = GROUP_LABELS[node.group] || '';
+    document.getElementById('info-title').textContent = node.name;
+    document.getElementById('info-desc').textContent = node.desc;
+    document.getElementById('info-panel').style.display = 'block';
+
+    const dist = 100;
+    const ratio = 1 + dist / Math.hypot(node.x, node.y, node.z);
+    Graph.cameraPosition(
+      { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
+      node, 1500
+    );
+  })
+  .onBackgroundClick(() => {
+    document.getElementById('info-panel').style.display = 'none';
+    highlightNodes.clear();
+    highlightLinks.clear();
+    hoverNode = null;
+    updateHighlight();
+  });
+
+function updateHighlight() {
+  Graph
+    .nodeColor(Graph.nodeColor())
+    .linkColor(Graph.linkColor())
+    .linkWidth(Graph.linkWidth())
+    .linkDirectionalParticles(Graph.linkDirectionalParticles())
+    .linkDirectionalParticleWidth(Graph.linkDirectionalParticleWidth());
+}
+
+Graph.d3Force('charge').strength(-260);
+Graph.d3Force('link').distance(72);
+
+try {
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    2.4,
+    0.85,
+    0
+  );
+  Graph.postProcessingComposer().addPass(bloomPass);
+} catch (e) {
+  console.warn('Bloom unavailable:', e);
+}
+
+// Background stars
+const starGeometry = new THREE.BufferGeometry();
+const starPositions = new Float32Array(5000 * 3);
+for (let i = 0; i < 5000 * 3; i++) {
+  starPositions[i] = (Math.random() - 0.5) * 10000;
+}
+starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+Graph.scene().add(new THREE.Points(starGeometry, new THREE.PointsMaterial({
+  color: 0x38bdf8, size: 0.5, transparent: true, opacity: 0.35,
+})));
+
+// Fog for depth
+Graph.scene().fog = new THREE.FogExp2(0x0a0f1c, 0.00025);
+
+// Initial fly-in
+setTimeout(() => {
+  Graph.cameraPosition({ x: 0, y: 0, z: 420 }, { x: 0, y: 0, z: 0 }, 2000);
+}, 300);
+
+// Auto-orbit
+function spin() {
+  if (!spinning) return;
+  const t = Date.now() * 0.00008;
+  Graph.cameraPosition({
+    x: 420 * Math.sin(t),
+    y: 80 * Math.sin(t * 0.6),
+    z: 420 * Math.cos(t),
+  });
+  requestAnimationFrame(spin);
+}
+spin();
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  Graph.cameraPosition({ x: 0, y: 0, z: 420 }, { x: 0, y: 0, z: 0 }, 1500);
+  document.getElementById('info-panel').style.display = 'none';
+  highlightNodes.clear();
+  highlightLinks.clear();
+  hoverNode = null;
+  updateHighlight();
+});
+
+document.getElementById('btn-spin').addEventListener('click', () => {
+  spinning = !spinning;
+  if (spinning) spin();
+});
+
+window.addEventListener('resize', () => {
+  Graph.width(window.innerWidth).height(window.innerHeight);
+});
+
+</script>
+</body>
+</html>

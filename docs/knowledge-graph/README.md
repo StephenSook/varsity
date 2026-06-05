@@ -18,12 +18,31 @@ Result: **199 concepts, 211 relationships, 18 communities.**
 
 ## Files
 
+The first four files are the auto-extracted concept map (199 nodes from the docs). The 3D
+file is a hand-curated architecture view (26 nodes, the data-flow spine), and the Gource
+time-lapse is the animated repo-history companion.
+
 | File | What it is | How to view |
 |---|---|---|
 | `graph.svg` | Static force-directed map of all 199 concepts, coloured by community | Renders inline on GitHub; open the file |
-| `graph.html` | Interactive force-directed graph (drag, zoom, hover, search) | Download and open in any browser, no server needed |
+| `graph.html` | Interactive force-directed graph of all 199 concepts (drag, zoom, hover, search) | Download and open in any browser, no server needed |
+| `graph-3d.html` | Cinematic 3D architecture graph: 26 curated nodes in 7 brand-coloured layers, glowing orbs, bloom, animated data-flow particles, auto-orbit | Open via a render proxy (see below) or download and serve locally |
 | `GRAPH_REPORT.md` | Plain-language audit: god nodes, surprising connections, suggested questions, per-community cohesion | Renders on GitHub |
 | `graph.json` | Raw graph (nodes + edges + communities) for GraphRAG / Neo4j / Gephi | Machine-readable |
+
+## Moving and cinematic views
+
+- **3D architecture graph** (`graph-3d.html`): a curated WebGL view of the pipeline, the
+  trigger to geometry to RAG to Granite to Guardian to screen-reader flow, in the brand
+  navy and signal-green, with bloom and auto-orbit. It loads three.js from a CDN, so view
+  it through a render proxy (`https://raw.githack.com/StephenSook/varsity/main/docs/knowledge-graph/graph-3d.html`)
+  or download it and run `python3 -m http.server` locally. GitHub will not execute a
+  committed `.html` inline.
+- **Gource time-lapse**: an animated video of the whole repository history (197 commits
+  over 4.7 days) as a growing tree of files, in the brand palette with milestone captions.
+  It is rendered to a 1080p60 MP4 and kept as a demo asset outside the repo (a ~37 MB
+  binary does not belong in git history). Regenerate it any time with `gource` piped to
+  `ffmpeg`; the exact command is recorded in the session notes.
 
 ## What the graph surfaces
 

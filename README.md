@@ -208,7 +208,7 @@ graph TD
     class LOOP core;
 ```
 
-The full graph, **199 concepts and 211 relationships auto-extracted from the 30 documents in `docs/`** and clustered into 18 communities, lives in [docs/knowledge-graph/](docs/knowledge-graph/): an interactive force-directed view (`graph.html`), a static map (`graph.svg`), and a plain-language analysis (`GRAPH_REPORT.md`). Every edge is tagged EXTRACTED / INFERRED / AMBIGUOUS, so the map is as honest as the product.
+The full graph, **199 concepts and 211 relationships auto-extracted from the 30 documents in `docs/`** and clustered into 18 communities, lives in [docs/knowledge-graph/](docs/knowledge-graph/): an interactive force-directed view (`graph.html`), a static map (`graph.svg`), a plain-language analysis (`GRAPH_REPORT.md`), and a cinematic 3D architecture view (`graph-3d.html`, glowing orbs and animated data-flow, best opened through a render proxy). Every edge is tagged EXTRACTED / INFERRED / AMBIGUOUS, so the map is as honest as the product.
 
 <details>
 <summary>Show the full 199-concept force-directed map</summary>
