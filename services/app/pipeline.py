@@ -135,7 +135,7 @@ def explanation_stages(
         "stage": "discourse",
         "connective": _connective,
         "tight_calls_so_far": _state.tight_count,
-        "half": discourse._half(_minute),
+        "half": discourse.half_label(_minute),
         "decisions_seen": len(_state.history),
     }
 

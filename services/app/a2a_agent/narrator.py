@@ -59,7 +59,7 @@ def narrate(payload: str, *, granite: object | None = None) -> str:
         )
     except (ValueError, KeyError, TypeError):
         return granite.explain_offside(
-            margin_meters=5.45, is_offside=True, law_text=_CANNED_LAW
+            margin_meters=5.69, is_offside=True, law_text=_CANNED_LAW
         )
 
 
@@ -100,7 +100,7 @@ def agent_card(host: str = "127.0.0.1", port: int = NARRATOR_PORT) -> AgentCard:
         input_modes=["text/plain"],
         output_modes=["text/plain"],
         tags=["soccer", "var", "offside", "accessibility", "ifab"],
-        examples=['{"margin_meters": 5.45, "is_offside": true, "law_text": "...Law 11..."}'],
+        examples=['{"margin_meters": 5.69, "is_offside": true, "law_text": "...Law 11..."}'],
     )
     return AgentCard(
         name="VARSITY Narrator",

@@ -23,6 +23,12 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Literal
+
+# The closed domains of the two band scales, so a mistyped literal is a type error, not a silent
+# miss on the knife-edge ``band == "very tight"`` defer-to-official gate.
+Band = Literal["clear", "tight", "very tight"]
+ConfidenceBand = Literal["clear", "marginal", "too_close_to_call"]
 
 # --- The HONEST broadcast-annotation budget VARSITY actually consumes. Each input is now anchored
 #     to a MEASURED published figure where one exists; the genuinely-unmeasured pieces are flagged
@@ -131,8 +137,8 @@ _CONFIDENCE_BAND = {"clear": "clear", "tight": "marginal", "very tight": "too_cl
 class MarginUncertainty:
     margin_meters: float
     sigma_meters: float
-    band: str  # "clear" | "tight" | "very tight"
-    confidence_band: str  # "clear" | "marginal" | "too_close_to_call" (the honest schema)
+    band: Band  # "clear" | "tight" | "very tight"
+    confidence_band: ConfidenceBand  # "clear" | "marginal" | "too_close_to_call"
     defer_to_official: bool  # too-close: VARSITY describes the official decision, no precise claim
     p_verdict: float  # P(the verdict is correct) = Phi(|M| / sigma)
     likelihood: str  # the IPCC verbal hedge for p_verdict
