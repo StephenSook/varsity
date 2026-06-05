@@ -18,6 +18,20 @@ A blind football fan is often the last person in the room to understand a VAR ca
 
 The first system that is **all four at once**: real-time, screen-reader-native, IFAB-Laws-grounded, and fan-facing, with offside coverage. Prior art (X-VARS, CVPR 2024; SoccerRef-Agents, 2026) is offline, referee-facing, and foul-only. VARSITY is what those would look like if they shipped to the fan who needs it.
 
+## VARSITY in one loop, and where the depth lives
+
+The whole product is one loop you can run in five seconds on the live link:
+
+> A VAR review fires. VARSITY computes the real offside geometry, retrieves the exact Law, has IBM Granite explain the why, has Granite Guardian check it stays grounded, and your screen reader speaks it, before the broadcast picture catches up.
+
+Everything else is depth behind that one loop, and it groups into five pillars. Read these five, and you have the whole project; the detailed table that follows is the per-capability proof.
+
+1. **Grounded, never guessing.** Real StatsBomb offside geometry, the exact IFAB Law retrieved (RAG Hit@5 = 1.00), a neuro-symbolic Law-11 proof tree, and a Granite Guardian + multi-critic gate that fails closed. It explains a *received* decision; it never adjudicates or predicts.
+2. **Honest about uncertainty.** A calibrated "VARSITY's Call" band (ECE 0.34% vs a 4.16% overconfident control), an IPCC-style verbal scale, and a too-close call that withholds the number and defers to the official, audibly. The fan hears the confidence, not just the verdict.
+3. **Audio-first accessibility.** Screen-reader-native `aria-live`, spatial earcons that move past the offside line (HRTF, ISO 226), five languages, WCAG 2.2 AA enforced in CI, and a full keyboard mode.
+4. **All-IBM, end to end.** Granite reasoning, Granite Guardian, Granite embeddings, Granite Vision, and Docling, federated through Context Forge with an A2A narrator, plus a fully on-device offline mode running Granite Nano in the browser.
+5. **Provable and resilient.** Every claim is a live button on the `/judges` page, the corpus is SHA-256-signed and fails closed, the oracle survives a 13/13 red-team, and a watsonx outage degrades to a Law-citing floor instead of crashing.
+
 ## How VARSITY maps to the judging criteria
 
 The challenge scores four criteria. Each maps to evidence you can run against the **live deployment** ([web-chi-wine-13.vercel.app](https://web-chi-wine-13.vercel.app)) from the in-page "prove it" panel, which calls the live backend ([varsity-api.onrender.com](https://varsity-api.onrender.com)) and shows the real result inline.
@@ -31,7 +45,7 @@ The challenge scores four criteria. Each maps to evidence you can run against th
 
 ## Capability honesty
 
-Every capability is labeled by how it is wired, and each is verifiable in this repository. Every entry in the table below is wired-live: there are no roadmap-only, aspirational, or "coming soon" capabilities. We would rather under-claim than overstate.
+The table below is the per-capability proof behind the five pillars above. Every capability is labeled by how it is wired, and each is verifiable in this repository. Every entry is wired-live: there are no roadmap-only, aspirational, or "coming soon" capabilities. We would rather under-claim than overstate.
 
 - **Wired-live**: runs in this repo and has been exercised end to end (tests and/or a live run this session). Every capability listed below is at this tier.
 
