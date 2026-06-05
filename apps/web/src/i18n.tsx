@@ -3,7 +3,10 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 // The 5 World Cup languages Granite narrates in. The narration was already 5-language;
 // this lifts the SAME language choice up to a context so the whole PAGE chrome flips with
 // it (hero, problem, demo, pipeline, judges, footer), not just the spoken verdict.
-export type Lang = 'English' | 'Spanish' | 'French' | 'Portuguese' | 'German'
+// The canonical language list + order, single source of truth (the picker, the 1-5 keyboard
+// cycle, and the Lang union all derive from this so adding a language is a one-line change).
+export const LANGS = ['English', 'Spanish', 'French', 'Portuguese', 'German'] as const
+export type Lang = (typeof LANGS)[number]
 
 export type Chrome = {
   heroKicker: string
