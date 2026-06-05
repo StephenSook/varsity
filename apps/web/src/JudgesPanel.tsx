@@ -648,6 +648,10 @@ export function JudgesPanel() {
         ))}
         <span className="text-slate-400">wired-live / same-engine illustrative / integration</span>
       </div>
+      <details className="mb-2">
+        <summary className="mb-4 cursor-pointer text-sm font-medium text-emerald-300 hover:text-emerald-200">
+          Show all {CLAIMS.length} verifiable claims, each deep-linked to its code
+        </summary>
       <ul className="grid list-none gap-4 sm:grid-cols-2">
         {CLAIMS.map((c) => (
           <li
@@ -678,6 +682,7 @@ export function JudgesPanel() {
           </li>
         ))}
       </ul>
+      </details>
 
       <div className="mt-8 rounded-2xl bg-slate-900/60 p-5 text-left ring-1 ring-slate-700/50">
         <h3 className="text-sm font-semibold text-emerald-300">{c.runHeading}</h3>

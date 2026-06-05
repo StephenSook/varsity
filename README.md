@@ -45,39 +45,75 @@ The challenge scores four criteria. Each maps to evidence you can run against th
 
 ## Capability honesty
 
-The table below is the per-capability proof behind the five pillars above. Every capability is labeled by how it is wired, and each is verifiable in this repository. Every entry is wired-live: there are no roadmap-only, aspirational, or "coming soon" capabilities. We would rather under-claim than overstate.
+Every capability here is wired-live and verifiable in this repo: no roadmap-only, aspirational, or "coming soon" entries, and we would rather under-claim than overstate. This is the per-capability proof behind the five pillars, grouped and collapsed so the page stays scannable. Expand a pillar to see its proof.
 
-- **Wired-live**: runs in this repo and has been exercised end to end (tests and/or a live run this session). Every capability listed below is at this tier.
+<details>
+<summary><b>Pillar 1: Grounded, never guessing</b> (real geometry, IFAB-Laws RAG, Granite, Guardian, the Law-11 proof tree)</summary>
 
-| Capability | Tier | Where / how to verify |
-|---|---|---|
-| Offside-margin geometry from StatsBomb 360 freeze-frames | Wired-live | `services/app/geometry.py` (StatsBomb yards, `METERS_PER_UNIT = 0.9144`) over `services/tests/fixtures/wc2022_offside_frame.json` (a real 2022 World Cup frame); the live `GET /scenarios` reports **5.69 m offside / -3.14 m onside / 0.02 m too-close** |
-| IFAB-Laws RAG: Docling to FAISS, IBM Granite embeddings online + BM25 offline | Wired-live | `services/app/rag/` over the real **IFAB Laws of the Game 2025/26** (18 Docling-ingested chunks incl. the VAR protocol); evaluated in `docs/benchmarks/rag-eval.md` |
-| RAG retrieval evaluation (Hit-Rate@k + MRR over a golden IFAB set) | Wired-live | `services/evals/` + `docs/benchmarks/rag-eval.md`; CI-gated (Hit@5 = 1.00, every offside query routes to Law 11) |
-| IBM Granite reasoning via watsonx (rule-grounded explanation citing the Law) | Wired-live | `services/app/llm/granite.py` (5 languages, prompt-leak guard); live run this session |
-| Granite Guardian groundedness + Law-citation safety | Wired-live | `services/app/llm/guardian.py` + tests |
-| OpenTelemetry per-request span tree (geometry to law to granite to guardian) | Wired-live | `services/app/observability.py`, `services/app/pipeline.py`; the real span tree is served live as `GET /trace` (per-stage durations) and runnable from the /judges panel |
-| Context Forge MCP gateway + A2A narrator round-trip | Wired-live | `services/app/mcp_servers/`, `app/a2a_agent/` (real `message/send` round-trip in `client.py` + test), `app/federation.py`, `docs/federation.md` |
-| Live-trigger resilience + "VAR is reviewing" announcement | Wired-live | `services/app/triggers/`, `GET /stream/live` emits the transitional review event; front-end Live / Replay toggle |
-| SSE pipeline to a screen-reader `aria-live` region | Wired-live | `services/app/main.py`, `apps/web/src/Demo.tsx` (pre-registered region, verbosity-gated, re-announce-safe) |
-| 5-language narration (EN / ES / FR / PT / DE) | Wired-live | `apps/web/src/Demo.tsx`; the same call re-narrated, the `lang` attribute flips the spoken voice |
-| Spatial audio: listener-centred HRTF + animated offside crossing + semantic verdict earcon | Wired-live | `apps/web/src/sonify.ts`; the attacker tone moves past the centred offside line, then a major (onside) / minor+tritone (offside) earcon |
-| SVG offside-line visualization synced to the computed margin | Wired-live | `apps/web/src/OffsidePitch.tsx` (margin on screen equals the geometry value) |
-| Broadcast-delay ticker (Phenix-cited offset, live-measured delta) | Wired-live | `apps/web/src/BroadcastTicker.tsx`; lead = the OTA broadcast offset minus VARSITY's measured latency |
-| Keyboard power-mode + stage scrubber + verbosity modes | Wired-live | `apps/web/src/Demo.tsx`, `StageScrubber.tsx`, `KeyboardHelp.tsx`; every action by one keypress, any step re-narrated |
-| Shareable on-device audio clip | Wired-live | `apps/web/src/share.ts`, `tts.ts`; Kokoro WAV via the Web Share API with download / clipboard fallback |
-| On-device offline mode: a 3-tier all-IBM ladder (deterministic floor / Granite 4.0 Nano 350M / opt-in Granite 4.0 1B) | Wired-live | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser via Transformers.js + WebGPU, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent; the 1B tier is a gated ~1.5 GB opt-in |
-| Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | Wired-live | `apps/web/src/tts.ts`; the accessibility path stays the user's own screen reader |
-| 3D / GSAP cinematic hero | Wired-live | `apps/web/src/Hero3D.tsx` (React Three Fiber pitch, lazy-loaded, `aria-hidden`, motion-gated) + a GSAP intro |
-| Multi-critic verification gate (deterministic-hard + advisory Guardian) over a neuro-symbolic Law-11 proof tree | Wired-live | `services/app/verification.py`, `law11.py`, `verbalizer.py`; the hard gate is dispositive, a Guardian false-positive is reported but never flips it |
-| Calibrated uncertainty band ("VARSITY's Call") + ECE / Brier reliability receipt | Wired-live | `services/app/uncertainty.py`, `calibration.py`; `GET /calibration` (ECE 0.34% vs a 4.16% overconfident control, 40k seeded draws); too-close calls withhold the number and defer to the official |
-| SHA-256-signed IFAB corpus, fail-closed verify-at-load (LLM08) | Wired-live | `services/app/rag/corpus_signature.py`; `GET /corpus_integrity` (verified, 18 chunks, root + 0 mismatches) |
-| Oracle input hardening: HAP + prompt-injection screen + spotlighting (LLM01) | Wired-live | `services/app/safety/input_screen.py`; the free-text oracle fails closed; `GET /red_team` (13/13 attacks caught, 0 leakage, honest residual documented) |
-| Faithfulness gold-eval (per injection class, per decision type) + ALCE citation precision/recall | Wired-live | `services/verify/faithfulness_eval.py`, `services/app/citation_metrics.py`; `GET /faithfulness` (zero structural leakage on offside / penalty / handball) |
-| Multi-decision engine + "ask any rule" oracle (offside geometry; penalty / handball off the same RAG + Granite + Guardian path) | Wired-live | `services/app/decisions.py`, `pipeline.py`; `GET /decisions`, `GET /law_clause`, `GET /stream/ask` |
-| Live-feed resilience: normalized `VARDecisionEvent` schema + multi-source fusion confidence + speculative pre-warm + honest latency | Wired-live | `services/app/triggers/` (schema/fusion/prewarm), `services/app/latency.py`; `GET /fusion`, `GET /latency` (Phenix-cited delays, < 10 s budget) |
-| Measured-literature uncertainty: the broadcast-data sigma anchored to published, fetch-verified figures + a sensitivity envelope | Wired-live | `services/app/uncertainty.py`, `gum.py`, `docs/UNCERTAINTY_SOURCES.md`; `GET /uncertainty` (extended) returns the sigma sensitivity across the measured envelope; the clear demo call is robust at every sigma |
-| Low-vision + keyboard a11y beyond the screen-reader core: forced-colors (Windows High Contrast Mode), global focus-visible, skip-link, WCAG 2.2 target-size, prefers-contrast | Wired-live | `apps/web/src/index.css`, `App.tsx`; the CI axe gate and the live /judges axe-core check both run the `wcag22aa` tag; `docs/ACCESSIBILITY.md` |
+| Capability | Where / how to verify |
+|---|---|
+| Offside-margin geometry from StatsBomb 360 freeze-frames | `services/app/geometry.py` (StatsBomb yards, `METERS_PER_UNIT = 0.9144`) over `services/tests/fixtures/wc2022_offside_frame.json` (a real 2022 World Cup frame); live `GET /scenarios` reports **5.69 m offside / -3.14 m onside / 0.02 m too-close** |
+| IFAB-Laws RAG: Docling to FAISS, IBM Granite embeddings online + BM25 offline | `services/app/rag/` over the real **IFAB Laws of the Game 2025/26** (18 Docling-ingested chunks incl. the VAR protocol); `docs/benchmarks/rag-eval.md` |
+| RAG retrieval evaluation (Hit-Rate@k + MRR over a golden IFAB set) | `services/evals/` + `docs/benchmarks/rag-eval.md`; CI-gated (Hit@5 = 1.00, every offside query routes to Law 11) |
+| IBM Granite reasoning via watsonx (rule-grounded explanation citing the Law) | `services/app/llm/granite.py` (5 languages, prompt-leak guard); live run this session |
+| Granite Guardian groundedness + Law-citation safety | `services/app/llm/guardian.py` + tests |
+| Multi-critic verification gate (deterministic-hard + advisory Guardian) over a neuro-symbolic Law-11 proof tree | `services/app/verification.py`, `law11.py`, `verbalizer.py`; the hard gate is dispositive, a Guardian false-positive is reported but never flips it |
+| Multi-decision engine + "ask any rule" oracle (penalty / handball off the same RAG + Granite + Guardian path) | `services/app/decisions.py`, `pipeline.py`; `GET /decisions`, `GET /law_clause`, `GET /stream/ask` |
+
+</details>
+
+<details>
+<summary><b>Pillar 2: Honest about uncertainty</b> (calibrated "VARSITY's Call" band, ECE / Brier, measured-literature sigma)</summary>
+
+| Capability | Where / how to verify |
+|---|---|
+| Calibrated uncertainty band ("VARSITY's Call") + ECE / Brier reliability receipt | `services/app/uncertainty.py`, `calibration.py`; `GET /calibration` (ECE 0.34% vs a 4.16% overconfident control, 40k seeded draws); too-close calls withhold the number and defer to the official |
+| Measured-literature uncertainty: the broadcast-data sigma anchored to published, fetch-verified figures + a sensitivity envelope | `services/app/uncertainty.py`, `gum.py`, `docs/UNCERTAINTY_SOURCES.md`; `GET /uncertainty` (extended) returns the sigma sensitivity across the measured envelope; the clear demo call is robust at every sigma |
+
+</details>
+
+<details>
+<summary><b>Pillar 3: Audio-first accessibility</b> (screen-reader aria-live, spatial earcons, 5 languages, WCAG 2.2, keyboard mode)</summary>
+
+| Capability | Where / how to verify |
+|---|---|
+| SSE pipeline to a screen-reader `aria-live` region | `services/app/main.py`, `apps/web/src/Demo.tsx` (pre-registered region, verbosity-gated, re-announce-safe) |
+| 5-language narration (EN / ES / FR / PT / DE) | `apps/web/src/Demo.tsx`; the same call re-narrated, the `lang` attribute flips the spoken voice |
+| Spatial audio: listener-centred HRTF + animated offside crossing + semantic verdict earcon | `apps/web/src/sonify.ts`; the attacker tone moves past the centred offside line, then a major (onside) / minor+tritone (offside) earcon |
+| SVG offside-line visualization synced to the computed margin | `apps/web/src/OffsidePitch.tsx` (margin on screen equals the geometry value) |
+| Broadcast-delay ticker (Phenix-cited offset, live-measured delta) | `apps/web/src/BroadcastTicker.tsx`; lead = the OTA broadcast offset minus VARSITY's measured latency |
+| Keyboard power-mode + stage scrubber + verbosity modes | `apps/web/src/Demo.tsx`, `StageScrubber.tsx`, `KeyboardHelp.tsx`; every action by one keypress, any step re-narrated |
+| Shareable on-device audio clip | `apps/web/src/share.ts`, `tts.ts`; Kokoro WAV via the Web Share API with download / clipboard fallback |
+| Read-aloud for the sighted track (Web Speech floor + Kokoro-82M on-device) | `apps/web/src/tts.ts`; the accessibility path stays the user's own screen reader |
+| 3D / GSAP cinematic hero | `apps/web/src/Hero3D.tsx` (React Three Fiber pitch, lazy-loaded, `aria-hidden`, motion-gated) + a GSAP intro |
+| Low-vision + keyboard a11y beyond the screen-reader core: forced-colors (Windows High Contrast Mode), global focus-visible, skip-link, WCAG 2.2 target-size, prefers-contrast | `apps/web/src/index.css`, `App.tsx`; the CI axe gate and the live /judges axe-core check both run the `wcag22aa` tag; `docs/ACCESSIBILITY.md` |
+
+</details>
+
+<details>
+<summary><b>Pillar 4: All-IBM, end to end</b> (Context Forge + A2A federation, on-device Granite Nano offline)</summary>
+
+| Capability | Where / how to verify |
+|---|---|
+| Context Forge MCP gateway + A2A narrator round-trip | `services/app/mcp_servers/`, `app/a2a_agent/` (real `message/send` round-trip in `client.py` + test), `app/federation.py`, `docs/federation.md` |
+| On-device offline mode: a 3-tier all-IBM ladder (deterministic floor / Granite 4.0 Nano 350M / opt-in Granite 4.0 1B) | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser via Transformers.js + WebGPU, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent; the 1B tier is a gated ~1.5 GB opt-in |
+
+</details>
+
+<details>
+<summary><b>Pillar 5: Provable and resilient</b> (live OpenTelemetry trace, a real live feed, SHA-256 corpus, red-team, degrade-to-floor)</summary>
+
+| Capability | Where / how to verify |
+|---|---|
+| OpenTelemetry per-request span tree (geometry to law to granite to guardian) | `services/app/observability.py`, `services/app/pipeline.py`; the real span tree is served live as `GET /trace` (per-stage durations) and runnable from the /judges panel |
+| Live feed: real current matches + VAR events from API-Football | `services/app/triggers/apifootball.py`; `GET /live/now` (cached, on-demand) returns the matches in play right now; honest when no key is configured |
+| Live-trigger resilience + "VAR is reviewing" announcement | `services/app/triggers/`, `GET /stream/live` emits the transitional review event; front-end Live / Replay toggle |
+| SHA-256-signed IFAB corpus, fail-closed verify-at-load (LLM08) | `services/app/rag/corpus_signature.py`; `GET /corpus_integrity` (verified, 18 chunks, root + 0 mismatches) |
+| Oracle input hardening: HAP + prompt-injection screen + spotlighting (LLM01) | `services/app/safety/input_screen.py`; the free-text oracle fails closed; `GET /red_team` (13/13 attacks caught, 0 leakage, honest residual documented) |
+| Faithfulness gold-eval (per injection class, per decision type) + ALCE citation precision/recall | `services/verify/faithfulness_eval.py`, `services/app/citation_metrics.py`; `GET /faithfulness` (zero structural leakage on offside / penalty / handball) |
+| Live-feed resilience: normalized `VARDecisionEvent` schema + multi-source fusion confidence + speculative pre-warm + honest latency | `services/app/triggers/` (schema/fusion/prewarm), `services/app/latency.py`; `GET /fusion`, `GET /latency` (Phenix-cited delays, < 10 s budget) |
+
+</details>
 
 ## Architecture
 
