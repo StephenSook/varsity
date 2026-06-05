@@ -4,6 +4,21 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the React runtime into its own long-lived chunk. App code changes far more
+        // often than React/scheduler, so isolating them lets a returning visitor reuse the
+        // cached vendor chunk across deploys. Everything else (incl. the lazy-loaded ONNX /
+        // kokoro chunks behind dynamic import) keeps Rollup's default code-splitting.
+        manualChunks(id) {
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+            return 'react-vendor'
+          }
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

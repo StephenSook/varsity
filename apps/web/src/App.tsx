@@ -8,6 +8,7 @@ import { OnlineBadge } from './OnlineBadge'
 import { Reveal } from './Reveal'
 import { useLenis } from './useLenis'
 import { usePrefersReducedMotion } from './useReducedMotion'
+import { HeroBackdrop } from './HeroBackdrop'
 
 // The 3D hero is heavy and purely decorative, so it is code-split and only loaded
 // when motion is allowed (keeps the core fast and accessible).
@@ -73,10 +74,12 @@ export default function App() {
         aria-label={c.heroKicker}
         className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
       >
-        {!reducedMotion && (
+        {reducedMotion ? (
+          <HeroBackdrop />
+        ) : (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
-            <LazyBoundary fallback={null}>
-              <Suspense fallback={null}>
+            <LazyBoundary fallback={<HeroBackdrop />}>
+              <Suspense fallback={<HeroBackdrop />}>
                 <Hero3D />
               </Suspense>
             </LazyBoundary>
