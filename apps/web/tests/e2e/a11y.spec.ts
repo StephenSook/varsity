@@ -105,3 +105,33 @@ test('the ? keyboard shortcut toggles the shortcut help (keyboard power mode is 
   // the help lists the core single-key actions (scoped to the help panel)
   await expect(help.getByText('Explain the call')).toBeVisible()
 })
+
+test('the action buttons advertise their single-key shortcut via aria-keyshortcuts', async ({
+  page,
+}) => {
+  await page.goto('/')
+  // The keyboard power mode binds E/O/S/B/D/L; a screen-reader user must be able to
+  // DISCOVER those shortcuts on the controls themselves, not only in the help panel.
+  await expect(page.locator('#explain-cta')).toHaveAttribute('aria-keyshortcuts', 'E')
+  await expect(page.getByRole('button', { name: 'Spatial audio cue' })).toHaveAttribute(
+    'aria-keyshortcuts',
+    'S',
+  )
+  await expect(page.getByRole('button', { name: 'Decision detail' })).toHaveAttribute(
+    'aria-keyshortcuts',
+    'D',
+  )
+})
+
+test('the audio sliders speak a human-readable value, not a bare number', async ({ page }) => {
+  await page.goto('/')
+  // aria-valuetext makes a screen reader say "70 percent" / "1.0 times speed" instead of "0.7".
+  await expect(page.getByRole('slider', { name: 'Sound volume' })).toHaveAttribute(
+    'aria-valuetext',
+    /percent$/,
+  )
+  await expect(page.getByRole('slider', { name: 'Read-aloud speech speed' })).toHaveAttribute(
+    'aria-valuetext',
+    /times speed$/,
+  )
+})
