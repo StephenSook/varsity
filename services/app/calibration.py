@@ -1,8 +1,9 @@
 """Calibration receipt for the offside-verdict confidence - the uncertainty band's honesty check.
 
 VARSITY reports a confidence in each received verdict: P(verdict correct) = Phi(|M| / sigma),
-where M is the measured margin and sigma ~= 13 cm is the propagated measurement noise (see
-``uncertainty.py``). A confidence is only honest if it is CALIBRATED: across many decisions, the
+where M is the measured margin and sigma ~= 55 cm is the honest broadcast-annotation budget (see
+``uncertainty.py``; the ~13 cm optical-equivalent is kept only as the if-we-had-SAOT comparison). A
+confidence is only honest if it is CALIBRATED: across many decisions, the
 verdicts we call "90% confident" should be correct about 90% of the time.
 
 This module produces that receipt deterministically (seeded Monte-Carlo, no model call): a

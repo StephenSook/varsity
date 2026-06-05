@@ -116,7 +116,7 @@ Four honesty checks back the budget, none of which need a gold-standard dataset:
 - **Log-loss + bootstrap CI on the ECE.** The calibration receipt adds the strictly-proper log
   score (the KL cross-entropy, which punishes confident errors harder than Brier) and a seeded
   percentile bootstrap 95% interval on the ECE, so the calibration error carries its own
-  finite-sample uncertainty (live: ECE 0.35% with a tight bootstrap CI, log-loss ~0.19).
+  finite-sample uncertainty (live: ECE 0.34% with a tight bootstrap CI, log-loss ~0.19).
 - **Fitted-temperature self-consistency.** Fitting the Boltzmann temperature `T` so the softmax
   `sigmoid(m/T)` best reproduces the Gaussian posterior recovers the closed-form `T = sigma/1.7`
   exactly (Guo et al. 2017 temperature scaling), a clean self-consistency check.

@@ -242,7 +242,7 @@ def explanation_stages(
         margin_meters=geo.margin_meters,
         sigma_meters=unc.sigma_meters,
         p_verdict=unc.p_verdict,
-        guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
+        guardian_model=getattr(guardian, "model_id", None)
         or "ibm/granite-guardian-3-8b",
     )
     yield provenance.provenance_stage(manifest)
@@ -345,7 +345,7 @@ def decision_stages(
         grounded=verdict.grounded,
         verified=panel.verified,
         links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
-        guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
+        guardian_model=getattr(guardian, "model_id", None)
         or "ibm/granite-guardian-3-8b",
     )
     yield provenance.provenance_stage(manifest)
@@ -446,7 +446,7 @@ def question_stages(
         grounded=verdict.grounded,
         verified=panel.verified,
         links=[provenance.link_from_law(law=law.law, law_title=law.title, law_text=law.text)],
-        guardian_model=getattr(getattr(guardian, "config", None), "model_id", None)
+        guardian_model=getattr(guardian, "model_id", None)
         or "ibm/granite-guardian-3-8b",
     )
     yield provenance.provenance_stage(manifest)
