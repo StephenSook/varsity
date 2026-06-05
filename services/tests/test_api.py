@@ -77,6 +77,18 @@ def test_models_registry_names_the_ibm_models_and_never_returns_the_key() -> Non
     assert "WATSONX_API_KEY" not in str(body)  # the key value is never returned
 
 
+def test_challenge_fit_serves_primary_sourced_facts_with_their_urls() -> None:
+    # Challenge Fit must be grounded, not asserted: the WHO and FIFA figures each carry the page
+    # they were verified against, so a judge can check them.
+    client = TestClient(app)
+    body = client.get("/challenge_fit").json()
+    assert "2.2 billion" in body["problem"]["stat"]
+    assert body["problem"]["url"].startswith("https://www.who.int/")
+    assert "104 matches" in body["moment"]["stat"]
+    assert body["moment"]["url"].startswith("https://www.fifa.com/")
+    assert "2026" in body["transferability"]
+
+
 def test_trace_spans_carry_the_ibm_model_attributes() -> None:
     # /trace must show WHICH named Granite models ran + what Guardian returned, not just timings.
     client = TestClient(app)

@@ -140,6 +140,16 @@ def latency(elapsed_s: float | None = None) -> dict:
     return latency_model.payload(elapsed_s)
 
 
+@app.get("/challenge_fit")
+def challenge_fit() -> dict:
+    """Why VARSITY fits the challenge, as primary-sourced facts a judge can check: the WHO scale of
+    vision impairment, the FIFA scale of the 2026 World Cup it serves during, and the honest
+    2022->2026 method transfer. Each figure carries the page it was verified against."""
+    from app import challenge_fit as cf
+
+    return cf.payload()
+
+
 @app.get("/fusion")
 def fusion() -> dict:
     """Multi-source fusion confidence over the live (or replay-floor) VAR events: each

@@ -564,6 +564,17 @@ export function JudgesPanel() {
         return `${reg} · watsonx ${j.watsonx_configured ? 'configured' : 'not configured'}`
       },
     },
+    {
+      key: 'challenge_fit',
+      label: 'Show why VARSITY fits the challenge (sourced)',
+      fn: async () => {
+        const j = await getJson('/challenge_fit')
+        type Fact = { stat: string; claim: string; source: string }
+        const p = j.problem as Fact
+        const m = j.moment as Fact
+        return `${p.stat} ${p.claim} (${p.source}) · ${m.stat}: ${m.claim} (${m.source}) · ${String(j.transferability)}`
+      },
+    },
   ]
 
   async function runAll() {
