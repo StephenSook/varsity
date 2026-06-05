@@ -18,6 +18,7 @@ retriever share ``GRANITE_EMBED_MODEL`` so they cannot drift apart.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import re
@@ -26,6 +27,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.rag import corpus_signature
+
+_log = logging.getLogger("varsity")
 
 INDEX_DIR = Path(__file__).resolve().parent / "index"
 CORPUS = INDEX_DIR / "chunks.json"
@@ -143,7 +146,7 @@ class LawRetriever:
             try:
                 return self._embeddings(query)
             except Exception:
-                pass
+                _log.warning("embeddings retrieve failed; falling back to keyword", exc_info=True)
         return self._keyword(query)
 
     def rank(self, query: str, *, k: int = 5, use_embeddings: bool = True) -> list[LawChunk]:
@@ -154,7 +157,7 @@ class LawRetriever:
                 _, ids = self._faiss().search(self._embed_query(query), k)
                 return [self.chunks[int(i)] for i in ids[0] if i >= 0]
             except Exception:
-                pass
+                _log.warning("FAISS rank failed; falling back to keyword scores", exc_info=True)
         scores = self._keyword_scores(query)
         order = sorted(range(len(self.chunks)), key=scores.__getitem__, reverse=True)
         return [self.chunks[i] for i in order[:k]]

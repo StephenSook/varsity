@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +45,26 @@ app.add_middleware(
 setup_tracing(app)
 
 _SENTINEL = object()
+_log = logging.getLogger("varsity")
+
+
+async def _sse_events(gen):
+    """Drive a stage generator to named SSE events. A last-resort boundary: if a stage raises
+    unexpectedly, emit a terminal 'stream_error' event so the client can announce a grounded
+    failure rather than the connection dropping with no signal, then stop. LLM stages already
+    self-degrade; this guards the deterministic stages so the stream never dies silently."""
+    try:
+        while True:
+            stage = await asyncio.to_thread(next, gen, _SENTINEL)
+            if stage is _SENTINEL:
+                break
+            yield {"event": stage["stage"], "data": json.dumps(stage)}
+    except Exception:  # noqa: BLE001 - boundary so one bad stage never kills the stream silently
+        _log.exception("SSE stage generator failed")
+        yield {
+            "event": "stream_error",
+            "data": json.dumps({"stage": "stream_error", "message": "stream failed"}),
+        }
 
 # Speculative pre-warm cache for the live path: the 'reviewing' beat warms the Law +
 # geometry so the resolved explanation skips that cold work.
@@ -71,16 +92,8 @@ async def stream_canned(
 ) -> EventSourceResponse:
     frame = scenarios.load_frame(scenario)
     meta = scenarios.trigger_meta(scenario)
-
-    async def event_gen():
-        gen = explanation_stages(frame, language=language, trigger_meta=meta)
-        while True:
-            stage = await asyncio.to_thread(next, gen, _SENTINEL)
-            if stage is _SENTINEL:
-                break
-            yield {"event": stage["stage"], "data": json.dumps(stage)}
-
-    return EventSourceResponse(event_gen())
+    gen = explanation_stages(frame, language=language, trigger_meta=meta)
+    return EventSourceResponse(_sse_events(gen))
 
 
 @app.get("/stream/live")
@@ -106,27 +119,28 @@ async def stream_live(
     review_id = f"{source}:{scenario}"
 
     async def event_gen():
-        warm = None
-        if transitional is not None:
-            # Speculative pre-warm: during the 'reviewing' gap, pre-retrieve the Law and run
-            # the geometry so the resolved explanation skips that cold work.
-            await asyncio.to_thread(_prewarm.warm, review_id, frame, _law_retriever())
-            warm = _prewarm.consume(review_id)
-            stage = reviewing_stage(transitional, source)
-            if review is not None:
-                stage["confidence"] = round(review.confidence, 3)
-                stage["hedge"] = review.hedge
-            stage["prewarmed"] = warm is not None
-            yield {"event": "reviewing", "data": json.dumps(stage)}
+        try:
+            warm = None
+            if transitional is not None:
+                # Speculative pre-warm: during the 'reviewing' gap, pre-retrieve the Law and run
+                # the geometry so the resolved explanation skips that cold work.
+                await asyncio.to_thread(_prewarm.warm, review_id, frame, _law_retriever())
+                warm = _prewarm.consume(review_id)
+                stage = reviewing_stage(transitional, source)
+                if review is not None:
+                    stage["confidence"] = round(review.confidence, 3)
+                    stage["hedge"] = review.hedge
+                stage["prewarmed"] = warm is not None
+                yield {"event": "reviewing", "data": json.dumps(stage)}
+        except Exception:  # noqa: BLE001 - the reviewing beat is a flourish, never load-bearing
+            _log.exception("live reviewing beat failed; proceeding to the explanation")
+            warm = None
         prewarmed_law = warm.law if warm is not None else None
         gen = explanation_stages(
             frame, language=language, trigger_meta=meta, prewarmed_law=prewarmed_law
         )
-        while True:
-            stage = await asyncio.to_thread(next, gen, _SENTINEL)
-            if stage is _SENTINEL:
-                break
-            yield {"event": stage["stage"], "data": json.dumps(stage)}
+        async for ev in _sse_events(gen):
+            yield ev
 
     return EventSourceResponse(event_gen())
 
@@ -398,15 +412,7 @@ async def stream_decision(type: str, language: str = "English") -> EventSourceRe
     """Explain a non-geometry VAR decision (penalty, handball) end to end: the same
     rule-grounded pipeline as offside, with no geometry/offside-line stage."""
 
-    async def event_gen():
-        gen = decision_stages(type, language=language)
-        while True:
-            stage = await asyncio.to_thread(next, gen, _SENTINEL)
-            if stage is _SENTINEL:
-                break
-            yield {"event": stage["stage"], "data": json.dumps(stage)}
-
-    return EventSourceResponse(event_gen())
+    return EventSourceResponse(_sse_events(decision_stages(type, language=language)))
 
 
 @app.get("/stream/ask")
@@ -414,13 +420,4 @@ async def stream_ask(q: str, language: str = "English") -> EventSourceResponse:
     """The rule oracle: answer a free-text fan question end to end, grounded in the Law
     the retriever returns, with Guardian checking the answer stays grounded."""
     question = q.strip()[:300]
-
-    async def event_gen():
-        gen = question_stages(question, language=language)
-        while True:
-            stage = await asyncio.to_thread(next, gen, _SENTINEL)
-            if stage is _SENTINEL:
-                break
-            yield {"event": stage["stage"], "data": json.dumps(stage)}
-
-    return EventSourceResponse(event_gen())
+    return EventSourceResponse(_sse_events(question_stages(question, language=language)))

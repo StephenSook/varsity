@@ -30,7 +30,7 @@ def test_narrate_falls_back_on_bad_payload() -> None:
     g = FakeGranite()
     out = narrate("not a decision", granite=g)
     assert "Law 11" in out
-    assert g.calls[0][0] == 5.45  # canned WC2022 fallback
+    assert g.calls[0][0] == 5.69  # canned WC2022 fallback (matches the fixture's 5.69 margin)
 
 
 def test_agent_card_served_at_well_known() -> None:

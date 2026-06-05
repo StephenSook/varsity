@@ -8,12 +8,15 @@ sequence even with no network. The live path is a flourish, never load-bearing.
 
 from __future__ import annotations
 
+import logging
 import os
 
 from app.triggers.fusion import FusedDecision, fuse
 from app.triggers.replay import ReplayBuffer, canned_buffer
 from app.triggers.schema import dedup_and_sort, normalize_all
 from app.triggers.sportmonks import VarEvent
+
+_log = logging.getLogger("varsity")
 
 # Values that look like an unset key, so a left-over .env placeholder never masquerades as live.
 _PLACEHOLDERS = {"", "changeme", "your-key", "your_key", "placeholder", "todo", "none", "xxx"}
@@ -55,6 +58,7 @@ def resolve_live_var_events(
         try:
             events = client.live_var_events()
         except Exception:
+            _log.warning("live source %s failed; falling through to the floor", name, exc_info=True)
             continue
         if events:
             return events, name
@@ -84,6 +88,7 @@ def resolve_and_fuse(
         try:
             events = client.live_var_events()
         except Exception:
+            _log.warning("live source %s failed; falling through to the floor", name, exc_info=True)
             continue
         if events:
             any_live = True

@@ -23,7 +23,7 @@ def _ordinal(n: int) -> str:
     return _ORDINALS.get(n, f"{n}th")
 
 
-def _half(minute: int | None) -> str | None:
+def half_label(minute: int | None) -> str | None:
     """The match half from the RECEIVED minute: <=45 is the first half, later is the second. A
     deterministic read of a real freeze-frame field (StatsBomb carries the minute), not a guess and
     not adjudication; None when the minute is unknown so the phrasing falls back to 'so far'."""
@@ -49,7 +49,9 @@ class MatchState:
         return sum(1 for d in self.history if d.band in _TIGHT_BANDS)
 
     def tight_count_in_half(self, half: str | None) -> int:
-        return sum(1 for d in self.history if d.band in _TIGHT_BANDS and _half(d.minute) == half)
+        return sum(
+            1 for d in self.history if d.band in _TIGHT_BANDS and half_label(d.minute) == half
+        )
 
 
 def connective(
@@ -65,7 +67,7 @@ def connective(
     if not history:
         return ""
     parts: list[str] = []
-    half = _half(minute)
+    half = half_label(minute)
     if band in _TIGHT_BANDS:
         if half is not None:
             n = state.tight_count_in_half(half) + 1
