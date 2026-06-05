@@ -6,6 +6,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0f1c" />
+    <!-- Warm the cross-origin backend connection (DNS + TLS) before the first Explain,
+         so the spoken verdict is not delayed by a fresh handshake to Render. -->
+    <link rel="preconnect" href="https://varsity-api.onrender.com" crossorigin />
     <meta
       name="description"
       content="Real-time, screen-reader-native, IFAB-grounded explanations of VAR and offside decisions."
@@ -37,10 +40,21 @@
       href="/fonts/instrument-serif-normal-latin.woff2"
       crossorigin
     />
-    <title>VARSITY</title>
+    <title>VARSITY: VAR offside, explained for blind fans</title>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="max-width: 40rem; margin: 4rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif; color: #e2e8f0; background: #0a0f1c">
+        <h1 style="color: #34d399">VARSITY</h1>
+        <p>
+          VARSITY explains VAR and offside decisions out loud for blind and low-vision
+          football fans, grounded in the IFAB Laws of the Game. The live explainer needs
+          JavaScript. Please enable it, or read the project and the Laws-grounded method at
+          <a style="color: #38bdf8" href="https://github.com/StephenSook/varsity">github.com/StephenSook/varsity</a>.
+        </p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

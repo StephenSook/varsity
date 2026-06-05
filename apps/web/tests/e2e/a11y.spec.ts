@@ -94,6 +94,17 @@ test('the decorative 3D canvas, when present, is aria-hidden', async ({ page }) 
   }
 })
 
+test('reduced motion still shows a static, decorative offside-line backdrop (not a blank hero)', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.getByRole('heading', { level: 1, name: 'VARSITY' }).waitFor()
+  // No WebGL canvas under reduced motion; the static SVG pitch backdrop stands in, decorative.
+  await expect(page.locator('canvas')).toHaveCount(0)
+  await expect(page.locator('[aria-hidden="true"] svg[role="presentation"]').first()).toBeVisible()
+})
+
 test('the ? keyboard shortcut toggles the shortcut help (keyboard power mode is wired)', async ({
   page,
 }) => {
