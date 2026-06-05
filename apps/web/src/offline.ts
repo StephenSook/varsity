@@ -12,7 +12,11 @@ const OFFSIDE_QUERY =
 // when available, falling back to a deterministic Law-grounded floor otherwise. No
 // backend, no network: the same deterministic-floor philosophy as the server path.
 
-const UNITS_TO_METERS = 105 / 120
+// StatsBomb's 120x80 grid is in YARDS; convert with the international yard, matching
+// services/app/geometry.py (METERS_PER_UNIT = 0.9144), Demo.tsx, and sonify.ts. The old
+// 105/120 (= 0.875) under-states every margin ~4.3% and was the audit-fixed bug; the
+// offline spoken margin must stay consistent with the online geometry and its own sonification.
+const UNITS_TO_METERS = 0.9144
 
 // IBM Granite 4.0 Nano, ONNX-web build (Transformers.js + WebGPU ready).
 // A 3-tier on-device ladder, all IBM Granite + Apache-2.0: the deterministic floor, the

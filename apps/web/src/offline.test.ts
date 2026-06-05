@@ -27,6 +27,9 @@ describe('offline deterministic floor (the geometry + text that run with no WebG
     expect(geo.is_offside).toBe(true)
     expect(geo.margin_meters).toBeGreaterThan(0)
     expect(geo.attacker_x).toBeGreaterThan(geo.offside_line_x)
+    // Pin the yards-to-meters factor (0.9144): the canned offline frame must speak the same
+    // 5.69 m the online geometry does, so the conversion can never silently drift back to 0.875.
+    expect(geo.margin_meters).toBe(5.69)
   })
 
   it('explains an offside geo grounded in Law 11', () => {
