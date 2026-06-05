@@ -729,27 +729,35 @@ export function Demo() {
       audioCtxRef.current ??= new AudioContext()
       void audioCtxRef.current.resume()
     }
-    const { generateOffline, setOfflineTier } = await import('./offline')
-    setOfflineTier(highAccuracyOffline ? 'granite-1b' : 'nano')
-    const res = await generateOffline({ onStatus: setOfflineStatus })
-    setGeo(res.geo)
-    const ctx = audioCtxRef.current
-    if (ctx) sonifyGeometry(ctx, res.geo)
-    setExplanation(res.text)
-    announce(
-      announceText(verbosity, {
-        text: res.text,
-        isOffside: res.geo.is_offside,
-        marginM: res.geo.margin_meters,
-        confidence: res.geo.confidence,
-      }),
-    )
-    setLawText(res.lawText)
-    triggerHaptic(res.geo)
-    setLatencyMs(performance.now() - startRef.current)
-    setOfflineSource(res.source)
-    setOfflineRetrieval(res.retrieval)
-    setStreaming(false)
+    try {
+      const { generateOffline, setOfflineTier } = await import('./offline')
+      setOfflineTier(highAccuracyOffline ? 'granite-1b' : 'nano')
+      const res = await generateOffline({ onStatus: setOfflineStatus })
+      setGeo(res.geo)
+      const ctx = audioCtxRef.current
+      if (ctx) sonifyGeometry(ctx, res.geo)
+      setExplanation(res.text)
+      announce(
+        announceText(verbosity, {
+          text: res.text,
+          isOffside: res.geo.is_offside,
+          marginM: res.geo.margin_meters,
+          confidence: res.geo.confidence,
+        }),
+      )
+      setLawText(res.lawText)
+      triggerHaptic(res.geo)
+      setLatencyMs(performance.now() - startRef.current)
+      setOfflineSource(res.source)
+      setOfflineRetrieval(res.retrieval)
+    } catch {
+      // The on-device model (WebGPU chunk fetch, model load) can fail; never leave the blind
+      // fan with a silently-hung button. Speak the same error the online path speaks.
+      setOfflineStatus('')
+      announce(UI[lang].error)
+    } finally {
+      setStreaming(false)
+    }
   }
 
   function selectScenario(s: Scenario) {
@@ -1007,6 +1015,7 @@ export function Demo() {
           type="button"
           aria-pressed={soundOn}
           aria-label="Spatial audio cue"
+          aria-keyshortcuts="S"
           onClick={() => setSoundOn((s) => !s)}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             soundOn ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
@@ -1018,6 +1027,7 @@ export function Demo() {
           type="button"
           aria-pressed={buildUp}
           aria-label="Build-up sonification (illustrative approach to the line)"
+          aria-keyshortcuts="B"
           onClick={() => setBuildUp((b) => !b)}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             buildUp ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
@@ -1028,6 +1038,8 @@ export function Demo() {
         <button
           type="button"
           aria-pressed={detail}
+          aria-label="Decision detail"
+          aria-keyshortcuts="D"
           onClick={() => setDetail((d) => !d)}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             detail ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
@@ -1039,6 +1051,7 @@ export function Demo() {
           type="button"
           aria-pressed={live}
           aria-label="Live World Cup feed"
+          aria-keyshortcuts="L"
           onClick={() => setLive((v) => !v)}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             live ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800/60 text-slate-300 hover:text-white'
@@ -1099,6 +1112,7 @@ export function Demo() {
           id="explain-cta"
           onClick={() => explainTheCall(lang)}
           disabled={streaming}
+          aria-keyshortcuts="E"
           className="rounded-full bg-emerald-500 px-6 py-3 font-medium text-slate-950 transition-colors hover:bg-emerald-400 disabled:opacity-60"
         >
           {streaming ? t.explaining : t.explain}
@@ -1106,6 +1120,7 @@ export function Demo() {
         <button
           onClick={() => void explainOffline()}
           disabled={streaming}
+          aria-keyshortcuts="O"
           className="rounded-full border border-emerald-500/60 px-6 py-3 font-medium text-emerald-300 transition-colors hover:bg-emerald-500/10 disabled:opacity-60"
         >
           Offline mode (on-device)
@@ -1641,6 +1656,7 @@ export function Demo() {
             step={0.1}
             value={audioPrefs.volume}
             aria-label="Sound volume"
+            aria-valuetext={`${Math.round(audioPrefs.volume * 100)} percent`}
             onChange={(e) => updateAudioPrefs({ volume: Number(e.target.value) })}
           />
         </label>
@@ -1653,6 +1669,7 @@ export function Demo() {
             step={0.1}
             value={audioPrefs.rate}
             aria-label="Read-aloud speech speed"
+            aria-valuetext={`${audioPrefs.rate.toFixed(1)} times speed`}
             onChange={(e) => updateAudioPrefs({ rate: Number(e.target.value) })}
           />
         </label>
