@@ -199,16 +199,29 @@ def live_now() -> dict:
     if apifootball is None:
         return {
             "configured": False,
+            "feed_ok": False,
             "fixtures": [],
             "note": "No live-feed key configured; the canned StatsBomb replay is the floor.",
         }
-    fixtures: list[dict] = []
     try:
         fixtures = apifootball.live_fixtures()
     except Exception:
-        _log.warning("live_now feed call failed; reporting empty", exc_info=True)
+        # A quota / auth / network failure must NOT masquerade as a quiet window. Report it
+        # honestly and do NOT cache it, so a recovered feed is re-queried on the next click.
+        _log.warning("live_now feed call failed", exc_info=True)
+        return {
+            "configured": True,
+            "feed_ok": False,
+            "fixtures": [],
+            "live_count": 0,
+            "note": (
+                "Live feed temporarily unavailable (quota, auth, or network); the canned "
+                "StatsBomb replay remains the floor."
+            ),
+        }
     data = {
         "configured": True,
+        "feed_ok": True,
         "source": "api-football",
         "live_count": len(fixtures),
         "fixtures": fixtures[:20],

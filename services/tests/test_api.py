@@ -83,8 +83,27 @@ def test_live_now_is_honest_without_a_feed_key() -> None:
     client = TestClient(app)
     body = client.get("/live/now").json()
     assert isinstance(body["configured"], bool)
+    assert body["feed_ok"] is False  # no key -> not ok, the canned floor stands
     assert "fixtures" in body and isinstance(body["fixtures"], list)
     assert "note" in body
+
+
+def test_live_now_reports_a_feed_failure_distinctly_and_does_not_cache_it(monkeypatch) -> None:
+    # A quota / auth / network failure must NOT look like a quiet "no match live" window, and it
+    # must NOT be cached, so a recovered feed is re-queried on the next click (the review's HIGH).
+    from app import main as m
+
+    class _Boom:
+        def live_fixtures(self):
+            raise RuntimeError("quota 429")
+
+    m._LIVE_CACHE["data"] = None  # no stale success cache
+    monkeypatch.setattr(m, "live_clients", lambda: (None, _Boom()))
+    body = TestClient(app).get("/live/now").json()
+    assert body["configured"] is True
+    assert body["feed_ok"] is False
+    assert "unavailable" in body["note"].lower()
+    assert m._LIVE_CACHE["data"] is None  # the failure was not cached
 
 
 def test_challenge_fit_serves_primary_sourced_facts_with_their_urls() -> None:

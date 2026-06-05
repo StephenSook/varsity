@@ -55,7 +55,7 @@ export const CHROME: Record<Lang, Chrome> = {
       },
       {
         h: 'What fans told us',
-        p: 'A blind supporter who follows the A-League told us the TV commentary leaves him with no idea what is happening on the pitch.',
+        p: 'A blind supporter told us the TV commentary leaves him with no idea what is happening on the pitch.',
       },
       {
         h: 'The gap',
@@ -108,7 +108,7 @@ export const CHROME: Record<Lang, Chrome> = {
       },
       {
         h: 'Lo que nos dijeron los aficionados',
-        p: 'Un aficionado ciego que sigue la A-League nos dijo que los comentarios de la televisión lo dejan sin idea de lo que pasa en el campo.',
+        p: 'Un aficionado ciego nos dijo que los comentarios de la televisión lo dejan sin idea de lo que pasa en el campo.',
       },
       {
         h: 'La brecha',
@@ -161,7 +161,7 @@ export const CHROME: Record<Lang, Chrome> = {
       },
       {
         h: 'Ce que les supporters nous ont dit',
-        p: "Un supporter aveugle qui suit la A-League nous a dit que les commentaires télé le laissent sans savoir ce qui se passe sur le terrain.",
+        p: "Un supporter aveugle nous a dit que les commentaires télé le laissent sans savoir ce qui se passe sur le terrain.",
       },
       {
         h: 'Le manque',
@@ -214,7 +214,7 @@ export const CHROME: Record<Lang, Chrome> = {
       },
       {
         h: 'O que os torcedores nos disseram',
-        p: 'Um torcedor cego que acompanha a A-League nos disse que a narração da TV o deixa sem ideia do que acontece no campo.',
+        p: 'Um torcedor cego nos disse que a narração da TV o deixa sem ideia do que acontece no campo.',
       },
       {
         h: 'A lacuna',
@@ -267,7 +267,7 @@ export const CHROME: Record<Lang, Chrome> = {
       },
       {
         h: 'Was Fans uns sagten',
-        p: 'Ein blinder Anhänger der A-League sagte uns, die TV-Kommentare ließen ihn im Unklaren darüber, was auf dem Spielfeld geschieht.',
+        p: 'Ein blinder Anhänger sagte uns, die TV-Kommentare ließen ihn im Unklaren darüber, was auf dem Spielfeld geschieht.',
       },
       {
         h: 'Die Lücke',
