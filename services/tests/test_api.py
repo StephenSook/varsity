@@ -106,6 +106,35 @@ def test_live_now_reports_a_feed_failure_distinctly_and_does_not_cache_it(monkey
     assert m._LIVE_CACHE["data"] is None  # the failure was not cached
 
 
+def test_live_now_success_truncates_to_20_flags_var_events_and_caches(monkeypatch) -> None:
+    # The success branch (feed_ok True, fixtures[:20] truncation, var_events filter,
+    # cache-on-success) was untested; pin it with a stub of 25 fixtures, one with a VAR event.
+    from app import main as m
+
+    fake = [
+        {"league": "L", "home": f"H{i}", "away": f"A{i}", "minute": i, "var_events": []}
+        for i in range(25)
+    ]
+    fake[0]["var_events"] = ["Goal Disallowed - offside"]
+
+    class _Feed:
+        def live_fixtures(self):
+            return fake
+
+    m._LIVE_CACHE["data"] = None
+    monkeypatch.setattr(m, "live_clients", lambda: (None, _Feed()))
+    client = TestClient(app)
+    body = client.get("/live/now").json()
+    assert body["feed_ok"] is True
+    assert body["source"] == "api-football"
+    assert body["live_count"] == 25
+    assert len(body["fixtures"]) == 20  # truncated
+    assert len(body["var_events"]) == 1 and body["cached"] is False
+    # the success is cached: a second call is served from cache (no second feed hit)
+    assert client.get("/live/now").json()["cached"] is True
+    m._LIVE_CACHE["data"] = None  # clean up the module cache for other tests
+
+
 def test_challenge_fit_serves_primary_sourced_facts_with_their_urls() -> None:
     # Challenge Fit must be grounded, not asserted: the WHO and FIFA figures each carry the page
     # they were verified against, so a judge can check them.
