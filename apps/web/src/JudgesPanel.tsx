@@ -239,9 +239,9 @@ const CLAIMS: { t: string; w: string; tier: Tier }[] = [
     tier: 'live',
   },
   {
-    t: 'Granite Vision diagram captioning (IFAB figures to alt-text, grounded + faithfulness-guarded)',
+    t: 'Granite Vision diagram-captioning pipeline (model + endpoint wired; 0 captions approved yet, human-review-gated)',
     w: 'services/app/llm/vision.py',
-    tier: 'live',
+    tier: 'integration',
   },
   {
     t: 'Screen-reader transcript: every aria-live announcement, made visible to sighted judges',

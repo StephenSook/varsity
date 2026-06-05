@@ -22,7 +22,7 @@ that receipt deterministically (seeded Monte-Carlo, no model call), over the *sa
 
 | Metric | Value | Reading |
 |---|---|---|
-| Expected Calibration Error (ECE) | **0.35%** | calibrated to within a third of a percent |
+| Expected Calibration Error (ECE) | **0.34%** | calibrated to within a third of a percent |
 | Brier score | **0.060** | low squared error of confidence vs outcome |
 | Overconfident control (sigma halved), ECE | **4.16%** | ~12x worse, the diagram discriminates |
 

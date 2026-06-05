@@ -276,7 +276,7 @@ def otel_trace() -> dict:
 
 
 @app.get("/uncertainty")
-def uncertainty(margin_m: float = 5.69) -> dict:
+def uncertainty(margin_m: float = 5.69, is_offside: bool | None = None) -> dict:
     """The GUM uncertainty budget for an offside margin: the honest broadcast-data expanded
     uncertainty + coverage interval (BIPM JCGM 100:2008, k=2 ~ 95%), the Bayesian credible
     interval, the Shannon entropy of the call in bits, a Monte-Carlo cross-check (JCGM 101:2008),
@@ -284,7 +284,11 @@ def uncertainty(margin_m: float = 5.69) -> dict:
     DESCRIBES the precision of the received decision's geometry; it never adjudicates."""
     from app import gum
 
-    return gum.payload(margin_m, extended=True)
+    # Derive the verdict from the margin sign (geometry convention: positive = ahead of the binding
+    # Law-11 reference = offside), matching the live pipeline (which passes geo.is_offside), so the
+    # spoken line never says "onside" for a positive (offside) margin. An explicit param overrides.
+    verdict_offside = is_offside if is_offside is not None else margin_m > 0
+    return gum.payload(margin_m, is_offside=verdict_offside, extended=True)
 
 
 _retriever: LawRetriever | None = None

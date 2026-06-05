@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -32,3 +33,32 @@ def test_trace_returns_the_real_otel_span_tree() -> None:
     assert {"geometry", "law", "granite", "guardian"} <= names
     assert body["span_count"] >= 4
     assert all("duration_ms" in s for s in body["spans"])
+
+
+@pytest.mark.parametrize(
+    ("path", "key"),
+    [
+        ("/latency", "broadcast_delay_s"),
+        ("/fusion", "primary_source"),
+        ("/corpus_integrity", "verified"),
+        ("/diagram_captions", "count"),
+        ("/red_team", "structural_caught"),
+        ("/faithfulness", "alce_per_decision"),
+        ("/uncertainty", "spoken"),
+    ],
+)
+def test_judge_route_returns_200_with_its_invariant_key(path: str, key: str) -> None:
+    # The honesty moat is "every claim is a live button"; gate that the routes a judge clicks
+    # actually return (these do lazy in-route imports the modules' own unit tests never exercise).
+    client = TestClient(app)
+    resp = client.get(path)
+    assert resp.status_code == 200, f"{path} -> {resp.status_code}"
+    assert key in resp.json(), f"{path} missing {key}"
+
+
+def test_uncertainty_default_margin_speaks_offside_not_onside() -> None:
+    # Regression: the default margin (+5.69 m) is an OFFSIDE call; the route must derive is_offside
+    # from the margin sign so the spoken line never says "onside" for a positive margin.
+    client = TestClient(app)
+    assert "offside" in client.get("/uncertainty").json()["spoken"].lower()
+    assert "onside" in client.get("/uncertainty?margin_m=-3.0").json()["spoken"].lower()
