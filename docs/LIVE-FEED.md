@@ -8,6 +8,37 @@ replay buffer are the deterministic floor, so the demo never depends on a live m
 Everything here stays in concept. The feed carries a **received** decision (what the
 officials signalled) to the explainer. Nothing here predicts or adjudicates a call.
 
+## 0. The live proof a judge can click: `GET /live/now`
+
+The headline live surface is a single endpoint a judge can hit during judging:
+`GET /live/now` (`services/app/main.py`) returns the real matches in play right now,
+each with any VAR events the feed reports. It is backed by
+`ApiFootballClient.live_fixtures` (`services/app/triggers/apifootball.py`), which calls
+api-football.com with the `x-apisports-key` header and the `API_FOOTBALL_KEY` environment
+variable, and normalises each fixture to `{league, home, away, minute, var_events}`. The
+response is cached on demand for 120 seconds (`_LIVE_TTL_S` in `main.py`) so repeated
+clicks during a demo do not burn the free-tier quota.
+
+It is honest by construction, three distinct states a judge can tell apart:
+
+- **No key configured** -> `configured: false`, `feed_ok: false`, an empty fixtures list,
+  and a note. The canned StatsBomb 360 path stays the deterministic floor, so the demo
+  still works with nothing wired.
+- **A feed failure** (quota, auth, or network) -> `configured: true`, `feed_ok: false`,
+  and a note that says the feed is temporarily unavailable. This is **not cached**, so a
+  recovered feed is re-queried on the next click. A broken feed never masquerades as a
+  quiet window.
+- **A quiet window** (the feed works but no match is live) -> `feed_ok: true`, an empty
+  fixtures list, and a note saying nothing is in play. Distinct from a failure.
+- **Live matches** -> `feed_ok: true`, `source: "api-football"`, the live count, and the
+  fixtures (truncated to 20), with the VAR events surfaced.
+
+The honest reality of the data: live *events* plus the Law explanation are reachable on
+the free tier, but a live tracked-geometry *margin* is not (that needs an enterprise SAOT
+feed). So `/live/now` proves "what is live right now" for real; the geometry demo runs on
+the named World Cup 2022 StatsBomb frames. The three states are pinned by
+`services/tests/test_api.py` (no-key, feed-failure-not-cached, success-truncates-and-caches).
+
 ## 1. Normalized `VARDecisionEvent` schema + feed adapters
 
 `services/app/triggers/schema.py`
