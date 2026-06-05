@@ -10,6 +10,14 @@ const BACKEND =
   'http://localhost:8000'
 const REPO = 'https://github.com/StephenSook/varsity/blob/main/'
 
+// Fetch JSON, surfacing a non-2xx as a real HTTP error (so a 4xx/5xx reads as the actual status,
+// not a misleading cold-start message).
+async function getJson(path: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${BACKEND}${path}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 type Tier = 'live' | 'illustrative' | 'integration'
 const TIER: Record<Tier, { label: string; cls: string }> = {
   live: { label: 'LIVE', cls: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40' },
@@ -296,8 +304,13 @@ export function JudgesPanel() {
     try {
       const out = await fn()
       setResult((r) => ({ ...r, [key]: out }))
-    } catch {
-      setResult((r) => ({ ...r, [key]: 'error (the free backend may be cold; retry in ~30s)' }))
+    } catch (e) {
+      // Distinguish a real backend error (a non-2xx, via getJson) from a cold-start / network drop.
+      const msg =
+        e instanceof Error && e.message.startsWith('HTTP')
+          ? `the backend returned ${e.message} (not a cold start)`
+          : 'error (the free backend may be cold; retry in ~30s)'
+      setResult((r) => ({ ...r, [key]: msg }))
     } finally {
       setBusy(null)
     }
@@ -511,8 +524,8 @@ export function JudgesPanel() {
       key: 'rag_eval',
       label: 'Run the RAG retrieval eval',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/rag_eval`)).json()
-        const s = j.scores
+        const j = await getJson('/rag_eval')
+        const s = j.scores as Record<string, number>
         return `Hit@1 ${s.hit_at_1} / Hit@5 ${s.hit_at_5} / MRR ${s.mrr} over ${j.golden_questions} golden questions (${j.scored_retriever}); live path: ${j.online_retriever} (${j.embedding_model})`
       },
     },
@@ -520,10 +533,19 @@ export function JudgesPanel() {
       key: 'vision',
       label: 'Show the Granite Vision captions',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/diagram_captions`)).json()
+        const j = await getJson('/diagram_captions')
         return (j.count as number) > 0
           ? `model ${j.model} · ${j.count} approved diagram descriptions (build-time, grounded + human-reviewed)`
           : `model ${j.model} · 0 approved captions yet (pipeline + model wired; build-time, faithfulness-guarded)`
+      },
+    },
+    {
+      key: 'trace',
+      label: 'Show the OpenTelemetry trace',
+      fn: async () => {
+        const j = await getJson('/trace')
+        const spans = j.spans as { name: string; duration_ms: number }[]
+        return `${spans.map((s) => `${s.name} ${s.duration_ms}ms`).join(' · ')} (${j.span_count} OpenTelemetry spans, captured live)`
       },
     },
   ]

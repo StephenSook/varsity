@@ -21,3 +21,14 @@ def test_rag_eval_receipt_separates_the_bm25_floor_from_the_granite_path() -> No
     assert "Granite" in body["online_retriever"]
     assert body["embedding_model"] == "ibm/granite-embedding-278m-multilingual"
     assert body["scores"]["hit_at_5"] == 1.0 and body["golden_questions"] == 20
+
+
+def test_trace_returns_the_real_otel_span_tree() -> None:
+    # GET /trace runs one canned explanation under OpenTelemetry and returns the real span tree
+    # (geometry/law/granite/guardian) with per-stage durations, so a judge sees the instrumentation.
+    client = TestClient(app)
+    body = client.get("/trace").json()
+    names = {s["name"] for s in body["spans"]}
+    assert {"geometry", "law", "granite", "guardian"} <= names
+    assert body["span_count"] >= 4
+    assert all("duration_ms" in s for s in body["spans"])
