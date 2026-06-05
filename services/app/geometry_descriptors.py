@@ -315,6 +315,33 @@ def _block_concavity_ratio(defenders: list[FreezeFramePlayer]) -> float:
     return 1.0 if hull_yd2 <= 0 else round(min(alpha_area / hull_yd2, 1.0), 2)
 
 
+def lateral_zone(frame: list[FreezeFramePlayer]) -> dict:
+    """WHERE across the pitch the flagged attacker was: the standard left / central / right channel
+    plus the metres to the nearer touchline. A blind fan cannot see which wing the incident was on;
+    this paints that, deterministically, from the real freeze-frame y. Left/right are the attacking
+    team's own (VARSITY normalises every frame to a left-to-right attack, and on StatsBomb's
+    top-left-origin grid that makes the y=0 touchline the attack's left and y=80 its right).
+    Describes the received decision's location; it never adjudicates."""
+    a = most_advanced_attacker(frame)
+    if a is None:
+        return {}
+    y = max(0.0, min(_PITCH_WID, a.y))
+    near_touchline_m = round(min(y, _PITCH_WID - y) * METERS_PER_UNIT, 1)
+    third = _PITCH_WID / 3.0
+    channel = "left" if y < third else "central" if y < 2 * third else "right"
+    if channel == "central":
+        phrase = f"in a central channel, {near_touchline_m:.0f} m from the nearer touchline"
+    else:
+        phrase = f"on the {channel} wing, {near_touchline_m:.0f} m from the nearer touchline"
+    return {
+        "channel": channel,
+        "near_touchline_m": near_touchline_m,
+        "attacker_y_m": round(y * METERS_PER_UNIT, 1),
+        "phrase": phrase,
+        "convention": "left/right are the attacking team's, normalised to a left-to-right attack",
+    }
+
+
 @dataclass(frozen=True)
 class LineDescriptors:
     n_defenders: int  # visible outfield opponents fitted (not just a back four)
@@ -381,6 +408,7 @@ def payload(frame: list[FreezeFramePlayer]) -> dict:
         "largest_gap_m": d.largest_gap_m,
         "split_radius_m": grouping["split_radius_m"],
         "block_concavity_ratio": d.block_concavity_ratio,
+        "lateral_zone": lateral_zone(frame),
         "note": d.note,
         "method": (
             "Theil-Sen robust tilt (29.3% breakdown), closed-form 2D PCA thickness, the defenders' "
