@@ -23,11 +23,21 @@ def _ordinal(n: int) -> str:
     return _ORDINALS.get(n, f"{n}th")
 
 
+def _half(minute: int | None) -> str | None:
+    """The match half from the RECEIVED minute: <=45 is the first half, later is the second. A
+    deterministic read of a real freeze-frame field (StatsBomb carries the minute), not a guess and
+    not adjudication; None when the minute is unknown so the phrasing falls back to 'so far'."""
+    if minute is None:
+        return None
+    return "first half" if minute <= 45 else "second half"
+
+
 @dataclass(frozen=True)
 class DecisionRecord:
     key: str  # a stable id for the moment (verdict + rounded margin), to dedupe re-views
     is_offside: bool
     band: str
+    minute: int | None = None  # the received match minute, so the half can locate the call in time
 
 
 @dataclass
@@ -38,18 +48,30 @@ class MatchState:
     def tight_count(self) -> int:
         return sum(1 for d in self.history if d.band in _TIGHT_BANDS)
 
+    def tight_count_in_half(self, half: str | None) -> int:
+        return sum(1 for d in self.history if d.band in _TIGHT_BANDS and _half(d.minute) == half)
 
-def connective(state: MatchState, *, key: str, is_offside: bool, band: str) -> str:
+
+def connective(
+    state: MatchState, *, key: str, is_offside: bool, band: str, minute: int | None = None
+) -> str:
     """The discourse lead-in to prepend, computed BEFORE recording this decision. Empty for the
-    first decision of the match or for a re-view of the immediately-previous moment."""
+    first decision of the match or for a re-view of the immediately-previous moment. When the
+    received minute is known, a tight call is located in its half ('the second tight call in the
+    first half'); without it, the half-agnostic 'so far' phrasing is used."""
     history = state.history
     if history and history[-1].key == key:
         return ""  # re-viewing the same moment adds no new discourse
     if not history:
         return ""
     parts: list[str] = []
+    half = _half(minute)
     if band in _TIGHT_BANDS:
-        parts.append(f"the {_ordinal(state.tight_count + 1)} tight call so far")
+        if half is not None:
+            n = state.tight_count_in_half(half) + 1
+            parts.append(f"the {_ordinal(n)} tight call in the {half}")
+        else:
+            parts.append(f"the {_ordinal(state.tight_count + 1)} tight call so far")
     last = history[-1]
     if last.is_offside == is_offside:
         parts.append("the same outcome as the previous review")
@@ -59,11 +81,15 @@ def connective(state: MatchState, *, key: str, is_offside: bool, band: str) -> s
     return "; ".join(parts)
 
 
-def record(state: MatchState, *, key: str, is_offside: bool, band: str) -> None:
+def record(
+    state: MatchState, *, key: str, is_offside: bool, band: str, minute: int | None = None
+) -> None:
     """Append this received decision unless it repeats the immediately-previous moment."""
     if state.history and state.history[-1].key == key:
         return
-    state.history.append(DecisionRecord(key=key, is_offside=is_offside, band=band))
+    state.history.append(
+        DecisionRecord(key=key, is_offside=is_offside, band=band, minute=minute)
+    )
 
 
 def moment_key(is_offside: bool, margin_meters: float) -> str:

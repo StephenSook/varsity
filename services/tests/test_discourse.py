@@ -45,3 +45,26 @@ def test_store_is_per_match_and_resettable() -> None:
     assert len(discourse.for_match("m1").history) == 1
     discourse.reset_match("m1")
     assert len(discourse.for_match("m1").history) == 0
+
+
+def test_tight_call_is_located_in_its_half_from_the_received_minute() -> None:
+    s = discourse.MatchState()
+    discourse.record(s, key="a", is_offside=True, band="tight", minute=12)
+    c = discourse.connective(s, key="b", is_offside=True, band="very tight", minute=40)
+    assert "the second tight call in the first half" in c
+
+
+def test_tight_count_is_scoped_to_the_half_not_the_whole_match() -> None:
+    s = discourse.MatchState()
+    discourse.record(s, key="a", is_offside=True, band="tight", minute=12)  # first half
+    discourse.record(s, key="b", is_offside=True, band="tight", minute=40)  # first half
+    # a tight call in the second half is the FIRST of THAT half, not the third overall
+    c = discourse.connective(s, key="c", is_offside=False, band="tight", minute=70)
+    assert "the first tight call in the second half" in c
+
+
+def test_half_phrasing_falls_back_to_so_far_when_the_minute_is_unknown() -> None:
+    s = discourse.MatchState()
+    discourse.record(s, key="a", is_offside=True, band="tight")  # no minute received
+    c = discourse.connective(s, key="b", is_offside=True, band="tight")
+    assert "tight call so far" in c
