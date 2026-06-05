@@ -279,10 +279,21 @@ function streamSummary(url: string): Promise<string> {
     }
     for (const ev of ['geometry', 'law', 'guardian']) {
       es.addEventListener(ev, (e) => {
-        got[ev] = JSON.parse((e as MessageEvent).data)
+        try {
+          got[ev] = JSON.parse((e as MessageEvent).data)
+        } catch {
+          // A parse throw inside a listener does NOT fire onerror; settle the promise so the
+          // awaiting run() never hangs forever on a malformed frame.
+          es.close()
+          resolve('stream error (a malformed event was received)')
+        }
       })
     }
     es.addEventListener('verdict', finish)
+    es.addEventListener('stream_error', () => {
+      es.close()
+      resolve('stream error (the backend reported a stage failure)')
+    })
     es.onerror = () => {
       es.close()
       resolve('stream error (the free backend may be cold; retry in ~30s)')
@@ -321,7 +332,7 @@ export function JudgesPanel() {
       key: 'geometry',
       label: 'Run the geometry engine',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/scenarios`)).json()
+        const j = await getJson('/scenarios')
         return (j.scenarios as Record<string, unknown>[])
           .map((s) => `${s.scenario}: ${s.expected_margin_meters}m ${s.expected_is_offside ? 'offside' : 'onside'}`)
           .join(' · ')
@@ -336,7 +347,7 @@ export function JudgesPanel() {
       key: 'decisions',
       label: 'List the VAR decisions',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/decisions`)).json()
+        const j = await getJson('/decisions')
         return (j.decisions as Record<string, unknown>[])
           .map((d) => `${d.decision_type}: ${d.outcome}`)
           .join(' · ')
@@ -346,9 +357,9 @@ export function JudgesPanel() {
       key: 'law_clause',
       label: 'Resolve a rule to the official text',
       fn: async () => {
-        const j = await (
-          await fetch(`${BACKEND}/law_clause?q=${encodeURIComponent('gaining an advantage offside')}`)
-        ).json()
+        const j = await getJson(
+          `/law_clause?q=${encodeURIComponent('gaining an advantage offside')}`,
+        )
         const text = String(j.text ?? '')
           .replace(/[#*]/g, '')
           .replace(/\s+/g, ' ')
@@ -361,7 +372,7 @@ export function JudgesPanel() {
       key: 'calibration',
       label: 'Run the calibration receipt',
       fn: async () => {
-        const j = (await (await fetch(`${BACKEND}/calibration`)).json()) as CalibrationPayload
+        const j = (await getJson('/calibration')) as unknown as CalibrationPayload
         setCalib(j)
         const x = j as unknown as { log_loss: number; ece_ci95: number[] }
         return (
@@ -376,7 +387,7 @@ export function JudgesPanel() {
       key: 'multilingual',
       label: 'Run the multilingual term check',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/multilingual`)).json()
+        const j = await getJson('/multilingual')
         const rows = (j.rows as Record<string, unknown>[])
           .map((r) => `${r.lang}: ${r.offside_term}`)
           .join(' · ')
@@ -387,7 +398,7 @@ export function JudgesPanel() {
       key: 'fusion',
       label: 'Run multi-source fusion',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/fusion`)).json()
+        const j = await getJson('/fusion')
         return (
           `source ${String(j.primary_source)} · ` +
           (j.decisions as Record<string, unknown>[])
@@ -400,7 +411,7 @@ export function JudgesPanel() {
       key: 'latency',
       label: 'Show the latency budget',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/latency?elapsed_s=6.5`)).json()
+        const j = await getJson('/latency?elapsed_s=6.5')
         const run = j.run as Record<string, unknown>
         const leads = run.leads_s as Record<string, number>
         return (
@@ -413,7 +424,7 @@ export function JudgesPanel() {
       key: 'corpus',
       label: 'Verify the Law corpus',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/corpus_integrity`)).json()
+        const j = await getJson('/corpus_integrity')
         if (!j.signed) return 'corpus is not signed'
         return (
           `${j.verified ? 'VERIFIED' : 'TAMPERED'} · ${j.count} chunks · ` +
@@ -449,7 +460,7 @@ export function JudgesPanel() {
       key: 'redteam',
       label: 'Run the red-team regression',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/red_team`)).json()
+        const j = await getJson('/red_team')
         return (
           `${j.structural_caught}/${j.structural_attacks} attacks caught · ` +
           `leakage ${j.structural_leakage} · ${j.false_positives} false positives · ` +
@@ -461,7 +472,7 @@ export function JudgesPanel() {
       key: 'faithfulness',
       label: 'Run the faithfulness gold-eval',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/faithfulness`)).json()
+        const j = await getJson('/faithfulness')
         const decisions = (j.per_decision as Record<string, number>[])
           .map((d) => `${d.decision} ${d.structural_caught}/${d.structural_total}`)
           .join(', ')
@@ -475,11 +486,12 @@ export function JudgesPanel() {
       key: 'uncertainty',
       label: 'Show the GUM uncertainty budget',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/uncertainty?margin_m=0.02`)).json()
+        const j = await getJson('/uncertainty?margin_m=0.02')
         const [lo, hi] = j.coverage_interval_m as number[]
+        const regimes = j.regimes as Record<string, unknown>
         return (
           `tight call: ±${j.expanded_uncertainty_m}m at 95% GUM coverage ([${lo}, ${hi}] straddles 0 → too close), ` +
-          `${j.entropy_bits} bits · honest σ ${j.regimes.broadcast_annotation_sigma_m}m vs optical ${j.regimes.optical_equivalent_sigma_m}m`
+          `${j.entropy_bits} bits · honest σ ${regimes.broadcast_annotation_sigma_m}m vs optical ${regimes.optical_equivalent_sigma_m}m`
         )
       },
     },
@@ -487,7 +499,7 @@ export function JudgesPanel() {
       key: 'health',
       label: 'Backend health',
       fn: async () => {
-        const j = await (await fetch(`${BACKEND}/health`)).json()
+        const j = await getJson('/health')
         return `backend ${String(j.status)} (${String(j.service)})`
       },
     },

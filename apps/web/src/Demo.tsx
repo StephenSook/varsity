@@ -260,6 +260,10 @@ export function Demo() {
   const [lawText, setLawText] = useState('')
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
+  // A visible, role=alert error message for a stream/parse failure. The sr-only verdict region
+  // stays for verdicts only; routing errors here gives a sighted judge a visible signal AND lets
+  // assistive tech announce it once (role=alert) without the verdict region double-speaking.
+  const [errorMsg, setErrorMsg] = useState('')
   const { lang, setLang } = useLang()
   const [scenario, setScenario] = useState<Scenario>('offside')
   const [moment, setMoment] = useState<Moment>(null)
@@ -514,6 +518,7 @@ export function Demo() {
     spatialSpokenRef.current = ''
     budgetSpokenRef.current = ''
     discourseRef.current = ''
+    setErrorMsg('')
     setStages([])
     setExplanation('')
     setGeo(null)
@@ -546,17 +551,37 @@ export function Demo() {
         : `${BACKEND}/stream/${live ? 'live' : 'canned'}?language=${langParam}&scenario=${sc}`
     const source = new EventSource(url)
     sourceRef.current = source
-    source.addEventListener('reviewing', (event) => {
-      const data = JSON.parse((event as MessageEvent).data) as {
-        source: string
-        detail: string
-        minute: number
+    // Recover from any stream/parse failure: a SyntaxError thrown inside an SSE listener does NOT
+    // fire onerror, so without this a malformed frame would leave the Explain button locked forever.
+    const recover = () => {
+      setStreaming(false)
+      source.close()
+      setErrorMsg(UI[lang].error)
+    }
+    const guard =
+      (fn: (e: MessageEvent) => void) =>
+      (event: Event) => {
+        try {
+          fn(event as MessageEvent)
+        } catch {
+          recover()
+        }
       }
-      setReviewing(data)
-    })
+    source.addEventListener('stream_error', recover)
+    source.addEventListener(
+      'reviewing',
+      guard((event) => {
+        const data = JSON.parse(event.data) as {
+          source: string
+          detail: string
+          minute: number
+        }
+        setReviewing(data)
+      }),
+    )
     for (const name of STAGES) {
-      source.addEventListener(name, (event) => {
-        const data = JSON.parse((event as MessageEvent).data) as Stage
+      source.addEventListener(name, guard((event) => {
+        const data = JSON.parse(event.data) as Stage
         // arrival time of this stage since the request started, for the observability waterfall
         data._arrivedMs = Math.round(performance.now() - startRef.current)
         setStages((prev) => [...prev, data])
@@ -709,15 +734,11 @@ export function Demo() {
           setStreaming(false)
           source.close()
         }
-      })
+      }))
     }
-    source.onerror = () => {
-      setStreaming(false)
-      source.close()
-      // The verdict handler closes the source on success, so onerror here means a genuine stream
-      // failure: tell the blind fan in their language rather than leaving them in silence.
-      announce(UI[lang].error)
-    }
+    // The verdict handler closes the source on success, so onerror means a genuine stream failure
+    // (or a cold-start drop): the role=alert banner surfaces it visibly + to assistive tech.
+    source.onerror = recover
   }
 
   // Airplane mode: explain entirely on-device, with NO backend call.
@@ -729,6 +750,7 @@ export function Demo() {
     setLawText('')
     setOfflineSource(null)
     setOfflineStatus('')
+    setErrorMsg('')
     setMoment(null)
     setDecision(null)
     setSignalCard(null)
@@ -770,9 +792,9 @@ export function Demo() {
       setOfflineRetrieval(res.retrieval)
     } catch {
       // The on-device model (WebGPU chunk fetch, model load) can fail; never leave the blind
-      // fan with a silently-hung button. Speak the same error the online path speaks.
+      // fan with a silently-hung button. Surface the error visibly + to assistive tech.
       setOfflineStatus('')
-      announce(UI[lang].error)
+      setErrorMsg(UI[lang].error)
     } finally {
       setStreaming(false)
     }
@@ -819,14 +841,30 @@ export function Demo() {
     setCompleteness(null)
     setProvenance(null)
     setAskedQuestion(asked)
+    setErrorMsg('')
     startRef.current = performance.now()
     setStreaming(true)
     const url = `${BACKEND}/stream/ask?q=${encodeURIComponent(asked)}&language=${encodeURIComponent(lang)}`
     const source = new EventSource(url)
     sourceRef.current = source
+    const recover = () => {
+      setStreaming(false)
+      source.close()
+      setErrorMsg(UI[lang].error)
+    }
+    const guard =
+      (fn: (e: MessageEvent) => void) =>
+      (event: Event) => {
+        try {
+          fn(event as MessageEvent)
+        } catch {
+          recover()
+        }
+      }
+    source.addEventListener('stream_error', recover)
     for (const name of STAGES) {
-      source.addEventListener(name, (event) => {
-        const data = JSON.parse((event as MessageEvent).data) as Stage
+      source.addEventListener(name, guard((event) => {
+        const data = JSON.parse(event.data) as Stage
         setStages((prev) => [...prev, data])
         if (name === 'law') setLawText(String(data.text ?? ''))
         if (name === 'verdict') {
@@ -838,15 +876,9 @@ export function Demo() {
           setStreaming(false)
           source.close()
         }
-      })
+      }))
     }
-    source.onerror = () => {
-      setStreaming(false)
-      source.close()
-      // The verdict handler closes the source on success, so onerror here means a genuine stream
-      // failure: tell the blind fan in their language rather than leaving them in silence.
-      announce(UI[lang].error)
-    }
+    source.onerror = recover
   }
 
   // Optional voice input for the oracle, two tiers. Tier 1 (premium): on-device ASR (Whisper in
@@ -1176,6 +1208,12 @@ export function Demo() {
           Share clip
         </button>
       </div>
+
+      {errorMsg && (
+        <p role="alert" className="max-w-2xl text-sm font-medium text-red-400">
+          {errorMsg}
+        </p>
+      )}
 
       {/* The rule oracle: ask any Laws-of-the-Game question, answered grounded in the
           retrieved Law (Granite + Guardian), spoken through the same aria-live region. */}
