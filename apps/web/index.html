@@ -28,11 +28,14 @@
       content="Real-time, screen-reader-native, IFAB-grounded explanations of VAR and offside decisions."
     />
     <meta name="twitter:image" content="https://web-chi-wine-13.vercel.app/og-banner.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Self-hosted OFL fonts (see src/index.css @font-face). Preload the hero serif so the
+         "VARSITY" wordmark paints with no flash, and the deployed link never waits on Google. -->
     <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/instrument-serif-normal-latin.woff2"
+      crossorigin
     />
     <title>VARSITY</title>
   </head>
