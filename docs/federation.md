@@ -105,8 +105,8 @@ architecture either way.
 
 ## Gateway-mediated A2A round-trip
 
-`narrate_via_a2a` (in `a2a_agent/client.py`) reaches the narrator on its own port. To drive the same
-agent THROUGH the gateway, `a2a_agent/gateway.py` builds the A2A `message/send` JSON-RPC envelope
+`narrate_via_a2a` (in `services/app/a2a_agent/client.py`) reaches the narrator on its own port. To drive the same
+agent THROUGH the gateway, `services/app/a2a_agent/gateway.py` builds the A2A `message/send` JSON-RPC envelope
 (the protobuf-mapped JSON: a typed `{"kind": "text", "text": ...}` part plus a `messageId`, which a
 flat body does not satisfy) and POSTs it to the gateway's federated-agent RPC path. The envelope
 builder and the narration extractor are pure and unit-tested (`tests/test_a2a_gateway.py`); the POST
