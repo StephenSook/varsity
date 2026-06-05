@@ -18,6 +18,8 @@ export type CalibrationPayload = {
   sigma_true_cm: number
   bins: CalibrationBin[]
   note: string
+  log_loss: number
+  ece_ci95: [number, number]
 }
 
 const W = 260

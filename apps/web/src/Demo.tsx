@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
 import { graniteSpeechEnabled, listen, onDeviceAsrAvailable } from './voice'
-import { useLang, type Lang } from './i18n'
+import { LANGS, useLang, type Lang } from './i18n'
 import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { PipelineWaterfall } from './PipelineWaterfall'
@@ -51,6 +51,22 @@ const LAW11_SPEARCONS = [
 ] as const
 
 type Stage = { stage: string; [key: string]: unknown }
+// The verdict SSE payload, named so a typo in the spoken-field reads (the verdict + margin a blind
+// fan HEARS) is a compile error, not a silent '0 m'. The wire is still loosely produced upstream,
+// so the reads keep their Number/Boolean/String coercion as a defensive guard.
+type VerdictData = {
+  text?: string
+  decision_type?: string
+  is_offside?: boolean
+  margin_meters?: number
+  confidence?: string
+  law_text?: string
+  sigma_meters?: number
+  p_verdict?: number
+  likelihood?: string
+  uncertainty_note?: string
+  counterfactual_meters?: number
+}
 
 // Granite is multilingual (EN/DE/ES/FR/PT); VARSITY ships all five World Cup languages.
 const UI: Record<
@@ -695,16 +711,17 @@ export function Demo() {
           discourseRef.current = String(data.connective ?? '')
         }
         if (name === 'verdict') {
-          const text = String(data.text ?? '')
+          const v = data as unknown as VerdictData
+          const text = String(v.text ?? '')
           setExplanation(text)
-          const isDecision = Boolean(data.decision_type)
+          const isDecision = Boolean(v.decision_type)
           const spoken = isDecision
             ? text
             : announceText(verbosity, {
                 text,
-                isOffside: Boolean(data.is_offside),
-                marginM: Number(data.margin_meters ?? 0),
-                confidence: data.confidence ? String(data.confidence) : undefined,
+                isOffside: Boolean(v.is_offside),
+                marginM: Number(v.margin_meters ?? 0),
+                confidence: v.confidence ? String(v.confidence) : undefined,
               })
           const lead =
             !isDecision && discourseRef.current
@@ -716,18 +733,21 @@ export function Demo() {
               : ''
           const tail = !isDecision && budgetSpokenRef.current ? ` ${budgetSpokenRef.current}` : ''
           announce(`${lead}${spoken}${spatial}${tail}`)
-          if (data.law_text) setLawText(String(data.law_text))
+          if (v.law_text) setLawText(String(v.law_text))
           if (!isDecision) {
-            triggerHaptic(data as unknown as Geometry)
+            triggerHaptic({
+              is_offside: Boolean(v.is_offside),
+              margin_meters: Number(v.margin_meters ?? 0),
+            })
             setVarsityCall({
-              marginM: Number(data.margin_meters ?? 0),
-              sigmaM: Number(data.sigma_meters ?? 0),
-              band: String(data.confidence ?? ''),
-              p: Number(data.p_verdict ?? 0),
-              likelihood: String(data.likelihood ?? ''),
-              note: String(data.uncertainty_note ?? ''),
-              counterfactualM: Number(data.counterfactual_meters ?? 0),
-              isOffside: Boolean(data.is_offside),
+              marginM: Number(v.margin_meters ?? 0),
+              sigmaM: Number(v.sigma_meters ?? 0),
+              band: String(v.confidence ?? ''),
+              p: Number(v.p_verdict ?? 0),
+              likelihood: String(v.likelihood ?? ''),
+              note: String(v.uncertainty_note ?? ''),
+              counterfactualM: Number(v.counterfactual_meters ?? 0),
+              isOffside: Boolean(v.is_offside),
             })
           }
           setLatencyMs(performance.now() - startRef.current)
@@ -751,6 +771,7 @@ export function Demo() {
     setOfflineSource(null)
     setOfflineStatus('')
     setErrorMsg('')
+    setReviewing(null) // clear a stale 'VAR is reviewing' card from a prior live run
     setMoment(null)
     setDecision(null)
     setSignalCard(null)
@@ -976,7 +997,7 @@ export function Demo() {
       const tag = (e.target as HTMLElement | null)?.tagName ?? ''
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
       const a = keyActions.current
-      const langs = ['English', 'Spanish', 'French', 'Portuguese', 'German'] as const
+      const langs = LANGS
       const k = e.key.toLowerCase()
       if (k === 'e') {
         if (!a.streaming) a.explainTheCall(a.lang)
@@ -1042,7 +1063,7 @@ export function Demo() {
           aria-label={t.langLabel}
           className="inline-flex rounded-full bg-slate-800/60 p-1"
         >
-          {(['English', 'Spanish', 'French', 'Portuguese', 'German'] as const).map((l) => (
+          {LANGS.map((l) => (
             <button key={l} type="button" aria-pressed={lang === l} aria-label={l} onClick={() => selectLang(l)} className={segBtn(lang === l)}>
               {UI[l].code}
             </button>

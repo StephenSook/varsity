@@ -374,10 +374,9 @@ export function JudgesPanel() {
       fn: async () => {
         const j = (await getJson('/calibration')) as unknown as CalibrationPayload
         setCalib(j)
-        const x = j as unknown as { log_loss: number; ece_ci95: number[] }
         return (
-          `ECE ${(j.ece * 100).toFixed(2)}% (bootstrap 95% CI [${(x.ece_ci95[0] * 100).toFixed(2)}, ${(x.ece_ci95[1] * 100).toFixed(2)}]%) · ` +
-          `Brier ${j.brier.toFixed(4)} · log-loss ${x.log_loss.toFixed(3)} · ` +
+          `ECE ${(j.ece * 100).toFixed(2)}% (bootstrap 95% CI [${(j.ece_ci95[0] * 100).toFixed(2)}, ${(j.ece_ci95[1] * 100).toFixed(2)}]%) · ` +
+          `Brier ${j.brier.toFixed(4)} · log-loss ${j.log_loss.toFixed(3)} · ` +
           `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(2)}% · ` +
           `${j.samples.toLocaleString()} seeded draws`
         )
