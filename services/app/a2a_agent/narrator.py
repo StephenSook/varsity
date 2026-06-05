@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 import uvicorn
 from a2a.helpers import (
@@ -33,6 +34,8 @@ from starlette.applications import Starlette
 from app.llm.granite import GraniteClient
 
 NARRATOR_PORT = 9000
+
+_log = logging.getLogger("varsity")
 
 _CANNED_LAW = (
     "A player is offside if any part of the head, body or feet is nearer the "
@@ -58,6 +61,7 @@ def narrate(payload: str, *, granite: object | None = None) -> str:
             language=str(data.get("language", "English")),
         )
     except (ValueError, KeyError, TypeError):
+        _log.warning("narrator payload not valid decision JSON; using the canned demo offside")
         return granite.explain_offside(
             margin_meters=5.69, is_offside=True, law_text=_CANNED_LAW
         )

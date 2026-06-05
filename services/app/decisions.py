@@ -11,6 +11,10 @@ margin / SVG do not apply; only the rule-grounded explanation does.
 
 from __future__ import annotations
 
+import logging
+
+_log = logging.getLogger("varsity")
+
 DECISIONS: dict[str, dict] = {
     "penalty": {
         "decision_type": "penalty",
@@ -47,7 +51,10 @@ def decision_names() -> list[str]:
 
 
 def _resolve(name: str) -> str:
-    return name if name in DECISIONS else DEFAULT_DECISION
+    if name in DECISIONS:
+        return name
+    _log.warning("unknown decision type %r; falling back to %r", name, DEFAULT_DECISION)
+    return DEFAULT_DECISION
 
 
 def get_decision(name: str) -> dict:
