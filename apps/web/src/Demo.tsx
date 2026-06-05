@@ -1002,6 +1002,7 @@ export function Demo() {
             🔊 {t.code}
           </button>
         )}
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-900/40 px-2 py-1 ring-1 ring-slate-700/40">
         <button
           type="button"
           aria-pressed={soundOn}
@@ -1045,6 +1046,7 @@ export function Demo() {
         >
           {live ? 'Live feed' : 'Replay'}
         </button>
+        </div>
         <div
           role="group"
           aria-label="Announcement verbosity"
