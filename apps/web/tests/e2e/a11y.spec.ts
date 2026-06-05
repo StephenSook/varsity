@@ -146,3 +146,30 @@ test('the audio sliders speak a human-readable value, not a bare number', async 
     /times speed$/,
   )
 })
+
+test('clicking Explain streams a verdict into the assertive live region (online path, mocked SSE)', async ({
+  page,
+}) => {
+  // Mock the cross-origin SSE so the online EventSource -> verdict handler -> announce ->
+  // setLiveMessage chain is regression-protected without the live Render cold-start flake.
+  const verdict = {
+    stage: 'verdict',
+    text: 'The attacker was offside by 5.69 metres, grounded in Law 11.',
+    is_offside: true,
+    margin_meters: 5.69,
+    confidence: 'clear',
+    law: '11',
+    law_text: 'Law 11',
+  }
+  const body = `event: verdict\ndata: ${JSON.stringify(verdict)}\n\n`
+  await page.route('**/stream/canned**', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/event-stream', body }),
+  )
+  await page.goto('/')
+  await page.locator('#explain-cta').click()
+  await expect(page.locator('[aria-live="assertive"]')).toContainText(/offside/i, {
+    timeout: 10000,
+  })
+  // a stream that delivers a verdict must NOT also raise the error banner
+  await expect(page.locator('[role="alert"]')).toHaveCount(0)
+})

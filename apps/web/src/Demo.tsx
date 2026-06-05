@@ -3,6 +3,7 @@ import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
 import { graniteSpeechEnabled, listen, onDeviceAsrAvailable } from './voice'
 import { LANGS, useLang, type Lang } from './i18n'
+import { announceText, type Verbosity } from './announce'
 import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { PipelineWaterfall } from './PipelineWaterfall'
@@ -237,25 +238,7 @@ function triggerHaptic(g: { is_offside: boolean; margin_meters: number }) {
   ;(window as unknown as { __varsityHaptic?: number[] }).__varsityHaptic = pattern
 }
 
-type Verbosity = 'minimal' | 'standard' | 'coach'
 const VERBOSITY_ORDER: Verbosity[] = ['minimal', 'standard', 'coach']
-
-// Verbosity control fights sonification/announcement fatigue: a verdict every 30s in
-// full prose exhausts a screen-reader listener. Minimal = headline only; Standard =
-// the full explanation; Coach = explanation plus how clear-cut the call was. The full
-// text always stays in the visible panel; this only gates what the live region speaks.
-function announceText(
-  v: Verbosity,
-  d: { text: string; isOffside: boolean; marginM: number; confidence?: string },
-): string {
-  if (v === 'minimal') {
-    return d.isOffside ? `Offside, by ${Math.abs(d.marginM).toFixed(2)} metres.` : 'Onside.'
-  }
-  if (v === 'coach') {
-    return d.confidence ? `${d.text} How clear-cut: ${d.confidence}.` : d.text
-  }
-  return d.text
-}
 
 export function Demo() {
   const [explanation, setExplanation] = useState('')
