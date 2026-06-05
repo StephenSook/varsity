@@ -123,17 +123,19 @@ def explanation_stages(
     # Discourse cohesion: reference the decisions already explained earlier in this match (records
     # and refers back to RECEIVED decisions; never predicts or recomputes a call).
     _match_id = (trigger_meta or {}).get("match_name", "default")
+    _minute = (trigger_meta or {}).get("minute")
     _band = quantify(geo.margin_meters).band
     _key = discourse.moment_key(geo.is_offside, geo.margin_meters)
     _state = discourse.for_match(_match_id)
     _connective = discourse.connective(
-        _state, key=_key, is_offside=geo.is_offside, band=_band
+        _state, key=_key, is_offside=geo.is_offside, band=_band, minute=_minute
     )
-    discourse.record(_state, key=_key, is_offside=geo.is_offside, band=_band)
+    discourse.record(_state, key=_key, is_offside=geo.is_offside, band=_band, minute=_minute)
     yield {
         "stage": "discourse",
         "connective": _connective,
         "tight_calls_so_far": _state.tight_count,
+        "half": discourse._half(_minute),
         "decisions_seen": len(_state.history),
     }
 
