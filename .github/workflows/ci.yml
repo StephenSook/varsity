@@ -19,7 +19,9 @@ jobs:
         run: |
           if [ -f apps/web/package.json ]; then
             cd apps/web
-            npm ci
+            # Retry npm ci: onnxruntime-node's postinstall fetches a native binary from a CDN
+            # that intermittently times out (ETIMEDOUT) on GitHub runners; a clean retry clears it.
+            for i in 1 2 3; do npm ci && break || { echo "npm ci attempt $i failed; retrying"; rm -rf node_modules; sleep 5; }; done
             # npm intermittently skips the platform-specific lightningcss binary
             # (optional-dep extraction race); reinstall if it failed to land.
             node -e "require('lightningcss')" 2>/dev/null \
@@ -44,7 +46,9 @@ jobs:
         run: |
           if [ -f apps/web/playwright.config.ts ]; then
             cd apps/web
-            npm ci
+            # Retry npm ci: onnxruntime-node's postinstall binary fetch intermittently times out
+            # on GitHub runners (ETIMEDOUT); a clean retry clears it (see the web job).
+            for i in 1 2 3; do npm ci && break || { echo "npm ci attempt $i failed; retrying"; rm -rf node_modules; sleep 5; }; done
             # Same lightningcss optional-dep guard as the web job (see above).
             node -e "require('lightningcss')" 2>/dev/null \
               || { echo "lightningcss native binary missing; reinstalling"; rm -rf node_modules; npm install; }
