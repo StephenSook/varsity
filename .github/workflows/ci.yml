@@ -78,8 +78,9 @@ jobs:
           if [ -f services/requirements.txt ] || [ -f services/pyproject.toml ]; then
             cd services
             python -m pip install --upgrade pip
-            [ -f requirements.txt ] && pip install -r requirements.txt || true
-            [ -f pyproject.toml ] && pip install -e . || true
+            # No `|| true`: a real install failure must red the run, not silently ship a broken
+            # requirements.txt. (pytest resolves the package via pythonpath, so no editable install.)
+            if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
             pip install ruff pytest hypothesis z3-solver
             ruff check .
             pytest -q
