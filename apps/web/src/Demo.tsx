@@ -335,6 +335,7 @@ export function Demo() {
   const [audioPrefs, setAudioPrefs] = useState<{
     preamble: boolean
     volume: number
+    rate: number
     mode: SpatialMode
   }>(() => {
     try {
@@ -344,6 +345,7 @@ export function Demo() {
         return {
           preamble: p.preamble !== false,
           volume: typeof p.volume === 'number' ? p.volume : 1,
+          rate: typeof p.rate === 'number' ? p.rate : 1,
           mode:
             p.mode === 'stereo' || p.mode === 'mono' || p.mode === 'hrtf'
               ? p.mode
@@ -353,7 +355,7 @@ export function Demo() {
     } catch {
       // ignore a malformed pref
     }
-    return { preamble: true, volume: 1, mode: detectDefaultSpatialMode() }
+    return { preamble: true, volume: 1, rate: 1, mode: detectDefaultSpatialMode() }
   })
   const updateAudioPrefs = (patch: Partial<typeof audioPrefs>) =>
     setAudioPrefs((p) => {
@@ -897,6 +899,7 @@ export function Demo() {
     lang,
     streaming,
     explanation,
+    rate: audioPrefs.rate,
   })
   keyActions.current = {
     explainTheCall,
@@ -907,6 +910,7 @@ export function Demo() {
     lang,
     streaming,
     explanation,
+    rate: audioPrefs.rate,
   }
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -921,7 +925,8 @@ export function Demo() {
       } else if (k === 'o') {
         if (!a.streaming) void a.explainOffline()
       } else if (k === 'r') {
-        if (a.explanation && !a.streaming) void readAloud(a.explanation, { lang: UI[a.lang].bcp47 })
+        if (a.explanation && !a.streaming)
+          void readAloud(a.explanation, { lang: UI[a.lang].bcp47, rate: a.rate })
       } else if (k === 'c') {
         if (a.explanation && !a.streaming) void a.shareCurrent()
       } else if (k === 's') {
@@ -1122,7 +1127,7 @@ export function Demo() {
           Spatial scan (headphones)
         </button>
         <button
-          onClick={() => void readAloud(explanation, { lang: t.bcp47 })}
+          onClick={() => void readAloud(explanation, { lang: t.bcp47, rate: audioPrefs.rate })}
           disabled={streaming || !explanation}
           className="rounded-full border border-slate-500/60 px-6 py-3 font-medium text-slate-300 transition-colors hover:bg-slate-500/10 disabled:opacity-40"
         >
@@ -1635,6 +1640,18 @@ export function Demo() {
             value={audioPrefs.volume}
             aria-label="Sound volume"
             onChange={(e) => updateAudioPrefs({ volume: Number(e.target.value) })}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          Read-aloud speed
+          <input
+            type="range"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={audioPrefs.rate}
+            aria-label="Read-aloud speech speed"
+            onChange={(e) => updateAudioPrefs({ rate: Number(e.target.value) })}
           />
         </label>
         <label className="flex items-center gap-2 text-xs text-slate-300">

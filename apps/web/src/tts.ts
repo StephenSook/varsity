@@ -13,10 +13,11 @@ function webSpeechAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
-function speakWebSpeech(text: string, lang: string): boolean {
+function speakWebSpeech(text: string, lang: string, rate = 1): boolean {
   if (!webSpeechAvailable()) return false
   const u = new SpeechSynthesisUtterance(text)
   u.lang = lang
+  u.rate = Math.min(Math.max(rate, 0.5), 2) // clamp the supplementary readout to a sane band
   window.speechSynthesis.cancel()
   window.speechSynthesis.speak(u)
   return true
@@ -75,7 +76,7 @@ export type ReadAloudResult = 'kokoro' | 'web-speech' | 'unavailable'
  */
 export async function readAloud(
   text: string,
-  opts: { lang?: string; preferKokoro?: boolean; onStatus?: (s: string) => void } = {},
+  opts: { lang?: string; preferKokoro?: boolean; rate?: number; onStatus?: (s: string) => void } = {},
 ): Promise<ReadAloudResult> {
   const lang = opts.lang ?? 'en'
   const wantKokoro = (opts.preferKokoro ?? true) && lang.startsWith('en') && webgpuAvailable()
@@ -89,7 +90,7 @@ export async function readAloud(
       // fall through to the Web Speech floor
     }
   }
-  if (speakWebSpeech(text, lang)) {
+  if (speakWebSpeech(text, lang, opts.rate ?? 1)) {
     opts.onStatus?.('Reading aloud (system voice).')
     return 'web-speech'
   }
