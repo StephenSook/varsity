@@ -544,8 +544,24 @@ export function JudgesPanel() {
       label: 'Show the OpenTelemetry trace',
       fn: async () => {
         const j = await getJson('/trace')
-        const spans = j.spans as { name: string; duration_ms: number }[]
-        return `${spans.map((s) => `${s.name} ${s.duration_ms}ms`).join(' · ')} (${j.span_count} OpenTelemetry spans, captured live)`
+        type Span = { name: string; duration_ms: number; attributes?: Record<string, unknown> }
+        const spans = j.spans as Span[]
+        const g = spans.find((s) => s.name === 'granite')?.attributes
+        const gd = spans.find((s) => s.name === 'guardian')?.attributes
+        const models = g?.['varsity.model']
+          ? ` · this request ran granite ${g['varsity.model']}, guardian ${gd?.['varsity.guardian_model']} (safe=${gd?.['varsity.safe']})`
+          : ''
+        return `${spans.map((s) => `${s.name} ${s.duration_ms}ms`).join(' · ')}${models} (${j.span_count} OpenTelemetry spans, live)`
+      },
+    },
+    {
+      key: 'models',
+      label: 'Show the IBM model registry',
+      fn: async () => {
+        const j = await getJson('/models')
+        const models = j.models as { role: string; model_id: string }[]
+        const reg = models.map((m) => `${m.role}: ${m.model_id}`).join(' · ')
+        return `${reg} · watsonx ${j.watsonx_configured ? 'configured' : 'not configured'}`
       },
     },
   ]

@@ -199,6 +199,7 @@ def explanation_stages(
         span.set_attribute("varsity.safe", verdict.safe)
         span.set_attribute("varsity.grounded", verdict.grounded)
         span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
+        span.set_attribute("varsity.guardian_model", getattr(guardian, "model_id", "guardian"))
     yield {
         "stage": "guardian",
         "safe": verdict.safe,
@@ -319,6 +320,7 @@ def decision_stages(
         span.set_attribute("varsity.safe", verdict.safe)
         span.set_attribute("varsity.grounded", verdict.grounded)
         span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
+        span.set_attribute("varsity.guardian_model", getattr(guardian, "model_id", "guardian"))
     yield {
         "stage": "guardian",
         "safe": verdict.safe,
@@ -420,6 +422,7 @@ def question_stages(
         span.set_attribute("varsity.safe", verdict.safe)
         span.set_attribute("varsity.grounded", verdict.grounded)
         span.set_attribute("varsity.screen_reader_ok", verdict.screen_reader_ok)
+        span.set_attribute("varsity.guardian_model", getattr(guardian, "model_id", "guardian"))
     yield {
         "stage": "guardian",
         "safe": verdict.safe,

@@ -56,16 +56,27 @@ def clear_captured_spans() -> None:
 
 
 def captured_span_tree() -> list[dict]:
-    """The finished spans as {name, duration_ms, parent}, for the /trace judge receipt."""
+    """The finished spans as {name, duration_ms, parent, attributes}, for the /trace judge receipt.
+
+    The attributes carry the IBM-stack proof: each pipeline stage records which named Granite model
+    it invoked (varsity.model on the granite span, varsity.guardian_model on the guardian span) and
+    what each returned (varsity.safe / varsity.grounded), so /trace shows not just timings but the
+    actual models that ran and their verdicts for this exact request."""
     if _in_memory_spans is None:
         return []
     spans = _in_memory_spans.get_finished_spans()
     name_by_id = {s.context.span_id: s.name for s in spans}
+
+    def _attrs(span) -> dict:
+        # dict() the OTel BoundedAttributes mapping so it JSON-serializes; keep only varsity.* keys.
+        return {k: v for k, v in dict(span.attributes or {}).items() if k.startswith("varsity.")}
+
     return [
         {
             "name": s.name,
             "duration_ms": round((s.end_time - s.start_time) / 1e6, 1),
             "parent": name_by_id.get(s.parent.span_id) if s.parent else None,
+            "attributes": _attrs(s),
         }
         for s in spans
     ]
