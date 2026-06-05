@@ -217,6 +217,12 @@ The full graph, **199 concepts and 211 relationships auto-extracted from the 30 
 
 </details>
 
+### The build, as a time-lapse
+
+[![VARSITY commit-history time-lapse: files and directories growing across 197 commits over five days, rendered with Gource in the brand navy and signal-green palette.](docs/knowledge-graph/gource-preview.gif)](docs/knowledge-graph/varsity-gource-broll.mp4)
+
+A Gource visualization of the whole build (197 commits over 4.7 days). The preview loops above; click it for the 10-second cut, and the full 1080p60 render is attached to the [v1.0.0 release](https://github.com/StephenSook/varsity/releases/tag/v1.0.0).
+
 ## Evaluation
 
 The IFAB retrieval is measured, not asserted. A golden set of 20 VAR/offside questions mapped to the governing Law is run against the real retriever, scored directly (no inflated harness). Full report: [docs/benchmarks/rag-eval.md](docs/benchmarks/rag-eval.md).
