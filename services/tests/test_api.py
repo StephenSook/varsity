@@ -62,3 +62,25 @@ def test_uncertainty_default_margin_speaks_offside_not_onside() -> None:
     client = TestClient(app)
     assert "offside" in client.get("/uncertainty").json()["spoken"].lower()
     assert "onside" in client.get("/uncertainty?margin_m=-3.0").json()["spoken"].lower()
+
+
+def test_models_registry_names_the_ibm_models_and_never_returns_the_key() -> None:
+    # The 'best use of IBM tech' artifact: every IBM Granite-family model in one place.
+    client = TestClient(app)
+    body = client.get("/models").json()
+    roles = {m["role"]: m["model_id"] for m in body["models"]}
+    assert roles["reasoning"].startswith("ibm/granite")
+    assert roles["safety"].startswith("ibm/granite-guardian")
+    assert roles["embeddings"].startswith("ibm/granite-embedding")
+    assert roles["vision"].startswith("ibm/granite-vision")
+    assert isinstance(body["watsonx_configured"], bool)
+    assert "WATSONX_API_KEY" not in str(body)  # the key value is never returned
+
+
+def test_trace_spans_carry_the_ibm_model_attributes() -> None:
+    # /trace must show WHICH named Granite models ran + what Guardian returned, not just timings.
+    client = TestClient(app)
+    by_name = {s["name"]: s.get("attributes", {}) for s in client.get("/trace").json()["spans"]}
+    assert by_name["granite"]["varsity.model"].startswith("ibm/granite")
+    assert by_name["guardian"]["varsity.guardian_model"].startswith("ibm/granite-guardian")
+    assert "varsity.safe" in by_name["guardian"]

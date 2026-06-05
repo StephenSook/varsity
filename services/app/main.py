@@ -275,6 +275,34 @@ def otel_trace() -> dict:
     }
 
 
+@app.get("/models")
+def models() -> dict:
+    """The IBM Granite-family model registry: every IBM model VARSITY runs, named and resolved from
+    the live config (env overrides honored), in one place - the single-glance 'best use of IBM
+    technology' artifact. Returns only whether the watsonx key is configured, never the key."""
+    import os
+
+    from app.llm import _watsonx
+    from app.llm.granite import GraniteConfig
+    from app.llm.guardian import GuardianClient
+    from app.llm.vision import vision_model_id
+    from app.rag.retriever import GRANITE_EMBED_MODEL
+
+    reasoning = GraniteConfig.from_env().model_id
+    safety = GuardianClient().model_id
+    return {
+        "models": [
+            {"role": "reasoning", "model_id": reasoning, "via": "watsonx text"},
+            {"role": "safety", "model_id": safety, "via": "watsonx chat risk head"},
+            {"role": "embeddings", "model_id": GRANITE_EMBED_MODEL, "via": "watsonx embeddings"},
+            {"role": "vision", "model_id": vision_model_id(), "via": "watsonx image (build-time)"},
+        ],
+        "watsonx_region": _watsonx._base_url(),
+        "watsonx_configured": bool(os.environ.get("WATSONX_API_KEY")),
+        "note": "Every IBM Granite model VARSITY uses, resolved live; the key is never sent.",
+    }
+
+
 @app.get("/uncertainty")
 def uncertainty(margin_m: float = 5.69, is_offside: bool | None = None) -> dict:
     """The GUM uncertainty budget for an offside margin: the honest broadcast-data expanded
