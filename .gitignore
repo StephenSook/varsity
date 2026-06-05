@@ -70,3 +70,6 @@ npm-debug.log*
 
 # Vercel CLI link
 .vercel/
+
+# graphify scratch (knowledge-graph build dir; published artifacts live in docs/knowledge-graph/)
+graphify-out/
