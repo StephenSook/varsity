@@ -95,7 +95,7 @@ Every capability here is wired-live and verifiable in this repo: no roadmap-only
 
 | Capability | Where / how to verify |
 |---|---|
-| Context Forge MCP gateway + A2A narrator round-trip | `services/app/mcp_servers/`, `app/a2a_agent/` (real `message/send` round-trip in `client.py` + test), `app/federation.py`, `docs/federation.md` |
+| Context Forge MCP gateway + A2A narrator round-trip | `services/app/mcp_servers/`, `services/app/a2a_agent/` (real `message/send` round-trip in `client.py` + test), `services/app/federation.py`, `docs/federation.md` |
 | On-device offline mode: a 3-tier all-IBM ladder (deterministic floor / Granite 4.0 Nano 350M / opt-in Granite 4.0 1B) | `apps/web/src/offline.ts`; a Law-grounded explanation fully in-browser via Transformers.js + WebGPU, no backend (verified 0 backend calls), deterministic floor when WebGPU is absent; the 1B tier is a gated ~1.5 GB opt-in |
 
 </details>
@@ -154,6 +154,68 @@ flowchart LR
 The canned StatsBomb path is the deterministic floor; the live trigger is a resilient flourish that falls back to a cached replay buffer. The screen-reader layer is always parallel to (and independent of) the decorative visual and audio layers.
 
 See [docs/IBM_STACK.md](docs/IBM_STACK.md) for every IBM component mapped to its file path and how to verify it is running, [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) for the WCAG conformance target, the `aria-live` design decision, and the screen-reader test matrix, and [docs/observability.md](docs/observability.md) for the OpenTelemetry trace of one VAR event with real measured stage timings (~2.8s end to end).
+
+## Knowledge map
+
+A concept-level view of the project, the companion to the data-flow diagram above. The 18 documentation clusters map onto the five pillars, and the dotted edges are the cross-pillar bridges the graph surfaced: the offside margin and the GUM uncertainty budget couple the geometry and calibration clusters, because the number the geometry computes and the confidence the fan hears are one story, not two.
+
+```mermaid
+graph TD
+    LOOP["VARSITY · one loop, five pillars<br/>199 concepts and 18 clusters auto-mapped from docs/"]
+
+    subgraph P1["Pillar 1 · Grounded, never guessing"]
+      GEO["Offside geometry engine<br/>orient2d · Theil-Sen · convex hull"]
+      RAG["IFAB-Laws RAG + SSE pipeline<br/>Docling to FAISS · Context Forge · A2A"]
+      PROOF["Law 11 proof tree<br/>+ ASPIC / Dung argumentation"]
+      HAP["Safety guardrails<br/>HAP screen · oracle fail-closed"]
+    end
+
+    subgraph P2["Pillar 2 · Honest about uncertainty"]
+      CAL["Confidence calibration<br/>GUM budget · ECE / Brier · IPCC scale"]
+    end
+
+    subgraph P3["Pillar 3 · Audio-first accessibility"]
+      A11Y["Accessibility · WCAG 2.2 AA<br/>aria-live · focus · HCM · keyboard"]
+      LANG["Multilingual narration<br/>EN / ES / FR / PT / DE · TBX termbase"]
+      AUD["Spatial audio + perception<br/>HRTF earcons · ISO 226 · Plomp-Levelt"]
+    end
+
+    subgraph P4["Pillar 4 · All-IBM, end to end"]
+      APP["App + deployment topology<br/>React / Vite · FastAPI · Render / Vercel"]
+      VOICE["On-device voice + ASR<br/>Granite Nano · Whisper · WebGPU"]
+    end
+
+    subgraph P5["Pillar 5 · Provable and resilient"]
+      RED["Red-team + injection defense<br/>13/13 caught · corpus SHA-256"]
+      RAI["Explain-not-adjudicate<br/>+ attribution · non-affiliation"]
+      PRIV["Privacy + data minimization"]
+      LIC["Licensing + deployment risk"]
+    end
+
+    LOOP --> P1
+    LOOP --> P2
+    LOOP --> P3
+    LOOP --> P4
+    LOOP --> P5
+
+    GEO -. offside margin .-> CAL
+    CAL -. GUM sigma budget .-> GEO
+    RAG -. OTel span tree .-> APP
+    PROOF --> RAI
+    RAG --> HAP
+
+    classDef core fill:#0a0f1c,stroke:#34d399,stroke-width:2px,color:#e2e8f0;
+    class LOOP core;
+```
+
+The full graph, **199 concepts and 211 relationships auto-extracted from the 30 documents in `docs/`** and clustered into 18 communities, lives in [docs/knowledge-graph/](docs/knowledge-graph/): an interactive force-directed view (`graph.html`), a static map (`graph.svg`), and a plain-language analysis (`GRAPH_REPORT.md`). Every edge is tagged EXTRACTED / INFERRED / AMBIGUOUS, so the map is as honest as the product.
+
+<details>
+<summary>Show the full 199-concept force-directed map</summary>
+
+![Force-directed knowledge graph of the VARSITY documentation: 199 concepts in 18 colour-coded communities spanning the offside geometry, confidence calibration, accessibility, IBM stack, and provability clusters, with the bridges between them.](docs/knowledge-graph/graph.svg)
+
+</details>
 
 ## Evaluation
 
