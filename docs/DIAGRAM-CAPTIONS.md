@@ -11,14 +11,14 @@ alt-text, at build time.
 
 A generated caption could be wrong, which on a rule corpus would be fabrication. It is fenced three ways:
 
-1. **Grounded.** `app/llm/vision.py:caption_prompt` passes the figure's own page text and instructs the
+1. **Grounded.** `services/app/llm/vision.py:caption_prompt` passes the figure's own page text and instructs the
    model to describe only what the figure literally shows, adding no rule or verdict the text omits.
 2. **Guarded.** `faithfulness_ok` is a deterministic gate: it rejects a caption that asserts a verdict or
    opinion, or that shares no real vocabulary with the Law text (a sign of drift or hallucination).
    `caption_image` returns an empty string on failure, so an unfaithful caption never leaves the pipeline.
 3. **Gated.** `services/scripts/caption_diagrams.py` writes a **draft** (`diagram_captions.draft.json`)
    that a human reviews and promotes to `diagram_captions.approved.json`. The runtime loader
-   (`app/rag/diagram_captions.py`) reads only the approved file, and the captions are tiered
+   (`services/app/rag/diagram_captions.py`) reads only the approved file, and the captions are tiered
    **"diagram description (AI-generated, build-time, human-reviewed)"**, never official IFAB text. They
    live separately from the SHA-256-signed corpus, so the signature is never polluted by generated text.
 
