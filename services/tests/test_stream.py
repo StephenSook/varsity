@@ -57,6 +57,22 @@ def test_stream_ask_serializes_and_ends_in_a_verdict() -> None:
     assert "stream_error" not in names
 
 
+def test_stream_live_emits_the_reviewing_beat_then_a_verdict() -> None:
+    # /stream/live assembles the transitional 'reviewing' beat + the speculative prewarm +
+    # the explanation. With no live API key (CI), resolve_live_var_events falls to the
+    # deterministic replay floor (which always has events), so the assembled route is fully
+    # driven: the 'reviewing' beat must precede the 'verdict', with no stream_error.
+    events = _collect("/stream/live?scenario=offside")
+    names = [n for n, _ in events]
+    assert "reviewing" in names, names
+    assert "verdict" in names, names
+    assert names.index("reviewing") < names.index("verdict")
+    verdict = next(d for n, d in events if n == "verdict")
+    assert {"text", "is_offside", "margin_meters"} <= verdict.keys()
+    assert all(isinstance(d, dict) for _, d in events)
+    assert "stream_error" not in names
+
+
 def test_sse_boundary_emits_a_terminal_stream_error_when_a_stage_raises() -> None:
     # The headline degrade fix: if a deterministic stage raises mid-stream (e.g. a watsonx outage
     # during judging), _sse_events must emit a terminal 'stream_error' frame so the client can
