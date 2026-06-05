@@ -40,8 +40,9 @@ uses the official offside term and the official word for "Law").
 
 chrF and COMET-22 are the gold-standard reference-based metrics, but both need native-reviewer
 **reference translations**, which we do not have. Producing them (a 100-sentence offside test set
-per language, native-reviewer-validated and credited) is the Stephen-gated submission artifact, not
-a CI build. The Terminology-Hit-Rate is the part that is honestly shippable today.
+per language, native-reviewer-validated and credited) is a planned submission deliverable (a manual,
+native-reviewer task), not a CI build. The Terminology-Hit-Rate is the part that is honestly
+shippable today.
 
 ## Honest scope
 

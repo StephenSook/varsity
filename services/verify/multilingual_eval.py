@@ -4,11 +4,11 @@ The report's "killer metric" for a multilingual explainer is the Terminology-Hit
 outputs in each language contain the OFFICIAL term ("97% of French outputs contain hors-jeu")? It is
 reference-FREE (no human reference translation needed) and deterministic, so it runs in CI - unlike
 chrF or COMET-22, which both need native-reviewer reference translations we do not have (those are
-the Stephen-gated submission artifact). This suite runs the in-language deterministic FLOORS (which
-are guaranteed to use the official terminology) and scores the offside-term + Law-word hit rate per
-language. A floor hit-rate of 1.0 proves VARSITY's deterministic fallback always uses the official
-IFAB terminology; the same metric can be run over the LIVE Granite output (Stephen-gated, needs
-watsonx) to measure the glossary-injection's effect.
+a manual submission deliverable, not yet produced). This suite runs the in-language deterministic
+FLOORS (which are guaranteed to use the official terminology) and scores the offside-term + Law-word
+hit rate per language. A floor hit-rate of 1.0 proves VARSITY's deterministic fallback always uses
+the official IFAB terminology; the same metric can be run over the LIVE Granite output (requires a
+live watsonx run) to measure the glossary-injection's effect.
 """
 
 from __future__ import annotations
@@ -43,7 +43,8 @@ def evaluate() -> dict:
         "overall_term_hit_rate": overall,
         "note": (
             "Reference-free Terminology-Hit-Rate over the deterministic in-language floors. chrF "
-            "COMET-22 need native-reviewer reference translations (Stephen-gated), so they are not "
+            "COMET-22 need native-reviewer reference translations (a manual deliverable not yet "
+            "produced), so they are not "
             "run here; this metric is the CI-runnable guarantee that the official IFAB terminology "
             "is used in every language."
         ),

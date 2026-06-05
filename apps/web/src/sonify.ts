@@ -675,40 +675,6 @@ export function confidenceVoice(band?: string): ConfidenceVoice {
   return { ...e, detuneCents: t.detuneCents, vibratoCents: 0, vibratoHz: 0, inharmonicity: 0 }
 }
 
-// Sidechain-style ducking: ramp a bed GainNode down when speech starts and back up when it ends,
-// so the spatial bed never masks the TTS (the Web Audio DynamicsCompressorNode has no native
-// sidechain input, W3C issue #246; this gain-ramp is the accepted workaround). duckDb is the duck
-// depth; ~5 ms attack, ~200 ms release keep speech intelligible without losing the bed. Manual-
-// verified (WebAudio is not observable in headless Playwright).
-export function duckGain(
-  gain: GainNode,
-  ctx: AudioContext,
-  ducked: boolean,
-  { duckTo = 0.1, attackMs = 5, releaseMs = 200, full = 1 }: { duckTo?: number; attackMs?: number; releaseMs?: number; full?: number } = {},
-): void {
-  const now = ctx.currentTime
-  gain.gain.cancelScheduledValues(now)
-  gain.gain.setValueAtTime(gain.gain.value, now)
-  if (ducked) gain.gain.linearRampToValueAtTime(duckTo, now + attackMs / 1000)
-  else gain.gain.linearRampToValueAtTime(full, now + releaseMs / 1000)
-}
-
-// A synthetic "stadium" impulse response for a ConvolverNode: exponentially-decaying noise. Adds
-// air/depth to the spatial bed and is itself a known back-of-head cue that reduces front-back
-// confusion (the 2024 Frontiers review). Manual-verified.
-export function makeStadiumIR(ctx: AudioContext, seconds = 1.6, decay = 3.2): AudioBuffer {
-  const rate = ctx.sampleRate
-  const len = Math.floor(seconds * rate)
-  const ir = ctx.createBuffer(2, len, rate)
-  for (let ch = 0; ch < 2; ch++) {
-    const data = ir.getChannelData(ch)
-    for (let i = 0; i < len; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay)
-    }
-  }
-  return ir
-}
-
 // ISO 226:2003 equal-loudness-level contours (the coefficient table cross-verified against the
 // standard's Table 1 + the canonical dsprelated.com/MATLAB implementation; 1 kHz self-consistency
 // holds: 60 phon -> 60.01 dB SPL). Without this, a 500 Hz tone at a given amplitude is much louder
