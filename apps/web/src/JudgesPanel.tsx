@@ -609,6 +609,13 @@ export function JudgesPanel() {
 
   return (
     <div className="mt-12">
+      <p className="mb-5 max-w-3xl text-sm text-slate-300">
+        The whole product is one loop: a VAR review fires, VARSITY computes the geometry, retrieves
+        the Law, Granite explains it, Guardian checks it, and your screen reader speaks it. Everything
+        below is the depth behind that loop, in five pillars: grounded reasoning, honest uncertainty,
+        audio-first accessibility, an all-IBM stack, and provable resilience. Click any claim to run
+        it live against the deployed backend.
+      </p>
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-300">
         <span className="font-semibold text-emerald-300">
           {CLAIMS.filter((cl) => cl.tier === 'live').length} live, verifiable claims
