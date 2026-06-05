@@ -40,9 +40,11 @@ time-lapse is the animated repo-history companion.
   committed `.html` inline.
 - **Gource time-lapse**: an animated video of the whole repository history (197 commits
   over 4.7 days) as a growing tree of files, in the brand palette with milestone captions.
-  It is rendered to a 1080p60 MP4 and kept as a demo asset outside the repo (a ~37 MB
-  binary does not belong in git history). Regenerate it any time with `gource` piped to
-  `ffmpeg`; the exact command is recorded in the session notes.
+  Three forms: `gource-preview.gif` (a ~2 MB loop that animates inline in the main
+  [README](../../README.md#the-build-as-a-time-lapse)), `varsity-gource-broll.mp4` (a 10-second
+  1080p60 cut, what the preview links to), and the full 1080p60 render attached to the
+  [v1.0.0 release](https://github.com/StephenSook/varsity/releases/tag/v1.0.0) (a ~37 MB
+  binary kept off git history). Regenerate any time with `gource` piped to `ffmpeg`.
 
 ## What the graph surfaces
 
