@@ -344,6 +344,24 @@ export function JudgesPanel() {
       fn: () => streamSummary(`${BACKEND}/stream/canned?scenario=offside`),
     },
     {
+      key: 'live_now',
+      label: 'Show what is live right now (real feed)',
+      fn: async () => {
+        const j = await getJson('/live/now')
+        if (!j.configured) return String(j.note)
+        type Fx = { league: string; home: string; away: string; minute: number; var_events: string[] }
+        const fx = (j.fixtures as Fx[]) ?? []
+        if (!fx.length)
+          return `Live feed connected (${String(j.source)}). No match live this exact moment; try again during a match window.`
+        const top = fx
+          .slice(0, 3)
+          .map((m) => `${m.home} v ${m.away} (${m.league}, ${m.minute}')`)
+          .join(' · ')
+        const vars = (j.var_events as unknown[]) ?? []
+        return `${String(j.live_count)} live now via ${String(j.source)}: ${top}${vars.length ? ' · VAR review detected, explainable live' : ''}`
+      },
+    },
+    {
       key: 'decisions',
       label: 'List the VAR decisions',
       fn: async () => {

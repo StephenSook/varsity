@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -176,6 +177,51 @@ def fusion() -> dict:
         "primary_source": source,
         "decisions": [d.as_dict() for d in decisions_out],
     }
+
+
+# Cache the live-feed snapshot so a judge clicking "what is live now" repeatedly does not burn the
+# free-tier daily quota; on-demand only, no auto-polling. (single-instance backend, in-process.)
+_LIVE_CACHE: dict = {"t": 0.0, "data": None}
+_LIVE_TTL_S = 120.0
+
+
+@app.get("/live/now")
+def live_now() -> dict:
+    """What is live right now from the REAL API-Football feed: the matches in play, their minute,
+    and any VAR review detail. Proves VARSITY is wired to a live feed, not just canned replay. A VAR
+    review in a covered match is explainable live through the same pipeline; the precise offside
+    margin still uses the known frame, because no public live feed exposes the player-tracking data
+    a margin needs. Honest when no key is configured (the canned StatsBomb path is the floor)."""
+    now = time.time()
+    if _LIVE_CACHE["data"] is not None and now - _LIVE_CACHE["t"] < _LIVE_TTL_S:
+        return {**_LIVE_CACHE["data"], "cached": True}
+    _sportmonks, apifootball = live_clients()
+    if apifootball is None:
+        return {
+            "configured": False,
+            "fixtures": [],
+            "note": "No live-feed key configured; the canned StatsBomb replay is the floor.",
+        }
+    fixtures: list[dict] = []
+    try:
+        fixtures = apifootball.live_fixtures()
+    except Exception:
+        _log.warning("live_now feed call failed; reporting empty", exc_info=True)
+    data = {
+        "configured": True,
+        "source": "api-football",
+        "live_count": len(fixtures),
+        "fixtures": fixtures[:20],
+        "var_events": [f for f in fixtures if f.get("var_events")],
+        "note": (
+            "Live fixtures from the real feed. A VAR review in a covered match is explained live; "
+            "the offside margin uses the known frame (no public live feed exposes tracking data)."
+        ),
+        "cached": False,
+    }
+    _LIVE_CACHE["t"] = now
+    _LIVE_CACHE["data"] = data
+    return data
 
 
 @app.get("/corpus_integrity")

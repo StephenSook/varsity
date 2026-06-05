@@ -59,3 +59,23 @@ class ApiFootballClient:
             fid = (fx.get("fixture") or {}).get("id", 0)
             out.extend(parse_api_football_events(fid, fx.get("events") or []))
         return out
+
+    def live_fixtures(self) -> list[dict]:
+        """The matches live right now (league, teams, minute) + any VAR event detail per match,
+        for the judge-facing 'what is live now' proof. One on-demand call; the route caches it."""
+        data = self._get("/fixtures", {"live": "all"})
+        out: list[dict] = []
+        for fx in data.get("response") or []:
+            fixture = fx.get("fixture") or {}
+            teams = fx.get("teams") or {}
+            var = parse_api_football_events(fixture.get("id", 0), fx.get("events") or [])
+            out.append(
+                {
+                    "league": (fx.get("league") or {}).get("name"),
+                    "home": (teams.get("home") or {}).get("name"),
+                    "away": (teams.get("away") or {}).get("name"),
+                    "minute": (fixture.get("status") or {}).get("elapsed"),
+                    "var_events": [v.detail for v in var if v.detail],
+                }
+            )
+        return out
