@@ -127,3 +127,31 @@ def test_descriptors_survive_degenerate_defender_clouds():
         c = gd._block_concavity_ratio(d)
         assert 0.0 <= c <= 1.0
         gd.payload(_frame(110.0, defs))  # the full payload (>= 2 opponents) never raises
+
+
+def _frame_attacker_at_y(att_y):
+    # the most-advanced attacker (largest x) sits at the chosen y; the rest is a legal frame
+    return [
+        FreezeFramePlayer(x=110.0, y=att_y, teammate=True),
+        FreezeFramePlayer(x=50.0, y=40.0, teammate=True, actor=True),
+        FreezeFramePlayer(x=98.0, y=20.0, teammate=False),
+        FreezeFramePlayer(x=96.0, y=60.0, teammate=False),
+        FreezeFramePlayer(x=119.0, y=40.0, teammate=False),
+    ]
+
+
+def test_lateral_zone_maps_attacker_y_to_channel_and_touchline() -> None:
+    # 80-yard width split in thirds: left < 26.67, central, right > 53.33 (left/right are the
+    # attacking team's, attack normalised left-to-right).
+    assert gd.lateral_zone(_frame_attacker_at_y(0.0))["channel"] == "left"
+    assert gd.lateral_zone(_frame_attacker_at_y(20.0))["channel"] == "left"
+    assert gd.lateral_zone(_frame_attacker_at_y(40.0))["channel"] == "central"
+    assert gd.lateral_zone(_frame_attacker_at_y(60.0))["channel"] == "right"
+    assert gd.lateral_zone(_frame_attacker_at_y(80.0))["channel"] == "right"
+    # the touchline distance is symmetric and unambiguous: 0 at the line, max at the centre
+    assert gd.lateral_zone(_frame_attacker_at_y(0.0))["near_touchline_m"] == 0.0
+    assert gd.lateral_zone(_frame_attacker_at_y(80.0))["near_touchline_m"] == 0.0
+    centre = gd.lateral_zone(_frame_attacker_at_y(40.0))
+    assert centre["near_touchline_m"] == round(40.0 * gd.METERS_PER_UNIT, 1)
+    assert "central channel" in centre["phrase"]
+    assert "wing" in gd.lateral_zone(_frame_attacker_at_y(10.0))["phrase"]

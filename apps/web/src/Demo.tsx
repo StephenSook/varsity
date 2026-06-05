@@ -165,8 +165,11 @@ function describe(s: Stage): string {
       return ` · margin ${String(s.margin_meters)}m, ${s.is_offside ? 'offside' : 'onside'}`
     case 'uncertainty_budget':
       return ` · ±${String(s.expanded_uncertainty_m)}m at 95% GUM coverage, ${String(s.entropy_bits)} bits`
-    case 'geometry_descriptors':
-      return ` · line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line`
+    case 'geometry_descriptors': {
+      const z = s.lateral_zone as { channel?: string } | undefined
+      const where = z?.channel ? `, ${z.channel} channel` : ''
+      return ` · line tilt ${String(s.tilt_deg)}°, ${String(s.thickness_m)}m deep, ${String(s.free_space_behind_line_m2)}m² free behind the line${where}`
+    }
     case 'discourse':
       return s.connective
         ? ` · ${String(s.connective)}`
@@ -250,6 +253,10 @@ export function Demo() {
   // The discourse lead-in (references decisions already explained earlier in this match), captured
   // from the discourse stage and prepended to the spoken verdict.
   const discourseRef = useRef('')
+  // The deterministic spatial line (which channel/wing + metres to the nearer touchline), captured
+  // from the geometry_descriptors stage, so a blind fan HEARS where on the pitch it happened, not
+  // only the margin. Spoken at standard/coach verbosity; withheld at minimal (kept terse).
+  const spatialSpokenRef = useRef('')
   const [lawText, setLawText] = useState('')
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
@@ -504,6 +511,9 @@ export function Demo() {
       void audioCtxRef.current.resume()
     }
     sourceRef.current?.close()
+    spatialSpokenRef.current = ''
+    budgetSpokenRef.current = ''
+    discourseRef.current = ''
     setStages([])
     setExplanation('')
     setGeo(null)
@@ -652,6 +662,10 @@ export function Demo() {
         if (name === 'uncertainty_budget') {
           budgetSpokenRef.current = String(data.spoken ?? '')
         }
+        if (name === 'geometry_descriptors') {
+          const z = data.lateral_zone as { phrase?: string } | undefined
+          spatialSpokenRef.current = String(z?.phrase ?? '')
+        }
         if (name === 'discourse') {
           discourseRef.current = String(data.connective ?? '')
         }
@@ -671,8 +685,12 @@ export function Demo() {
             !isDecision && discourseRef.current
               ? `${discourseRef.current.charAt(0).toUpperCase()}${discourseRef.current.slice(1)}. `
               : ''
+          const spatial =
+            !isDecision && verbosity !== 'minimal' && spatialSpokenRef.current
+              ? ` The incident was ${spatialSpokenRef.current}.`
+              : ''
           const tail = !isDecision && budgetSpokenRef.current ? ` ${budgetSpokenRef.current}` : ''
-          announce(`${lead}${spoken}${tail}`)
+          announce(`${lead}${spoken}${spatial}${tail}`)
           if (data.law_text) setLawText(String(data.law_text))
           if (!isDecision) {
             triggerHaptic(data as unknown as Geometry)
