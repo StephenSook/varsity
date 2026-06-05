@@ -9,9 +9,7 @@ VARSITY: a real-time, screen-reader-native, IFAB-Laws-grounded AI explainer of V
 ## Layout
 
 - `apps/web`: React + Vite + TypeScript front end.
-- `services`: FastAPI backend + the MCP servers (IFAB-RAG, match-data/geometry) + the A2A narrator agent.
-- `packages/geometry`: offside-margin computation from StatsBomb 360 freeze-frames.
-- `packages/rag`: Docling ingestion + FAISS index build for the IFAB Laws corpus.
+- `services`: FastAPI backend + the MCP servers (IFAB-RAG, match-data/geometry) + the A2A narrator agent. The offside-margin geometry lives in `services/app/geometry.py` (StatsBomb 360 freeze-frames); the RAG (Docling ingestion + FAISS index over the IFAB Laws) lives in `services/app/rag/`.
 - `infra`: docker-compose, Context Forge config, `VERSIONS.lock`.
 - `docs`: architecture diagrams and ADRs.
 

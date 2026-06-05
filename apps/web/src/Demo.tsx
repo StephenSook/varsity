@@ -35,7 +35,7 @@ const BACKEND =
   (import.meta.env as Record<string, string | undefined>).VITE_BACKEND_URL ??
   'http://localhost:8000'
 
-const STAGES = ['trigger', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'discourse', 'signal', 'proof', 'verbalizer', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'citation_metrics', 'verdict'] as const
+const STAGES = ['trigger', 'screen', 'decision', 'geometry', 'uncertainty_budget', 'geometry_descriptors', 'discourse', 'signal', 'proof', 'verbalizer', 'parallax', 'causal', 'critical_questions', 'law', 'granite', 'guardian', 'verification', 'completeness', 'provenance', 'citation_metrics', 'verdict'] as const
 
 // Law-11 sub-clauses as spearcon-able rule shortcuts (Walker et al., Human Factors 2013).
 const LAW11_SPEARCONS = [
@@ -89,7 +89,7 @@ const UI: Record<
     langLabel: 'Explanation language',
     explain: 'Explain the call',
     explaining: 'Explaining...',
-    error: 'Sorry, the explanation could not load. Please check your connection and try again.',
+    error: 'Sorry, the explanation could not load. On a first visit the backend may be waking up; please wait about 30 seconds and try again.',
     reannounce: 'Re-announce in English',
     caption: (m, off) =>
       `Offside line at the second-to-last defender · attacker ${m} m ${off ? 'ahead' : 'behind'}`,
@@ -100,7 +100,7 @@ const UI: Record<
     langLabel: 'Idioma de la explicación',
     explain: 'Explicar la jugada',
     explaining: 'Explicando...',
-    error: 'No se pudo cargar la explicación. Comprueba tu conexión e inténtalo de nuevo.',
+    error: 'No se pudo cargar la explicación. En la primera visita el servidor puede estar activándose; espera unos 30 segundos e inténtalo de nuevo.',
     reannounce: 'Volver a anunciar en español',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
@@ -111,7 +111,7 @@ const UI: Record<
     langLabel: "Langue de l'explication",
     explain: "Expliquer l'action",
     explaining: 'Explication...',
-    error: "Impossible de charger l'explication. Vérifiez votre connexion et réessayez.",
+    error: "Impossible de charger l'explication. Lors d'une première visite le serveur peut être en train de démarrer; patientez environ 30 secondes et réessayez.",
     reannounce: 'Réannoncer en français',
     caption: (m, off) =>
       `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
@@ -122,7 +122,7 @@ const UI: Record<
     langLabel: 'Idioma da explicação',
     explain: 'Explicar o lance',
     explaining: 'Explicando...',
-    error: 'Não foi possível carregar a explicação. Verifique sua conexão e tente novamente.',
+    error: 'Não foi possível carregar a explicação. Na primeira visita o servidor pode estar inicializando; aguarde cerca de 30 segundos e tente novamente.',
     reannounce: 'Anunciar novamente em português',
     caption: (m, off) =>
       `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
@@ -133,7 +133,7 @@ const UI: Record<
     langLabel: 'Sprache der Erklärung',
     explain: 'Die Szene erklären',
     explaining: 'Erkläre...',
-    error: 'Die Erklärung konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.',
+    error: 'Die Erklärung konnte nicht geladen werden. Beim ersten Besuch startet der Server möglicherweise gerade; bitte warte etwa 30 Sekunden und versuche es erneut.',
     reannounce: 'Erneut auf Deutsch ansagen',
     caption: (m, off) =>
       `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
@@ -336,7 +336,7 @@ export function Demo() {
   const [reviewing, setReviewing] = useState<{
     source: string
     detail: string
-    minute: number
+    minute: number | null
   } | null>(null)
   const [verbosity, setVerbosity] = useState<Verbosity>(() => {
     const v = typeof localStorage !== 'undefined' && localStorage.getItem('varsity-verbosity')
@@ -485,13 +485,14 @@ export function Demo() {
     audioCtxRef.current ??= new AudioContext()
     const ctx = audioCtxRef.current
     await ctx.resume()
-    const tGeo = (attacker_x: number, offside_line_x: number, is_offside: boolean): Geometry =>
-      ({
-        attacker_x,
-        offside_line_x,
-        is_offside,
-        players: [{ x: offside_line_x - 8, y: 40, teammate: true, actor: true }],
-      }) as unknown as Geometry
+    const tGeo = (attacker_x: number, offside_line_x: number, is_offside: boolean): Geometry => ({
+      attacker_x,
+      offside_line_x,
+      is_offside,
+      margin_meters: Math.round((attacker_x - offside_line_x) * 0.9144 * 100) / 100,
+      players: [{ x: offside_line_x - 8, y: 40, teammate: true, actor: true }],
+      pitch: { length: 120, width: 80 },
+    })
     const steps: { label: string; geo: Geometry; band: string }[] = [
       { label: 'A clear offside, well beyond the line.', geo: tGeo(112, 100, true), band: 'clear' },
       {
@@ -575,9 +576,9 @@ export function Demo() {
         const data = JSON.parse(event.data) as {
           source: string
           detail: string
-          minute: number
+          minute: number | null
         }
-        setReviewing(data)
+        setReviewing({ ...data, minute: typeof data.minute === 'number' ? data.minute : null })
       }),
     )
     for (const name of STAGES) {
@@ -1305,7 +1306,8 @@ export function Demo() {
           className="glass w-full max-w-md rounded-xl p-3 text-left"
         >
           <p className="text-sm font-medium text-emerald-200">
-            Minute {reviewing.minute}: VAR is reviewing. {reviewing.detail}.
+            {typeof reviewing.minute === 'number' ? `Minute ${reviewing.minute}: ` : ''}VAR is
+            reviewing. {reviewing.detail}.
           </p>
           <p className="mt-0.5 font-mono text-xs text-slate-400">
             trigger source: {reviewing.source}

@@ -27,6 +27,7 @@ it never adjudicates.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import random
 from dataclasses import dataclass
@@ -34,6 +35,8 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.uncertainty import SIGMA_MARGIN_M, normal_cdf
+
+_log = logging.getLogger("varsity")
 
 # The deterministic receipt is precomputed and committed here so the live endpoint never recomputes
 # the full bootstrap (slow under a throttled free-tier CPU). Regenerate with
@@ -274,8 +277,10 @@ def calibration_payload() -> dict:
             data = json.loads(_PRECOMPUTED.read_text())
             data["precomputed"] = True
             return data
-        except (OSError, ValueError):
-            pass
+        except (OSError, ValueError) as exc:
+            # A corrupt committed receipt would silently trigger the slow live recompute on
+            # Render's throttled CPU (the hang the precompute exists to avoid): make it visible.
+            _log.warning("calibration_report.json unreadable (%s); recomputing live", exc)
     return compute_payload()
 
 

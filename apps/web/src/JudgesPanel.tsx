@@ -351,13 +351,19 @@ export function JudgesPanel() {
         // No key configured, or the feed errored (quota / auth / network): surface the honest
         // note, never the misleading "connected, no match" copy.
         if (!j.configured || j.feed_ok === false) return String(j.note)
-        type Fx = { league: string; home: string; away: string; minute: number | null; var_events: string[] }
+        type Fx = {
+          league: string | null
+          home: string | null
+          away: string | null
+          minute: number | null
+          var_events: string[]
+        }
         const fx = (j.fixtures as Fx[]) ?? []
         if (!fx.length)
           return `Live feed connected (${String(j.source)}). No match live this exact moment; try again during a match window.`
         const top = fx
           .slice(0, 3)
-          .map((m) => `${m.home} v ${m.away} (${m.league}, ${m.minute ?? '?'}')`)
+          .map((m) => `${m.home ?? 'Home'} v ${m.away ?? 'Away'} (${m.league ?? 'league'}, ${m.minute ?? '?'}')`)
           .join(' · ')
         const vars = (j.var_events as unknown[]) ?? []
         return `${String(j.live_count)} live now via ${String(j.source)}: ${top}${vars.length ? ' · VAR review detected, explainable live' : ''}`
