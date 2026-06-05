@@ -5,11 +5,12 @@ break-loop, the per-stage json.dumps serialization, and the event:/data: framing
 channel that carries the spoken verdict to a blind fan, so it gets its own contract test here.
 """
 
+import asyncio
 import json
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import _sse_events, app
 
 
 def _collect(path: str) -> list[tuple[str, dict]]:
@@ -54,3 +55,21 @@ def test_stream_ask_serializes_and_ends_in_a_verdict() -> None:
     assert "verdict" in names, names
     assert all(isinstance(d, dict) for _, d in events)
     assert "stream_error" not in names
+
+
+def test_sse_boundary_emits_a_terminal_stream_error_when_a_stage_raises() -> None:
+    # The headline degrade fix: if a deterministic stage raises mid-stream (e.g. a watsonx outage
+    # during judging), _sse_events must emit a terminal 'stream_error' frame so the client can
+    # announce a grounded failure, NOT let the raise drop the connection silently (the pre-fix bug).
+    def boom():
+        yield {"stage": "reviewing"}
+        raise RuntimeError("watsonx down")
+
+    async def collect():
+        return [ev async for ev in _sse_events(boom())]
+
+    events = asyncio.run(collect())
+    names = [e["event"] for e in events]
+    assert names[-1] == "stream_error", names
+    assert "verdict" not in names
+    assert json.loads(events[-1]["data"]) == {"stage": "stream_error", "message": "stream failed"}

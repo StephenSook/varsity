@@ -552,10 +552,12 @@ export function Demo() {
     sourceRef.current = source
     // Recover from any stream/parse failure: a SyntaxError thrown inside an SSE listener does NOT
     // fire onerror, so without this a malformed frame would leave the Explain button locked forever.
+    // Use the `language` param, not the closure `lang` state, so a switch-then-stream (selectLang
+    // calls setLang then explainTheCall(l) synchronously) shows the error in the requested language.
     const recover = () => {
       setStreaming(false)
       source.close()
-      setErrorMsg(UI[lang].error)
+      setErrorMsg(UI[language].error)
     }
     const guard =
       (fn: (e: MessageEvent) => void) =>

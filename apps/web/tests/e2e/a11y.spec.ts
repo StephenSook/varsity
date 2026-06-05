@@ -173,3 +173,39 @@ test('clicking Explain streams a verdict into the assertive live region (online 
   // a stream that delivers a verdict must NOT also raise the error banner
   await expect(page.locator('[role="alert"]')).toHaveCount(0)
 })
+
+test('a malformed SSE frame raises the error banner and recovers the Explain button (no lock)', async ({
+  page,
+}) => {
+  // A JSON.parse throw inside an SSE listener does NOT fire onerror; the guard() must still
+  // recover (set the banner + re-enable the button) instead of locking the control surface forever.
+  await page.route('**/stream/canned**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: 'event: verdict\ndata: {not valid json\n\n',
+    }),
+  )
+  await page.goto('/')
+  await page.locator('#explain-cta').click()
+  await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('#explain-cta')).toBeEnabled()
+})
+
+test('a terminal stream_error event raises the error banner and recovers the button', async ({
+  page,
+}) => {
+  // The backend emits a named stream_error frame when a stage raises; the frontend must announce
+  // it and recover, the same as a connection drop.
+  await page.route('**/stream/canned**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/event-stream',
+      body: 'event: stream_error\ndata: {"stage":"stream_error","message":"stream failed"}\n\n',
+    }),
+  )
+  await page.goto('/')
+  await page.locator('#explain-cta').click()
+  await expect(page.locator('[role="alert"]')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('#explain-cta')).toBeEnabled()
+})
