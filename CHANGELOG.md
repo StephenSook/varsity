@@ -23,6 +23,10 @@ All notable changes to VARSITY are documented here. The format follows
   log a warning, so neither is silent.
 
 ### Security
+- Added a per-IP rate limit (60 requests per minute, env-tunable) to the paid `/stream/*`
+  endpoints. The API is public and unauthenticated, so without it an abuser could spam the
+  routes to burn the watsonx quota and saturate the worker; the limit is generous enough that
+  no judge is affected. Found by the pre-submission security audit.
 - Bumped `vitest` to v4, which clears a development-only advisory (the Vitest UI server,
   which this project never runs). The shipped bundle and the backend runtime tree have no
   known vulnerabilities, and no secret has ever been committed (verified with gitleaks over
