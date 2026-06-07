@@ -13,7 +13,7 @@ import json
 import logging
 import time
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sse_starlette.sse import EventSourceResponse
 
@@ -24,6 +24,7 @@ from app.observability import setup_tracing
 from app.pipeline import decision_stages, explanation_stages, question_stages
 from app.rag import corpus_signature
 from app.rag.retriever import CORPUS, SIGNATURE, LawRetriever
+from app.ratelimit import rate_limit
 from app.triggers.fusion import fuse
 from app.triggers.prewarm import PreWarmCache
 from app.triggers.resolver import (
@@ -87,7 +88,7 @@ def list_scenarios() -> dict[str, list[dict]]:
     return {"scenarios": scenarios.scenarios_index()}
 
 
-@app.get("/stream/canned")
+@app.get("/stream/canned", dependencies=[Depends(rate_limit)])
 async def stream_canned(
     language: str = "English", scenario: str = scenarios.DEFAULT_SCENARIO
 ) -> EventSourceResponse:
@@ -97,7 +98,7 @@ async def stream_canned(
     return EventSourceResponse(_sse_events(gen))
 
 
-@app.get("/stream/live")
+@app.get("/stream/live", dependencies=[Depends(rate_limit)])
 async def stream_live(
     language: str = "English", scenario: str = scenarios.DEFAULT_SCENARIO
 ) -> EventSourceResponse:
@@ -466,7 +467,7 @@ def list_decisions() -> dict[str, list[dict]]:
     return {"decisions": decisions.decisions_index()}
 
 
-@app.get("/stream/decision")
+@app.get("/stream/decision", dependencies=[Depends(rate_limit)])
 async def stream_decision(type: str, language: str = "English") -> EventSourceResponse:
     """Explain a non-geometry VAR decision (penalty, handball) end to end: the same
     rule-grounded pipeline as offside, with no geometry/offside-line stage."""
@@ -474,7 +475,7 @@ async def stream_decision(type: str, language: str = "English") -> EventSourceRe
     return EventSourceResponse(_sse_events(decision_stages(type, language=language)))
 
 
-@app.get("/stream/ask")
+@app.get("/stream/ask", dependencies=[Depends(rate_limit)])
 async def stream_ask(q: str, language: str = "English") -> EventSourceResponse:
     """The rule oracle: answer a free-text fan question end to end, grounded in the Law
     the retriever returns, with Guardian checking the answer stays grounded."""
