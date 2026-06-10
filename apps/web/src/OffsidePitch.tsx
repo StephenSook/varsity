@@ -22,7 +22,7 @@ export type Geometry = {
  * The margin label is bound to the streamed geometry value, never hardcoded. The
  * whole SVG is decorative (aria-hidden); the screen reader speaks via aria-live.
  */
-export function OffsidePitch({ geo }: { geo: Geometry }) {
+export function OffsidePitch({ geo, whatIfX }: { geo: Geometry; whatIfX?: number | null }) {
   const L = geo.pitch.length
   const W = geo.pitch.width
   const lineX = geo.offside_line_x
@@ -48,6 +48,21 @@ export function OffsidePitch({ geo }: { geo: Geometry }) {
 
       {/* offside line at the second-to-last defender (sweeps in) */}
       <line x1={lineX} y1={0} x2={lineX} y2={W} stroke="rgb(52,211,153)" strokeWidth={0.7} className="offside-line" />
+
+      {/* what-if calibrator line: dashed, amber, only while the user has moved it. The real
+          line above never moves; the calibrator readout lives outside this aria-hidden SVG. */}
+      {typeof whatIfX === 'number' && (
+        <line
+          x1={whatIfX}
+          y1={0}
+          x2={whatIfX}
+          y2={W}
+          stroke="rgb(251,191,36)"
+          strokeWidth={0.5}
+          strokeDasharray="2 1.4"
+          data-testid="whatif-line"
+        />
+      )}
 
       {/* margin bracket + label, bound to the computed value */}
       <line x1={lineX} y1={bracketY} x2={attX} y2={bracketY} stroke="rgb(250,204,21)" strokeWidth={0.5} />

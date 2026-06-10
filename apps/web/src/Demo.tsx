@@ -8,6 +8,7 @@ import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
 import { PipelineWaterfall } from './PipelineWaterfall'
 import { KeyboardHelp } from './KeyboardHelp'
+import { clampLineX, whatIfMarginMeters } from './calibrate'
 import { OffsidePitch, type Geometry } from './OffsidePitch'
 import { LazyBoundary } from './LazyBoundary'
 import { usePrefersReducedMotion } from './useReducedMotion'
@@ -81,6 +82,12 @@ const UI: Record<
     error: string
     reannounce: string
     caption: (m: string, off: boolean) => string
+    whatIf: string
+    whatIfNote: string
+    whatIfLabel: string
+    whatIfValue: (m: string, ahead: boolean) => string
+    whatIfReadout: (m: string, ahead: boolean, real: string) => string
+    whatIfReset: string
   }
 > = {
   English: {
@@ -93,6 +100,14 @@ const UI: Record<
     reannounce: 'Re-announce in English',
     caption: (m, off) =>
       `Offside line at the second-to-last defender · attacker ${m} m ${off ? 'ahead' : 'behind'}`,
+    whatIf: 'What if the defender stood here?',
+    whatIfNote:
+      'Move the offside line and the margin is recomputed live from the same StatsBomb geometry. The official call never moves.',
+    whatIfLabel: 'Defender line position',
+    whatIfValue: (m, ahead) => `attacker ${m} m ${ahead ? 'ahead of' : 'behind'} the moved line`,
+    whatIfReadout: (m, ahead, real) =>
+      `Attacker ${m} m ${ahead ? 'ahead of' : 'behind'} your moved line. The real call stays ${real} m.`,
+    whatIfReset: 'Back to the real line',
   },
   Spanish: {
     code: 'ES',
@@ -104,6 +119,15 @@ const UI: Record<
     reannounce: 'Volver a anunciar en español',
     caption: (m, off) =>
       `Línea de fuera de juego en el penúltimo defensor · atacante ${m} m ${off ? 'por delante' : 'por detrás'}`,
+    whatIf: '¿Y si el defensor estuviera aquí?',
+    whatIfNote:
+      'Mueve la línea de fuera de juego y el margen se recalcula en vivo con la misma geometría de StatsBomb. La decisión oficial no cambia.',
+    whatIfLabel: 'Posición de la línea del defensor',
+    whatIfValue: (m, ahead) =>
+      `atacante ${m} m ${ahead ? 'por delante de' : 'por detrás de'} la línea movida`,
+    whatIfReadout: (m, ahead, real) =>
+      `Atacante ${m} m ${ahead ? 'por delante de' : 'por detrás de'} tu línea movida. La decisión real sigue siendo ${real} m.`,
+    whatIfReset: 'Volver a la línea real',
   },
   French: {
     code: 'FR',
@@ -115,6 +139,14 @@ const UI: Record<
     reannounce: 'Réannoncer en français',
     caption: (m, off) =>
       `Ligne de hors-jeu au niveau de l'avant-dernier défenseur · attaquant ${m} m ${off ? 'devant' : 'derrière'}`,
+    whatIf: 'Et si le défenseur était ici ?',
+    whatIfNote:
+      'Déplacez la ligne de hors-jeu : la marge est recalculée en direct avec la même géométrie StatsBomb. La décision officielle ne change jamais.',
+    whatIfLabel: 'Position de la ligne du défenseur',
+    whatIfValue: (m, ahead) => `attaquant ${m} m ${ahead ? 'devant' : 'derrière'} la ligne déplacée`,
+    whatIfReadout: (m, ahead, real) =>
+      `Attaquant ${m} m ${ahead ? 'devant' : 'derrière'} votre ligne déplacée. La décision réelle reste ${real} m.`,
+    whatIfReset: 'Revenir à la ligne réelle',
   },
   Portuguese: {
     code: 'PT',
@@ -126,6 +158,15 @@ const UI: Record<
     reannounce: 'Anunciar novamente em português',
     caption: (m, off) =>
       `Linha de impedimento no penúltimo defensor · atacante ${m} m ${off ? 'à frente' : 'atrás'}`,
+    whatIf: 'E se o defensor estivesse aqui?',
+    whatIfNote:
+      'Mova a linha de impedimento e a margem é recalculada ao vivo com a mesma geometria StatsBomb. A decisão oficial não muda.',
+    whatIfLabel: 'Posição da linha do defensor',
+    whatIfValue: (m, ahead) =>
+      `atacante ${m} m ${ahead ? 'à frente da' : 'atrás da'} linha movida`,
+    whatIfReadout: (m, ahead, real) =>
+      `Atacante ${m} m ${ahead ? 'à frente da' : 'atrás da'} sua linha movida. A decisão real continua ${real} m.`,
+    whatIfReset: 'Voltar à linha real',
   },
   German: {
     code: 'DE',
@@ -137,6 +178,15 @@ const UI: Record<
     reannounce: 'Erneut auf Deutsch ansagen',
     caption: (m, off) =>
       `Abseitslinie beim vorletzten Verteidiger · Angreifer ${m} m ${off ? 'davor' : 'dahinter'}`,
+    whatIf: 'Was wäre, wenn der Verteidiger hier stünde?',
+    whatIfNote:
+      'Verschiebe die Abseitslinie: der Abstand wird live mit derselben StatsBomb-Geometrie neu berechnet. Die offizielle Entscheidung ändert sich nie.',
+    whatIfLabel: 'Position der Verteidigerlinie',
+    whatIfValue: (m, ahead) =>
+      `Angreifer ${m} m ${ahead ? 'vor' : 'hinter'} der verschobenen Linie`,
+    whatIfReadout: (m, ahead, real) =>
+      `Angreifer ${m} m ${ahead ? 'vor' : 'hinter'} deiner verschobenen Linie. Die echte Entscheidung bleibt ${real} m.`,
+    whatIfReset: 'Zurück zur echten Linie',
   },
 }
 
@@ -257,6 +307,8 @@ export function Demo() {
   // only the margin. Spoken at standard/coach verbosity; withheld at minimal (kept terse).
   const spatialSpokenRef = useRef('')
   const [lawText, setLawText] = useState('')
+  // What-if calibrator: the user-moved offside line in grid units; null = the real line.
+  const [whatIfX, setWhatIfX] = useState<number | null>(null)
   const [detail, setDetail] = useState(false)
   const [streaming, setStreaming] = useState(false)
   // A visible, role=alert error message for a stream/parse failure. The sr-only verdict region
@@ -522,6 +574,7 @@ export function Demo() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setWhatIfX(null)
     setLawText('')
     setOfflineSource(null)
     setLatencyMs(null)
@@ -753,6 +806,7 @@ export function Demo() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setWhatIfX(null)
     setLawText('')
     setOfflineSource(null)
     setOfflineStatus('')
@@ -832,6 +886,7 @@ export function Demo() {
     setStages([])
     setExplanation('')
     setGeo(null)
+    setWhatIfX(null)
     setLawText('')
     setOfflineSource(null)
     setLatencyMs(null)
@@ -1032,6 +1087,9 @@ export function Demo() {
   }, [verbosity])
 
   const t = UI[lang]
+  // The moved-line margin, recomputed with the SAME yards formula as services/app/geometry.py
+  // (unit-tested parity in calibrate.test.ts). null whatIfX = the line as computed.
+  const whatIfMargin = geo ? whatIfMarginMeters(geo.attacker_x, whatIfX ?? geo.offside_line_x) : 0
   const voiceSupported =
     typeof window !== 'undefined' &&
     (('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) ||
@@ -1606,10 +1664,10 @@ export function Demo() {
       {geo && (
         <figure aria-hidden="true" className="w-full max-w-2xl">
           {reducedMotion ? (
-            <OffsidePitch geo={geo} />
+            <OffsidePitch geo={geo} whatIfX={whatIfX} />
           ) : (
-            <LazyBoundary fallback={<OffsidePitch geo={geo} />}>
-              <Suspense fallback={<OffsidePitch geo={geo} />}>
+            <LazyBoundary fallback={<OffsidePitch geo={geo} whatIfX={whatIfX} />}>
+              <Suspense fallback={<OffsidePitch geo={geo} whatIfX={whatIfX} />}>
                 <OffsidePitch3D geo={geo} />
               </Suspense>
             </LazyBoundary>
@@ -1624,6 +1682,51 @@ export function Demo() {
             />
           </div>
         </figure>
+      )}
+
+      {geo && (
+        // What-if calibrator: a native range input (free keyboard + screen-reader semantics)
+        // moves a dashed line on the pitch; the margin is recomputed from the same yards
+        // formula as the backend geometry. The readout re-anchors to the unchanged official
+        // call every time, and the rich sentence lives in aria-valuetext (announced while
+        // the slider has focus), so there is no second live region to double-speak.
+        <section
+          aria-label={t.whatIf}
+          data-testid="whatif-panel"
+          className="w-full max-w-2xl rounded-xl bg-slate-900/60 p-4 text-left ring-1 ring-slate-700/50"
+        >
+          <h3 className="text-sm font-semibold text-emerald-300">{t.whatIf}</h3>
+          <p className="mt-1 text-sm text-slate-400">{t.whatIfNote}</p>
+          <label className="mt-3 block text-sm text-slate-300">
+            {t.whatIfLabel}
+            <input
+              type="range"
+              min={0}
+              max={geo.pitch.length}
+              step={0.1}
+              value={whatIfX ?? geo.offside_line_x}
+              aria-valuetext={t.whatIfValue(Math.abs(whatIfMargin).toFixed(2), whatIfMargin > 0)}
+              onChange={(e) => setWhatIfX(clampLineX(Number(e.target.value), geo.pitch.length))}
+              data-testid="whatif-slider"
+              className="mt-1 block w-full accent-emerald-400"
+            />
+          </label>
+          <p data-testid="whatif-readout" lang={t.bcp47} className="mt-2 text-sm text-emerald-200">
+            {t.whatIfReadout(
+              Math.abs(whatIfMargin).toFixed(2),
+              whatIfMargin > 0,
+              Math.abs(geo.margin_meters).toFixed(2),
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => setWhatIfX(null)}
+            disabled={whatIfX === null}
+            className="mt-2 inline-flex min-h-6 items-center rounded px-2 py-1 text-xs text-slate-300 ring-1 ring-slate-600/60 hover:text-emerald-300 disabled:opacity-40"
+          >
+            {t.whatIfReset}
+          </button>
+        </section>
       )}
 
       {stages.length > 0 && (
