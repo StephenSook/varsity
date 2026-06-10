@@ -1668,7 +1668,7 @@ export function Demo() {
           ) : (
             <LazyBoundary fallback={<OffsidePitch geo={geo} whatIfX={whatIfX} />}>
               <Suspense fallback={<OffsidePitch geo={geo} whatIfX={whatIfX} />}>
-                <OffsidePitch3D geo={geo} />
+                <OffsidePitch3D geo={geo} whatIfX={whatIfX} />
               </Suspense>
             </LazyBoundary>
           )}
