@@ -21,7 +21,7 @@ function world(x: number, y: number): [number, number] {
   return [(x - 60) * S, (y - 40) * S]
 }
 
-function Scene({ geo }: { geo: Geometry }) {
+function Scene({ geo, whatIfX }: { geo: Geometry; whatIfX?: number | null }) {
   const group = useRef<THREE.Group>(null)
   const lineMat = useRef<THREE.MeshStandardMaterial>(null)
 
@@ -85,6 +85,24 @@ function Scene({ geo }: { geo: Geometry }) {
           side={THREE.DoubleSide}
         />
       </mesh>
+      {/* the what-if calibrator line: static amber SEGMENTS (the 3D read of the 2D dashed
+          line), only while the user has moved it. The real line above stays solid and
+          pulsing, so the two are distinguishable even when both render amber (onside). */}
+      {typeof whatIfX === 'number' &&
+        [0.25, 0.8, 1.35, 1.9].map((y) => (
+          <mesh key={y} position={[world(whatIfX, 40)[0], y, 0]}>
+            <planeGeometry args={[0.07, 0.4]} />
+            <meshStandardMaterial
+              color="#fbbf24"
+              emissive="#fbbf24"
+              emissiveIntensity={1.1}
+              transparent
+              opacity={0.85}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        ))}
+
       {/* the attacker's line + the margin gap between them */}
       <mesh position={[attX, 0.55, 0]}>
         <planeGeometry args={[0.06, 1.5]} />
@@ -98,7 +116,13 @@ function Scene({ geo }: { geo: Geometry }) {
   )
 }
 
-export default function OffsidePitch3D({ geo }: { geo: Geometry }) {
+export default function OffsidePitch3D({
+  geo,
+  whatIfX,
+}: {
+  geo: Geometry
+  whatIfX?: number | null
+}) {
   return (
     <Canvas
       aria-hidden="true"
@@ -115,7 +139,7 @@ export default function OffsidePitch3D({ geo }: { geo: Geometry }) {
       <ambientLight intensity={0.4} />
       <pointLight position={[5, 9, 5]} intensity={120} color="#a7f3d0" distance={40} decay={1.6} />
       <pointLight position={[-7, 5, -4]} intensity={55} color="#38bdf8" distance={40} decay={1.8} />
-      <Scene geo={geo} />
+      <Scene geo={geo} whatIfX={whatIfX} />
     </Canvas>
   )
 }

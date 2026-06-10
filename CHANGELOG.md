@@ -17,8 +17,10 @@ All notable changes to VARSITY are documented here. The format follows
   arrow keys (a native range slider, localized in all five languages) and the margin is
   recomputed live with the same international-yard formula as the backend geometry
   (unit-tested parity in `calibrate.test.ts`). A dashed amber line shows the moved
-  position on the SVG pitch, the readout re-anchors to the unchanged official call, and
-  an e2e spec covers keyboard operation, reset, and an axe scan of the panel.
+  position on both pitch renderings (dashed stroke on the 2D SVG; static amber segments
+  beside the pulsing real line on the 3D scene), the readout re-anchors to the unchanged
+  official call, and an e2e spec covers keyboard operation, reset, and an axe scan of
+  the panel.
 - An inline Gource build time-lapse in the README (an animated preview that links to the
   full render attached to the v1.0.0 release).
 - An end-to-end contract test for the `/stream/live` route, and watsonx degrade-to-floor
