@@ -3,6 +3,7 @@ import {
   computeOffsideLocal,
   deterministicExplanation,
   getOfflineTier,
+  groundNanoText,
   setOfflineTier,
 } from './offline'
 
@@ -18,6 +19,42 @@ describe('on-device model tier', () => {
     expect(getOfflineTier()).toBe('granite-1b')
     setOfflineTier('nano')
     expect(getOfflineTier()).toBe('nano')
+  })
+})
+
+describe('groundNanoText (grounds on-device generation in the retrieved Law)', () => {
+  const LAW = "## Law 11\n\n## Offside\n\n## 1. Offside position\n\nIt is not an offence to be in an offside position."
+
+  it('passes through output that already cites the Law', () => {
+    const cited = 'Under Law 11, the attacker was ahead of the second-to-last defender.'
+    expect(groundNanoText(cited, LAW)).toBe(cited)
+  })
+
+  it('prefixes the retrieval-sourced Law id when the model omits the citation (the real captured Nano output)', () => {
+    // Verbatim Granite Nano 350m output captured live 2026-06-11: correct explanation,
+    // no Law citation. The old guard rejected it and the Nano tier never surfaced.
+    const raw =
+      'Offside decision: The most advanced attacker was 5.69 meters ahead of the ' +
+      'second-to-last defender when the ball was played. Verdict: Offside.'
+    expect(groundNanoText(raw, LAW)).toBe(`Under Law 11: ${raw}`)
+  })
+
+  it('rejects empty or too-short output so the caller falls to the deterministic floor', () => {
+    expect(groundNanoText(undefined, LAW)).toBeNull()
+    expect(groundNanoText('', LAW)).toBeNull()
+    expect(groundNanoText('Offside.', LAW)).toBeNull()
+  })
+
+  it('rejects uncited output when the retrieved text has no Law id to ground with', () => {
+    const raw = 'The attacker was clearly ahead of the second-to-last defender at the pass.'
+    expect(groundNanoText(raw, 'Some retrieved text without a law number.')).toBeNull()
+  })
+
+  it('grounded output always satisfies the cite-a-Law guardrail', () => {
+    const raw = 'The attacker was clearly ahead of the second-to-last defender at the pass.'
+    const text = groundNanoText(raw, LAW)
+    expect(text).not.toBeNull()
+    expect(text!).toMatch(/law/i)
   })
 })
 
