@@ -137,6 +137,23 @@ type Generator = (
 
 const _generators: Partial<Record<OfflineTier, Generator>> = {}
 
+/**
+ * Ground a model-generated explanation in the retrieved Law. Small on-device models
+ * often restate the verdict without citing the Law (the 350m Nano does exactly this),
+ * which would fail the cite-a-Law guardrail and silently lose the generation. When the
+ * citation is missing, prefix the Law id taken from the RETRIEVED Law text - the id
+ * comes from retrieval, never from generation, so it cannot be invented. Returns null
+ * for unusable output (too short, or no Law id available to ground with), in which
+ * case the caller falls back to the deterministic floor.
+ */
+export function groundNanoText(raw: string | undefined, lawText: string): string | null {
+  const text = raw?.trim()
+  if (!text || text.length < 20) return null
+  if (/law/i.test(text)) return text
+  const lawId = lawText.match(/law\s+(\d{1,2})/i)?.[1]
+  return lawId ? `Under Law ${lawId}: ${text}` : null
+}
+
 export type OfflineResult = {
   text: string
   source: 'granite-nano-webgpu' | 'granite-1b-webgpu' | 'deterministic'
@@ -191,7 +208,8 @@ export async function generateOffline(
         role: 'system',
         content:
           'You explain a soccer VAR offside decision to a blind fan in two short ' +
-          'sentences, grounded in the Law text, citing the Law number. Do not invent rules.',
+          'sentences, grounded in the Law text, citing the Law number. Begin your ' +
+          'answer with the Law citation, for example: "Under Law 11, ...". Do not invent rules.',
       },
       {
         role: 'user',
@@ -203,8 +221,9 @@ export async function generateOffline(
       },
     ]
     const out = await _generator(messages, { max_new_tokens: 120, do_sample: false })
-    const text = out?.[0]?.generated_text?.at(-1)?.content?.trim()
-    if (text && text.length >= 20 && /law/i.test(text)) {
+    const raw = out?.[0]?.generated_text?.at(-1)?.content?.trim()
+    const text = groundNanoText(raw, lawText)
+    if (text) {
       opts.onStatus?.(
         tier === 'granite-1b'
           ? 'Generated on-device with Granite 4.0 1B (WebGPU).'
@@ -212,6 +231,7 @@ export async function generateOffline(
       )
       return { text, source: sourceTag, geo, lawText, retrieval }
     }
+    opts.onStatus?.('On-device output was not usable; explained on-device (deterministic).')
     return { text: floor, source: 'deterministic', geo, lawText, retrieval }
   } catch {
     opts.onStatus?.('On-device model unavailable; explained on-device (deterministic).')
