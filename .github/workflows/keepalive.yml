@@ -1,0 +1,31 @@
+# Keeps the free-tier demo backend warm so the first visitor request is fast.
+# Render free instances spin down after ~15 minutes idle; a 10-minute ping
+# prevents that. The job FAILS (and notifies) if the backend is unreachable,
+# so a broken ping is never silent.
+name: Keepalive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Ping the demo backend
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://varsity-api.onrender.com/health || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "backend healthy (200) on attempt $i"
+              exit 0
+            fi
+            echo "attempt $i returned $code; retrying in 20s"
+            sleep 20
+          done
+          echo "backend unreachable after 3 attempts" >&2
+          exit 1
