@@ -192,9 +192,14 @@ def explanation_stages(
             within_noise=within_noise,
         )
         model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        # Read synchronously right after the call: "granite" if a live watsonx reply passed the
+        # accept-gate, "deterministic-floor" if a watsonx outage degraded to the Law-citing floor.
+        # Keeps the trace honest instead of always claiming the model produced the text.
+        source = getattr(granite, "last_source", "granite")
         span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.source", source)
         span.set_attribute("varsity.language", language)
-    yield {"stage": "granite", "model": model}
+    yield {"stage": "granite", "model": model, "source": source}
 
     with tracer.start_as_current_span("guardian") as span:
         verdict = guardian.check(explanation, law_context=law.text)
@@ -313,9 +318,11 @@ def decision_stages(
             language=language,
         )
         model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        source = getattr(granite, "last_source", "granite")
         span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.source", source)
         span.set_attribute("varsity.language", language)
-    yield {"stage": "granite", "model": model}
+    yield {"stage": "granite", "model": model, "source": source}
 
     with tracer.start_as_current_span("guardian") as span:
         verdict = guardian.check(explanation, law_context=law.text)
@@ -415,9 +422,11 @@ def question_stages(
             language=language,
         )
         model = getattr(getattr(granite, "config", None), "model_id", "granite")
+        source = getattr(granite, "last_source", "granite")
         span.set_attribute("varsity.model", model)
+        span.set_attribute("varsity.source", source)
         span.set_attribute("varsity.language", language)
-    yield {"stage": "granite", "model": model}
+    yield {"stage": "granite", "model": model, "source": source}
 
     with tracer.start_as_current_span("guardian") as span:
         verdict = guardian.check(answer, law_context=law.text)

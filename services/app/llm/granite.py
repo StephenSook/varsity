@@ -189,6 +189,13 @@ class GraniteClient:
 
     def __init__(self, config: GraniteConfig | None = None) -> None:
         self.config = config or GraniteConfig.from_env()
+        # Which source produced the most recent explanation: "granite" (a live watsonx reply that
+        # passed the accept-gate) or "deterministic-floor" (a watsonx outage / unusable reply
+        # degraded to the Law-citing floor). The pipeline reads this synchronously right after each
+        # call to label the OpenTelemetry trace honestly, so the span never claims "Granite
+        # explained" when the floor actually ran. Valid for the request-local client the pipeline
+        # created fresh per request; read it right after the call, never across a yield.
+        self.last_source: str = "granite"
 
     def generate(
         self,
@@ -275,7 +282,9 @@ class GraniteClient:
                 break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
                 if not within_noise or TOO_CLOSE_HEDGE.search(text):
+                    self.last_source = "granite"
                     return text
+        self.last_source = "deterministic-floor"
         return _fallback_explanation(
             margin_meters=margin_meters,
             is_offside=is_offside,
@@ -312,7 +321,9 @@ class GraniteClient:
             except _WatsonxDegraded:
                 break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
+                self.last_source = "granite"
                 return text
+        self.last_source = "deterministic-floor"
         return _fallback_decision(law=law, outcome=outcome, language=language)
 
     def answer_question(
@@ -345,5 +356,7 @@ class GraniteClient:
             except _WatsonxDegraded:
                 break  # a hard watsonx outage will not recover; the deterministic floor takes over
             if len(text) >= 20 and not _looks_like_prompt_leak(text):
+                self.last_source = "granite"
                 return text
+        self.last_source = "deterministic-floor"
         return _fallback_answer(law=law, title=title, law_text=law_text, language=language)

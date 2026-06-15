@@ -129,3 +129,26 @@ def test_answer_question_outage_degrades_to_floor_without_retrying(monkeypatch) 
     )
     assert out.strip() != "" and "11" in out  # the deterministic, Law-grounded floor
     assert calls["n"] == 1  # one attempt, no retry on a hard outage
+
+
+def test_last_source_marks_granite_vs_floor(monkeypatch) -> None:
+    # The pipeline reads client.last_source to label the OpenTelemetry granite stage honestly:
+    # "granite" when a live watsonx reply passed the accept-gate, "deterministic-floor" when a
+    # watsonx outage (or an unusable reply) degraded to the Law-citing floor. This keeps /trace
+    # and the /judges summary from ever claiming "Granite explained" when it did not.
+    client = GraniteClient()
+
+    monkeypatch.setattr(
+        granite_mod._watsonx,
+        "generate",
+        lambda *a, **k: "Under Law 11, the attacker was offside by 5.45 meters.",
+    )
+    client.explain_offside(margin_meters=5.45, is_offside=True, law_text="Law 11 ...")
+    assert client.last_source == "granite"
+
+    def boom(*a, **k):
+        raise RuntimeError("watsonx 429")
+
+    monkeypatch.setattr(granite_mod._watsonx, "generate", boom)
+    client.explain_offside(margin_meters=5.45, is_offside=True, law_text="Law 11 ...")
+    assert client.last_source == "deterministic-floor"

@@ -244,7 +244,9 @@ function describe(s: Stage): string {
     case 'law':
       return ` · Law ${String(s.law)} (${String(s.title)})`
     case 'granite':
-      return ` · ${String(s.model)}`
+      return String(s.source) === 'deterministic-floor'
+        ? ' · deterministic floor (watsonx degraded)'
+        : ` · ${String(s.model)}`
     case 'guardian':
       return ` · Granite Guardian: risk=${String(s.answer) || 'n/a'} -> ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
     case 'decision':

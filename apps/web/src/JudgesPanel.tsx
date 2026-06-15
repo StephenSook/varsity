@@ -270,14 +270,19 @@ function streamSummary(url: string): Promise<string> {
       es.close()
       const g = got.geometry ?? {}
       const law = got.law ?? {}
+      const gran = got.granite ?? {}
       const guard = got.guardian ?? {}
+      const explainedBy =
+        String(gran.source) === 'deterministic-floor'
+          ? 'deterministic floor (watsonx degraded)'
+          : 'Granite explained'
       resolve(
         `Law ${String(law.law ?? '?')} retrieved · margin ${String(g.margin_meters ?? '?')}m ` +
-          `${g.is_offside ? 'offside' : 'onside'} · Granite explained · ` +
+          `${g.is_offside ? 'offside' : 'onside'} · ${explainedBy} · ` +
           `Guardian ${guard.safe ? 'SAFE' : 'flagged'} (grounded: ${String(guard.grounded ?? '?')})`,
       )
     }
-    for (const ev of ['geometry', 'law', 'guardian']) {
+    for (const ev of ['geometry', 'law', 'granite', 'guardian']) {
       es.addEventListener(ev, (e) => {
         try {
           got[ev] = JSON.parse((e as MessageEvent).data)
@@ -598,8 +603,12 @@ export function JudgesPanel() {
         const spans = j.spans as Span[]
         const g = spans.find((s) => s.name === 'granite')?.attributes
         const gd = spans.find((s) => s.name === 'guardian')?.attributes
+        const granLabel =
+          String(g?.['varsity.source']) === 'deterministic-floor'
+            ? 'deterministic floor (watsonx degraded)'
+            : String(g?.['varsity.model'])
         const models = g?.['varsity.model']
-          ? ` · this request ran granite ${g['varsity.model']}, guardian ${gd?.['varsity.guardian_model']} (safe=${gd?.['varsity.safe']})`
+          ? ` · this request ran granite ${granLabel}, guardian ${gd?.['varsity.guardian_model']} (safe=${gd?.['varsity.safe']})`
           : ''
         return `${spans.map((s) => `${s.name} ${s.duration_ms}ms`).join(' · ')}${models} (${j.span_count} OpenTelemetry spans, live)`
       },
