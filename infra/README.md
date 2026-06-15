@@ -23,7 +23,7 @@ the repo `.env`).
 ### Generate a bearer token
 
 ```bash
-docker run --rm -it ghcr.io/ibm/mcp-context-forge:1.0.2 \
+docker run --rm -it ghcr.io/ibm/mcp-context-forge:latest \
   python3 -m mcpgateway.utils.create_jwt_token \
   --username admin@example.com --exp 10080 --secret "$CONTEXT_FORGE_JWT_SECRET"
 ```
@@ -56,9 +56,10 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/
 
 ### Notes
 
-- Image pinned to `1.0.2` in `docker-compose.yml`. The upstream README still shows
-  `1.0.0-RC-3` in examples; confirm the `1.0.2` tag pulls when the daemon is up.
-  Fallback to `1.0.1` if `1.0.2` looks freshly churned near the deadline.
+- The PyPI gateway is pinned to `1.0.2`, the build this federation was verified against (GitHub
+  release 2026-05-26, "Admin UI Rewrite"); the `docker-compose.yml` image uses `:latest` because the
+  ghcr image tags lag the GitHub releases. Re-verified 2026-06-14: upstream has since shipped `1.0.3`
+  (2026-06-10), but we keep the verified `1.0.2` pin and re-verify before bumping.
 - Plugin hooks are `tool_pre_invoke` / `tool_post_invoke` / `prompt_pre_fetch` /
   `prompt_post_fetch`. Bundled plugins include PIIFilter, a rate limiter, and
   Granite Guardian. (There is no "CPEX".)

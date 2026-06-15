@@ -1,6 +1,8 @@
 # Pinned versions observed at build start (2026-06-01). Re-verify before relying on any.
 
-context-forge:    1.0.2     # GitHub release latest stable 2026-05-26 (Admin UI Rewrite).
+context-forge:    1.0.2     # Verified-working build (GitHub release 2026-05-26, "Admin UI Rewrite").
+                            # Re-verified 2026-06-14: real upstream tag; latest is now 1.0.3 (2026-06-10),
+                            # but we pin 1.0.2 as the version this federation was verified against.
                             # IMPORTANT: the ghcr DOCKER image versioned tags lag (max 0.5.0);
                             # there is NO 1.0.2 image tag. GA 1.0.x ships via the `latest`
                             # image and PyPI `mcp-contextforge-gateway==1.0.2`. Compose uses
