@@ -6,6 +6,8 @@ from app.llm.granite import (
     _fallback_explanation,
     _in_target_language,
     _looks_like_prompt_leak,
+    _strip_doc_artifacts,
+    _strip_footer_noise,
 )
 
 
@@ -199,3 +201,39 @@ def test_in_language_reply_is_accepted_as_granite(monkeypatch) -> None:
     )
     assert "Regla 11" in out
     assert client.last_source == "granite"  # accepted, not the floor
+
+
+def test_strip_doc_artifacts_removes_html_comments() -> None:
+    cleaned = _strip_doc_artifacts("Law 11\n<!-- image -->\nthe second-last opponent rule")
+    assert "<!--" not in cleaned
+    assert "second-last opponent rule" in cleaned
+
+
+def test_strip_footer_noise_removes_publisher_lines() -> None:
+    txt = (
+        "Under Law 12, the referee awards a penalty.\n"
+        "December 28, 2022 International Football Association Board\n"
+        "The arm made the body unnaturally bigger."
+    )
+    out = _strip_footer_noise(txt)
+    assert "International Football Association Board" not in out
+    assert "Under Law 12" in out  # the real explanation survives
+    assert "unnaturally bigger" in out
+
+
+def test_granite_reply_footer_is_stripped(monkeypatch) -> None:
+    # If the model parrots an IFAB document footer (the publisher line is NOT in our corpus, so
+    # the signature cannot catch it), it must be stripped before reaching the screen reader.
+    monkeypatch.setattr(
+        granite_mod._watsonx,
+        "generate",
+        lambda *a, **k: (
+            "Under Law 11, the attacker was offside by 5.45 meters.\n"
+            "International Football Association Board"
+        ),
+    )
+    client = GraniteClient()
+    out = client.explain_offside(margin_meters=5.45, is_offside=True, law_text="Law 11")
+    assert "International Football Association Board" not in out
+    assert "Law 11" in out  # the real, Law-citing explanation survives
+    assert client.last_source == "granite"
