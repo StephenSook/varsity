@@ -215,7 +215,9 @@ def _strip_doc_artifacts(law_text: str) -> str:
 # copyright). This text is NOT in our corpus, so the corpus signature cannot catch it; strip any
 # reply LINE carrying it before the accept-gate so it never reaches a blind fan's screen reader.
 # Deliberately narrow (publisher name / copyright only) so it never touches real explanation prose.
-_FOOTER_LINE = re.compile(r"(?im)^.*(?:international football association board|©|\bcopyright\b).*$")
+_FOOTER_LINE = re.compile(
+    r"(?im)^.*(?:international football association board|©|\bcopyright\b).*$"
+)
 
 
 def _strip_footer_noise(text: str) -> str:
@@ -290,7 +292,8 @@ class GraniteClient:
         if within_noise:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, warm "
-                f"language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. "
+                f"language. Reply ENTIRELY in {language} (write every sentence "
+                f"in {language}), in 2 to 3 short sentences. "
                 f"{glossary_line(language)}This call is INSIDE "
                 f"the measurement noise of our coarse freeze-frame data (about {_NOISE_CM} cm), so "
                 "it is "
@@ -307,7 +310,8 @@ class GraniteClient:
         else:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, "
-                f"warm language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. "
+                f"warm language. Reply ENTIRELY in {language} (write every "
+                f"sentence in {language}), in 2 to 3 short sentences. "
                 f"{glossary_line(language)}Lead with where "
                 "the players were, then state the verdict, then cite the Law that justifies it "
                 "(given-before-new order). A blind fan cannot see the line, so ALWAYS state the "
@@ -361,7 +365,8 @@ class GraniteClient:
         handball, ...) over the SAME retrieval + safety path as offside."""
         prompt = (
             "You are explaining a soccer VAR decision to a blind fan in plain, warm "
-            f"language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. {glossary_line(language)}"
+            f"language. Reply ENTIRELY in {language} (write every sentence in "
+            f"{language}), in 2 to 3 short sentences. {glossary_line(language)}"
             "Lead with the "
             "incident, then state the decision, then cite the Law that justifies it "
             "(given-before-new order). Ground the explanation in the Law text below and cite "
