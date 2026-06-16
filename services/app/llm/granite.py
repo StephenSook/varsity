@@ -113,7 +113,6 @@ def _lang_key(language: str) -> str:
 # wrong-language reply is rejected and the correct in-language deterministic floor takes over.
 # Net effect: the displayed text is always in the requested language (compliant reply or floor).
 _LANG_LAW_WORD: dict[str, re.Pattern[str]] = {
-    "en": re.compile(r"\blaw\b", re.IGNORECASE),
     "es": re.compile(r"\bregla\b", re.IGNORECASE),
     "fr": re.compile(r"\bloi\b", re.IGNORECASE),
     "pt": re.compile(r"\bregra\b", re.IGNORECASE),
@@ -122,10 +121,14 @@ _LANG_LAW_WORD: dict[str, re.Pattern[str]] = {
 
 
 def _in_target_language(text: str, language: str) -> bool:
-    """Best-effort language-fidelity guard: the reply cites the Law using the TARGET language's
-    word for "Law" (Spanish "Regla", French "Loi", ...). Unknown languages pass through."""
-    pattern = _LANG_LAW_WORD.get(_lang_key(language))
-    return pattern.search(text) is not None if pattern else True
+    """Best-effort language-fidelity guard: a NON-English reply cites the Law using the target
+    language's word for "Law" (Spanish "Regla", French "Loi", ...). English (and any unrecognised
+    language, which maps to the English floor) passes through, since cites_law_clause already
+    ensures it cites "Law N"."""
+    key = _lang_key(language)
+    if key == "en":
+        return True
+    return _LANG_LAW_WORD[key].search(text) is not None
 
 
 def _fallback_explanation(
