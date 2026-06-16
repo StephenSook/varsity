@@ -409,7 +409,8 @@ export function JudgesPanel() {
           `ECE ${(j.ece * 100).toFixed(2)}% (bootstrap 95% CI [${(j.ece_ci95[0] * 100).toFixed(2)}, ${(j.ece_ci95[1] * 100).toFixed(2)}]%) · ` +
           `Brier ${j.brier.toFixed(4)} · log-loss ${j.log_loss.toFixed(3)} · ` +
           `overconfident control ECE ${(j.overconfident_ece * 100).toFixed(2)}% · ` +
-          `${j.samples.toLocaleString()} seeded draws`
+          `${j.samples.toLocaleString()} seeded draws · ` +
+          `${j.precomputed ? 'precomputed build artifact (regenerate: python -m app.calibration)' : 'computed live'}`
         )
       },
     },
