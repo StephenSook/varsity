@@ -20,6 +20,10 @@ export type CalibrationPayload = {
   note: string
   log_loss: number
   ece_ci95: [number, number]
+  // True when the receipt is served from the committed, deterministic build artifact
+  // (calibration_report.json) rather than recomputed live (the free-tier CPU is too slow to
+  // bootstrap on each request). The numbers are identical either way and test-pinned.
+  precomputed?: boolean
 }
 
 const W = 260
@@ -42,7 +46,8 @@ export function ReliabilityDiagram({ p }: { p: CalibrationPayload }) {
     <figure className="mt-4 rounded-xl bg-slate-950/60 p-4 ring-1 ring-slate-700/50">
       <figcaption className="text-xs text-slate-300">
         <span className="font-semibold text-emerald-300">Reliability diagram</span>: predicted
-        confidence vs empirical accuracy over {p.samples.toLocaleString()} seeded draws. Points on
+        confidence vs empirical accuracy over {p.samples.toLocaleString()} seeded draws
+        {p.precomputed ? ' (precomputed build artifact)' : ''}. Points on
         the diagonal are perfectly calibrated. ECE{' '}
         <span className="font-mono text-emerald-300">{pctFine(p.ece)}</span>, Brier{' '}
         <span className="font-mono text-emerald-300">{p.brier.toFixed(4)}</span>. Overconfident
