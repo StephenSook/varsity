@@ -1,7 +1,12 @@
 import pytest
 
 import app.llm.granite as granite_mod
-from app.llm.granite import GraniteClient, _fallback_explanation, _looks_like_prompt_leak
+from app.llm.granite import (
+    GraniteClient,
+    _fallback_explanation,
+    _in_target_language,
+    _looks_like_prompt_leak,
+)
 
 
 def test_explain_offside_retries_then_returns_good(monkeypatch) -> None:
@@ -152,3 +157,45 @@ def test_last_source_marks_granite_vs_floor(monkeypatch) -> None:
     monkeypatch.setattr(granite_mod._watsonx, "generate", boom)
     client.explain_offside(margin_meters=5.45, is_offside=True, law_text="Law 11 ...")
     assert client.last_source == "deterministic-floor"
+
+
+def test_in_target_language_guard() -> None:
+    # The reply must cite the Law using the TARGET language's word for "Law".
+    assert _in_target_language("Según la Regla 11, el atacante estaba adelantado.", "Spanish")
+    assert not _in_target_language("Under Law 11, the attacker was offside.", "Spanish")
+    assert _in_target_language("Under Law 11, the attacker was offside.", "English")
+    assert _in_target_language("Selon la Loi 11, l'attaquant était hors-jeu.", "French")
+    assert _in_target_language("anything at all", "Klingon")  # unknown language passes through
+
+
+def test_wrong_language_reply_falls_to_in_language_floor(monkeypatch) -> None:
+    # granite-4-h-small sometimes ignores "reply in Spanish" and answers in English. Even though
+    # that reply cites the Law, it is the WRONG language, so the accept-gate rejects it and the
+    # correct in-language (Spanish) floor takes over - the EN->ES toggle never shows English.
+    monkeypatch.setattr(
+        granite_mod._watsonx,
+        "generate",
+        lambda *a, **k: "Under Law 11, the attacker was offside by 5.45 meters.",
+    )
+    client = GraniteClient()
+    out = client.explain_offside(
+        margin_meters=5.45, is_offside=True, law_text="Law 11", language="Spanish"
+    )
+    assert "Regla 11" in out  # fell to the Spanish floor
+    assert "Law 11" not in out  # the English reply was rejected as wrong-language
+    assert client.last_source == "deterministic-floor"
+
+
+def test_in_language_reply_is_accepted_as_granite(monkeypatch) -> None:
+    # A genuine in-language reply that cites the Law in Spanish is accepted as a live Granite reply.
+    monkeypatch.setattr(
+        granite_mod._watsonx,
+        "generate",
+        lambda *a, **k: "Según la Regla 11, el atacante estaba adelantado por 5.45 metros.",
+    )
+    client = GraniteClient()
+    out = client.explain_offside(
+        margin_meters=5.45, is_offside=True, law_text="Law 11", language="Spanish"
+    )
+    assert "Regla 11" in out
+    assert client.last_source == "granite"  # accepted, not the floor

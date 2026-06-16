@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 
 from app.llm import _watsonx
@@ -103,6 +104,28 @@ def _lang_key(language: str) -> str:
         if low.startswith(starts):
             return key
     return "en"
+
+
+# The target language's own word for "Law". granite-4-h-small occasionally ignores the
+# "reply in {language}" directive and answers in English (citing "Law 11" instead of
+# "Regla 11"). cites_law_clause ACCEPTS any language's word, so an English reply to a Spanish
+# request still passes it; this guard additionally REQUIRES the target language's word, so a
+# wrong-language reply is rejected and the correct in-language deterministic floor takes over.
+# Net effect: the displayed text is always in the requested language (compliant reply or floor).
+_LANG_LAW_WORD: dict[str, re.Pattern[str]] = {
+    "en": re.compile(r"\blaw\b", re.IGNORECASE),
+    "es": re.compile(r"\bregla\b", re.IGNORECASE),
+    "fr": re.compile(r"\bloi\b", re.IGNORECASE),
+    "pt": re.compile(r"\bregra\b", re.IGNORECASE),
+    "de": re.compile(r"\bregel\b", re.IGNORECASE),
+}
+
+
+def _in_target_language(text: str, language: str) -> bool:
+    """Best-effort language-fidelity guard: the reply cites the Law using the TARGET language's
+    word for "Law" (Spanish "Regla", French "Loi", ...). Unknown languages pass through."""
+    pattern = _LANG_LAW_WORD.get(_lang_key(language))
+    return pattern.search(text) is not None if pattern else True
 
 
 def _fallback_explanation(
@@ -240,7 +263,7 @@ class GraniteClient:
         if within_noise:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, warm "
-                f"language. Reply in {language}, in 2 to 3 short sentences. "
+                f"language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. "
                 f"{glossary_line(language)}This call is INSIDE "
                 f"the measurement noise of our coarse freeze-frame data (about {_NOISE_CM} cm), so "
                 "it is "
@@ -257,7 +280,7 @@ class GraniteClient:
         else:
             prompt = (
                 "You are explaining a soccer VAR offside decision to a blind fan in plain, "
-                f"warm language. Reply in {language}, in 2 to 3 short sentences. "
+                f"warm language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. "
                 f"{glossary_line(language)}Lead with where "
                 "the players were, then state the verdict, then cite the Law that justifies it "
                 "(given-before-new order). A blind fan cannot see the line, so ALWAYS state the "
@@ -280,7 +303,12 @@ class GraniteClient:
                 text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
             except _WatsonxDegraded:
                 break  # a hard watsonx outage will not recover; the deterministic floor takes over
-            if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
+            if (
+                len(text) >= 20
+                and not _looks_like_prompt_leak(text)
+                and cites_law_clause(text)
+                and _in_target_language(text, language)
+            ):
                 if not within_noise or TOO_CLOSE_HEDGE.search(text):
                     self.last_source = "granite"
                     return text
@@ -305,7 +333,7 @@ class GraniteClient:
         handball, ...) over the SAME retrieval + safety path as offside."""
         prompt = (
             "You are explaining a soccer VAR decision to a blind fan in plain, warm "
-            f"language. Reply in {language}, in 2 to 3 short sentences. {glossary_line(language)}"
+            f"language. Reply ENTIRELY in {language} (write every sentence in {language}), in 2 to 3 short sentences. {glossary_line(language)}"
             "Lead with the "
             "incident, then state the decision, then cite the Law that justifies it "
             "(given-before-new order). Ground the explanation in the Law text below and cite "
@@ -320,7 +348,12 @@ class GraniteClient:
                 text = self.generate(prompt, max_new_tokens=180, min_new_tokens=40).strip()
             except _WatsonxDegraded:
                 break  # a hard watsonx outage will not recover; the deterministic floor takes over
-            if len(text) >= 20 and not _looks_like_prompt_leak(text) and cites_law_clause(text):
+            if (
+                len(text) >= 20
+                and not _looks_like_prompt_leak(text)
+                and cites_law_clause(text)
+                and _in_target_language(text, language)
+            ):
                 self.last_source = "granite"
                 return text
         self.last_source = "deterministic-floor"
