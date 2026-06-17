@@ -5,6 +5,16 @@ and embedded with IBM Granite. The built index (`index/chunks.json` + `index/law
 is committed so the app, the container, and CI all ship the real corpus without
 re-running the heavy ingest.
 
+## IFAB copyright and redistribution
+
+The Laws of the Game are the property of The International Football Association Board (IFAB), which
+does not permit reproducing the Laws in whole or in part without permission. The chunked Law text in
+`index/chunks.json` is committed only to make deterministic, offline, non-commercial
+educational/accessibility retrieval reproducible; it is attributed to IFAB and is the 2025/26
+edition. A production deployment would fetch the Laws at runtime and seek a non-commercial
+educational cooperation with IFAB rather than ship the text statically. See `docs/LEGAL.md`.
+Source: https://www.theifab.com/laws-of-the-game-documents/
+
 ## Source
 
 IFAB **Laws of the Game 2025/26 (single pages)**, theifab.com (230 pages). This is

@@ -35,7 +35,8 @@ decision rather than quote a false-precise margin (the calibration critic, `serv
   subscription and separate clearance of any league/club/player logos and photos, which those feeds
   do not grant.
 - **IFAB Laws of the Game**: VARSITY grounds its narration in the IFAB Laws, primarily Law 11
-  (Offside). The Laws are copyrighted by The IFAB. The narration paraphrases the rules in plain
+  (Offside). The Laws are copyrighted by The IFAB, which does not permit reproducing the Laws in
+  whole or in part without permission. The narration paraphrases the rules in plain
   language; short verbatim clause citations are attributed to IFAB and used under fair-use
   principles for an educational and accessibility purpose. The full Laws are at https://theifab.com.
   **Honest note on the repository:** for offline mode and deterministic retrieval, the project
