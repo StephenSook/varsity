@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { BroadcastTicker } from './BroadcastTicker'
 import { verbalizeForSpeech } from './speech'
 import { graniteSpeechEnabled, listen, onDeviceAsrAvailable } from './voice'
-import { LANGS, useLang, type Lang } from './i18n'
+import { CHROME, LANGS, useLang, type Lang } from './i18n'
 import { announceText, type Verbosity } from './announce'
 import { MixedScriptText } from './mixedScript'
 import { DiagnosticsPanel } from './DiagnosticsPanel'
@@ -1646,6 +1646,15 @@ export function Demo() {
               </p>
             </>
           )}
+          <h4 className="mt-3 text-sm font-semibold text-emerald-300">{CHROME[lang].limits.heading}</h4>
+          <ul
+            data-testid="limits"
+            className="mt-1 list-disc space-y-1 pl-5 text-sm leading-relaxed text-slate-300"
+          >
+            {CHROME[lang].limits.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </section>
       )}
 
