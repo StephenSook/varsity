@@ -34,6 +34,7 @@ export type Chrome = {
   footerH2: string
   footerP: string
   footerWC: string
+  limits: { heading: string; items: string[] }
 }
 
 export const CHROME: Record<Lang, Chrome> = {
@@ -89,6 +90,15 @@ export const CHROME: Record<Lang, Chrome> = {
     footerP:
       'VARSITY turns officials-only decision data into the first rule-grounded, accessible why. It complements the commentary you love, it does not replace it.',
     footerWC: 'World Cup 2026',
+    limits: {
+      heading: 'What this explanation cannot see',
+      items: [
+        'The margin is read from a single broadcast-annotated freeze-frame, not the exact frame the VAR used.',
+        'It does not see intent, the point of contact, or the replay angle.',
+        'On a knife-edge call it says so and trusts the official decision, rather than quote a false-precise margin.',
+        'It explains the rule behind the call; it never adjudicates or overturns it.',
+      ],
+    },
   },
   Spanish: {
     heroKicker: 'Basado en las Reglas IFAB · nativo para lectores de pantalla',
@@ -142,6 +152,15 @@ export const CHROME: Record<Lang, Chrome> = {
     footerP:
       'VARSITY convierte los datos de decisión, antes solo para árbitros, en el primer porqué accesible y basado en las reglas. Complementa el relato que amas, no lo reemplaza.',
     footerWC: 'Mundial 2026',
+    limits: {
+      heading: 'Lo que esta explicación no puede ver',
+      items: [
+        'El margen se obtiene de un único fotograma anotado de la emisión, no del fotograma exacto que usó el VAR.',
+        'No ve la intención, el punto de contacto ni el ángulo de la repetición.',
+        'En una jugada al límite lo dice y confía en la decisión oficial, en lugar de citar un margen de falsa precisión.',
+        'Explica la regla detrás de la decisión; nunca la arbitra ni la revoca.',
+      ],
+    },
   },
   French: {
     heroKicker: "Fondé sur les Lois de l'IFAB · pensé pour les lecteurs d'écran",
@@ -195,6 +214,15 @@ export const CHROME: Record<Lang, Chrome> = {
     footerP:
       "VARSITY transforme les données de décision, réservées aux arbitres, en le premier pourquoi accessible et fondé sur les règles. Il complète le commentaire que vous aimez, il ne le remplace pas.",
     footerWC: 'Coupe du monde 2026',
+    limits: {
+      heading: 'Ce que cette explication ne peut pas voir',
+      items: [
+        "La marge provient d'une seule image annotée de la diffusion, pas de l'image exacte utilisée par le VAR.",
+        "Elle ne voit ni l'intention, ni le point de contact, ni l'angle du ralenti.",
+        "Sur une décision serrée, elle le dit et fait confiance à la décision officielle, plutôt que d'avancer une marge faussement précise.",
+        "Elle explique la règle derrière la décision; elle ne l'arbitre ni ne l'annule jamais.",
+      ],
+    },
   },
   Portuguese: {
     heroKicker: 'Baseado nas Regras da IFAB · nativo para leitores de tela',
@@ -248,6 +276,15 @@ export const CHROME: Record<Lang, Chrome> = {
     footerP:
       'A VARSITY transforma os dados de decisão, antes só dos árbitros, no primeiro porquê acessível e baseado nas regras. Complementa a narração que você ama, não a substitui.',
     footerWC: 'Copa do Mundo 2026',
+    limits: {
+      heading: 'O que esta explicação não consegue ver',
+      items: [
+        'A margem vem de um único fotograma anotado da transmissão, não do fotograma exato usado pelo VAR.',
+        'Não vê a intenção, o ponto de contacto nem o ângulo do replay.',
+        'Numa decisão no limite, ela diz isso e confia na decisão oficial, em vez de citar uma margem de falsa precisão.',
+        'Explica a regra por trás da decisão; nunca a arbitra nem a anula.',
+      ],
+    },
   },
   German: {
     heroKicker: 'Auf IFAB-Regeln gestützt · für Screenreader gemacht',
@@ -301,6 +338,15 @@ export const CHROME: Record<Lang, Chrome> = {
     footerP:
       'VARSITY verwandelt die bisher nur den Offiziellen vorbehaltenen Entscheidungsdaten in das erste regelbasierte, barrierefreie Warum. Es ergänzt den Kommentar, den Sie lieben, es ersetzt ihn nicht.',
     footerWC: 'WM 2026',
+    limits: {
+      heading: 'Was diese Erklärung nicht sehen kann',
+      items: [
+        'Der Abstand stammt aus einem einzelnen annotierten Übertragungs-Standbild, nicht aus dem genauen Bild, das der VAR verwendet hat.',
+        'Sie sieht weder Absicht noch Kontaktpunkt noch den Wiederholungswinkel.',
+        'Bei einer hauchdünnen Entscheidung sagt sie das und vertraut der offiziellen Entscheidung, statt einen scheingenauen Abstand zu nennen.',
+        'Sie erklärt die Regel hinter der Entscheidung; sie entscheidet oder kippt sie nie.',
+      ],
+    },
   },
 }
 
