@@ -260,7 +260,7 @@ CI runs lint, typecheck, tests, and build on every push and pull request.
 
 ## Legal, IP & deployment
 
-VARSITY is an independent project, not affiliated with FIFA, The IFAB, any league, club, or player. It **explains** decisions; it does not adjudicate them. Data is StatsBomb Open Data (non-commercial, attributed); the Laws are IFAB's, cited and paraphrased for an educational/accessibility purpose. The full treatment, including the honest path from this prototype to a partnership-first real deployment, is in [docs/LEGAL.md](docs/LEGAL.md).
+VARSITY is an independent project, not affiliated with FIFA, The IFAB, any league, club, or player. It **explains** decisions; it does not adjudicate them. Data is StatsBomb Open Data (non-commercial, attributed); the Laws are IFAB's (The IFAB does not permit reproducing the Laws in whole or in part without permission), cited and paraphrased for a non-commercial educational/accessibility purpose, from the attributed 2025/26 edition. The full treatment, including the honest path from this prototype to a partnership-first real deployment, is in [docs/LEGAL.md](docs/LEGAL.md).
 
 ## License
 
