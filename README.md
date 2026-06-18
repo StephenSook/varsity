@@ -156,6 +156,15 @@ The canned StatsBomb path is the deterministic floor; the live trigger is a resi
 
 See [docs/IBM_STACK.md](docs/IBM_STACK.md) for every IBM component mapped to its file path and how to verify it is running, [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) for the WCAG conformance target, the `aria-live` design decision, and the screen-reader test matrix, and [docs/observability.md](docs/observability.md) for the OpenTelemetry trace of one VAR event with real measured stage timings (~2.8s end to end).
 
+### The agentic fan-out, verified live
+
+One VAR offside event fans out across four federated backends: the `ifab-rag` and `match-geometry` MCP servers, the A2A `narrator` agent, and the Granite coordinator. There are two ways to see it for real, not just on the diagram:
+
+- **Live on the deployed backend:** `GET /trace` returns the real OpenTelemetry span tree for one event (geometry to law to Granite to Guardian) with per-stage durations, runnable from the `/judges` panel in your own browser.
+- **Through the IBM Context Forge MCP gateway:** bringing up the gateway and registering the backends (steps in [docs/federation.md](docs/federation.md)) was verified live, with all four backends reachable, the three federated tools invoked through the gateway over `POST /rpc` with correct results (Law 11 retrieved, the offside margin computed in metres), and the gateway observability recording 10 tool executions at 100% success, about 27 ms average.
+
+The deployed backend serves the live watsonx Granite, Granite Guardian, IFAB-RAG, and SSE pipeline behind that `/trace`; the Context Forge gateway federation is brought up and verified as documented in [docs/federation.md](docs/federation.md).
+
 ## Knowledge map
 
 A concept-level view of the project, the companion to the data-flow diagram above. The 18 documentation clusters map onto the five pillars, and the dotted edges are the cross-pillar bridges the graph surfaced: the offside margin and the GUM uncertainty budget couple the geometry and calibration clusters, because the number the geometry computes and the confidence the fan hears are one story, not two.
