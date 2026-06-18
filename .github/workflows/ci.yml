@@ -10,6 +10,7 @@ jobs:
   web:
     name: Front end (lint / typecheck / build / test)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -37,6 +38,9 @@ jobs:
   a11y:
     name: Accessibility (Playwright + axe)
     runs-on: ubuntu-latest
+    # Browser install + Playwright + axe normally runs in ~5-8 min; 20 caps a runner hang
+    # (one stalled 38 min with no bound on 2026-06-18) without risking a false timeout.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -68,6 +72,7 @@ jobs:
   api:
     name: Backend (lint / test)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -91,6 +96,7 @@ jobs:
   hygiene:
     name: Repo hygiene
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - name: No tracked .env
