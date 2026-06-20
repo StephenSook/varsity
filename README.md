@@ -32,6 +32,12 @@ Everything else is depth behind that one loop, and it groups into five pillars. 
 4. **All-IBM, end to end.** Granite reasoning, Granite Guardian, Granite embeddings, Granite Vision, and Docling, federated through Context Forge with an A2A narrator, plus a fully on-device offline mode running Granite Nano in the browser.
 5. **Provable and resilient.** Every claim is a live button on the `/judges` page, the corpus is SHA-256-signed and fails closed, the oracle survives a 13/13 red-team, and a watsonx outage degrades to a Law-citing floor instead of crashing.
 
+## Who deploys this, and the two surfaces
+
+VARSITY is one engine with two surfaces, not a single page. The **fan surface** is the accessible explainer in this demo: a blind fan presses one button, or a live VAR event fires, and hears the rule-grounded reason through their own screen reader. The **operator surface** is the same engine's live observability and proof layer that a broadcaster or federation runs in production: the `/judges` panel of verifiable claims, the OpenTelemetry `GET /trace` span tree (geometry, law, Granite, Guardian, with per-stage latencies), `GET /corpus_integrity` (the SHA-256-signed Law corpus), and the Context Forge federation. One surface is for the fan; the other is how an operator monitors, audits, and trusts the why-layer it is shipping.
+
+**The Monday test.** A federation or broadcaster deploys VARSITY as the why-layer beside the channels they already run. It sits alongside the in-stadium PA announcement of VAR decisions (an option the IFAB approved for 2026/27) and the audio-description feed, and adds the one thing those channels do not carry: the rule-grounded reason a VAR or offside decision was made, delivered in real time through the fan's own accessibility channel. It complements those feeds, it does not replace them. The integration path, the external-service contract, and the partnership-first route are documented in `docs/LEGAL.md`.
+
 ## How VARSITY maps to the judging criteria
 
 The challenge scores four criteria. Each maps to evidence you can run against the **live deployment** ([web-chi-wine-13.vercel.app](https://web-chi-wine-13.vercel.app)) from the in-page "prove it" panel, which calls the live backend ([varsity-api.onrender.com](https://varsity-api.onrender.com)) and shows the real result inline.
