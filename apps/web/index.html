@@ -6,6 +6,13 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0f1c" />
+    <!-- Installable PWA: when added to the Home Screen the app opens standalone (chromeless), like a
+         native app. The web manifest (vite-plugin-pwa) drives standalone display on current iOS/Android;
+         these tags add the dark iOS status bar and the Home Screen title, and cover older iOS. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="VARSITY" />
     <!-- Warm the cross-origin backend connection (DNS + TLS) before the first Explain,
          so the spoken verdict is not delayed by a fresh handshake to Render. -->
     <link rel="preconnect" href="https://varsity-api.onrender.com" crossorigin />
