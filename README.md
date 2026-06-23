@@ -55,7 +55,7 @@ Once it is on the home screen, the whole loop is a phone experience: **VoiceOver
 
 *(Screenshots are the live deployment rendered at an iPhone 14 Pro viewport.)*
 
-**Native Android app.** The same built front end is also wrapped as a real Android app with Capacitor (`apps/web/capacitor.config.ts` + `apps/web/android/`), so it can be sideloaded as a `.apk`. The shell adds no new capability over the PWA (WebGPU, the service worker, and `aria-live` all come from the system WebView); it is purely a native distribution of the identical web app. The `.apk` is built in a clean-room CI workflow (`.github/workflows/android.yml`, `gradlew assembleDebug`) and uploaded as a downloadable artifact. iOS is served by the PWA above rather than a separate native build.
+**Native Android app.** The same built front end is also wrapped as a real Android app with Capacitor (`apps/web/capacitor.config.ts` + `apps/web/android/`), so it can be sideloaded as a `.apk`. The shell adds no new capability over the PWA (WebGPU, the service worker, and `aria-live` all come from the system WebView); it is purely a native distribution of the identical web app. The `.apk` is built in a clean-room CI workflow (`.github/workflows/android.yml`, `gradlew assembleDebug`) and published for direct sideload on the [v1.1.0 release](https://github.com/StephenSook/varsity/releases/tag/v1.1.0). iOS is served by the PWA above rather than a separate native build.
 
 ## How VARSITY maps to the judging criteria
 
