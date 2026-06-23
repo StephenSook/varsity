@@ -70,7 +70,7 @@ export const CHROME: Record<Lang, Chrome> = {
     pipelineEyebrow: 'Under the hood',
     pipelineH2: 'One event, fanned out',
     pipelineIntro:
-      'Four backends coordinate through the IBM Context Forge gateway with Granite on top. One VAR event fans out across the services and returns a single, safe, rule-grounded answer. The live gateway recorded those tool calls at 100% success.',
+      'Four backends coordinate through the IBM Context Forge gateway with Granite on top. One VAR event fans out across the services and returns a single, safe, rule-grounded answer. A local bring-up of the gateway recorded those tool calls at 100% success.',
     pipeline: [
       { k: 'Trigger', d: 'A VAR review fires (live feed or a StatsBomb 360 frame).' },
       { k: 'Geometry', d: 'The real offside margin in meters, from the freeze-frame.' },
@@ -132,7 +132,7 @@ export const CHROME: Record<Lang, Chrome> = {
     pipelineEyebrow: 'Por dentro',
     pipelineH2: 'Un evento, distribuido',
     pipelineIntro:
-      'Cuatro servicios se coordinan a través de la puerta de enlace IBM Context Forge, con Granite por encima. Un evento del VAR se distribuye entre los servicios y devuelve una única respuesta segura y basada en las reglas. La puerta de enlace registró esas llamadas con un 100% de éxito.',
+      'Cuatro servicios se coordinan a través de la puerta de enlace IBM Context Forge, con Granite por encima. Un evento del VAR se distribuye entre los servicios y devuelve una única respuesta segura y basada en las reglas. En un arranque local, la puerta de enlace registró esas llamadas con un 100% de éxito.',
     pipeline: [
       { k: 'Disparo', d: 'Se activa una revisión del VAR (señal en vivo o un fotograma de StatsBomb 360).' },
       { k: 'Geometría', d: 'El margen real de fuera de juego en metros, a partir del fotograma.' },
@@ -194,7 +194,7 @@ export const CHROME: Record<Lang, Chrome> = {
     pipelineEyebrow: 'Sous le capot',
     pipelineH2: 'Un événement, déployé',
     pipelineIntro:
-      "Quatre services se coordonnent via la passerelle IBM Context Forge, avec Granite au-dessus. Un événement de la VAR se déploie sur les services et renvoie une seule réponse sûre et fondée sur les règles. La passerelle a enregistré ces appels avec 100% de réussite.",
+      "Quatre services se coordonnent via la passerelle IBM Context Forge, avec Granite au-dessus. Un événement de la VAR se déploie sur les services et renvoie une seule réponse sûre et fondée sur les règles. Lors d'un démarrage local, la passerelle a enregistré ces appels avec 100% de réussite.",
     pipeline: [
       { k: 'Déclenchement', d: "Un contrôle de la VAR se déclenche (flux en direct ou une image StatsBomb 360)." },
       { k: 'Géométrie', d: "La marge réelle de hors-jeu en mètres, à partir de l'image figée." },
@@ -256,7 +256,7 @@ export const CHROME: Record<Lang, Chrome> = {
     pipelineEyebrow: 'Por dentro',
     pipelineH2: 'Um evento, distribuído',
     pipelineIntro:
-      'Quatro serviços se coordenam pelo gateway IBM Context Forge, com o Granite no topo. Um evento do VAR se distribui pelos serviços e retorna uma única resposta segura e baseada nas regras. O gateway registrou essas chamadas com 100% de sucesso.',
+      'Quatro serviços se coordenam pelo gateway IBM Context Forge, com o Granite no topo. Um evento do VAR se distribui pelos serviços e retorna uma única resposta segura e baseada nas regras. Em uma execução local, o gateway registrou essas chamadas com 100% de sucesso.',
     pipeline: [
       { k: 'Gatilho', d: 'Uma revisão do VAR é acionada (sinal ao vivo ou um quadro do StatsBomb 360).' },
       { k: 'Geometria', d: 'A margem real de impedimento em metros, a partir do quadro.' },
@@ -318,7 +318,7 @@ export const CHROME: Record<Lang, Chrome> = {
     pipelineEyebrow: 'Hinter den Kulissen',
     pipelineH2: 'Ein Ereignis, verteilt',
     pipelineIntro:
-      'Vier Dienste koordinieren sich über das IBM-Context-Forge-Gateway, mit Granite darüber. Ein VAR-Ereignis verteilt sich über die Dienste und liefert eine einzige sichere, regelbasierte Antwort. Das Gateway protokollierte diese Aufrufe mit 100% Erfolg.',
+      'Vier Dienste koordinieren sich über das IBM-Context-Forge-Gateway, mit Granite darüber. Ein VAR-Ereignis verteilt sich über die Dienste und liefert eine einzige sichere, regelbasierte Antwort. Bei einem lokalen Start protokollierte das Gateway diese Aufrufe mit 100% Erfolg.',
     pipeline: [
       { k: 'Auslöser', d: 'Eine VAR-Überprüfung wird ausgelöst (Live-Signal oder ein StatsBomb-360-Bild).' },
       { k: 'Geometrie', d: 'Der reale Abseitsabstand in Metern, aus dem Standbild.' },

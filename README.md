@@ -10,6 +10,8 @@ VARSITY is a real-time, screen-reader-native, IFAB-grounded AI explainer of VAR 
 
 Built for the IBM SkillsBuild AI Builders Challenge (June 2026, Soccer / AI / World Cup).
 
+**[Watch the 3-minute demo](https://youtu.be/VPrvKEsq0Ho)** · **[Try the live demo](https://web-chi-wine-13.vercel.app)**
+
 ## The problem
 
 A blind football fan is often the last person in the room to understand a VAR call. Audio description is improving and major tournaments increasingly offer it, but even great commentary rarely explains the rule-grounded reason behind a contested VAR or offside decision as it happens. The decision data exists (the applied Law, the offside geometry, the structured outcome) yet it lives only in visual pipelines: stadium screens, broadcast overlays, and officials-only tools. No deployed product turns that into rule-grounded natural language delivered through a blind fan's own accessibility channel in real time. VARSITY adds that layer. It complements audio description and commentary, it does not replace them.
@@ -167,7 +169,7 @@ See [docs/IBM_STACK.md](docs/IBM_STACK.md) for every IBM component mapped to its
 One VAR offside event fans out across four federated backends: the `ifab-rag` and `match-geometry` MCP servers, the A2A `narrator` agent, and the Granite coordinator. There are two ways to see it for real, not just on the diagram:
 
 - **Live on the deployed backend:** `GET /trace` returns the real OpenTelemetry span tree for one event (geometry to law to Granite to Guardian) with per-stage durations, runnable from the `/judges` panel in your own browser.
-- **Through the IBM Context Forge MCP gateway:** bringing up the gateway and registering the backends (steps in [docs/federation.md](docs/federation.md)) was verified live, with all four backends reachable, the three federated tools invoked through the gateway over `POST /rpc` with correct results (Law 11 retrieved, the offside margin computed in metres), and the gateway observability recording 10 tool executions at 100% success, about 27 ms average.
+- **Through the IBM Context Forge MCP gateway:** bringing up the gateway and registering the backends (steps in [docs/federation.md](docs/federation.md)) was verified in a local bring-up, with all four backends reachable, the three federated tools invoked through the gateway over `POST /rpc` with correct results (Law 11 retrieved, the offside margin computed in metres), and the gateway observability recording, in that local run, 10 tool executions at 100% success and about 27 ms average.
 
 The deployed backend serves the live watsonx Granite, Granite Guardian, IFAB-RAG, and SSE pipeline behind that `/trace`; the Context Forge gateway federation is brought up and verified as documented in [docs/federation.md](docs/federation.md).
 
