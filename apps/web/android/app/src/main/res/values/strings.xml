@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VARSITY</string>
+    <string name="title_activity_main">VARSITY</string>
+    <string name="package_name">dev.stephensook.varsity</string>
+    <string name="custom_url_scheme">dev.stephensook.varsity</string>
+</resources>
