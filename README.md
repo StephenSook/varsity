@@ -40,6 +40,23 @@ VARSITY is one engine with two surfaces, not a single page. The **fan surface** 
 
 **The Monday test.** A federation or broadcaster deploys VARSITY as the why-layer beside the channels they already run. It sits alongside the in-stadium PA announcement of VAR decisions (an option the IFAB approved for 2026/27) and the audio-description feed, and adds the one thing those channels do not carry: the rule-grounded reason a VAR or offside decision was made, delivered in real time through the fan's own accessibility channel. It complements those feeds, it does not replace them. The integration path, the external-service contract, and the partnership-first route are documented in `docs/LEGAL.md`.
 
+## Run it on your phone
+
+The fan surface is mobile-native, not a desktop site squeezed onto a phone. VARSITY is an installable PWA, so a fan reaches it the way they reach any app:
+
+- **iPhone (iOS):** open [web-chi-wine-13.vercel.app](https://web-chi-wine-13.vercel.app) in Safari, then Share → **Add to Home Screen**. It launches standalone (no browser chrome), like a native app.
+- **Android:** open the same link in Chrome, then **Install app**.
+
+Once it is on the home screen, the whole loop is a phone experience: **VoiceOver (iOS) and TalkBack (Android) speak the verdict** through the same `aria-live` region the desktop uses, the offside margin fires a **haptic buzz** (the Vibration API, which only exists on a phone), and **airplane mode still works** because the on-device Granite Nano tier runs in the phone's own WebGPU (shipping by default in Safari 26 / iOS 26 and Chrome for Android 121+; it falls back to the deterministic Law-citing floor on devices without WebGPU). Because this is an online-judged challenge, a judge can install it on their own phone in two taps, with nothing to build.
+
+| Home screen (installed, iPhone-sized viewport) | The call, explained on the phone |
+|---|---|
+| ![VARSITY landing at a 393px iPhone viewport](docs/mobile/phone-landing.png) | ![VARSITY explaining an offside on a phone](docs/mobile/phone-verdict.png) |
+
+*(Screenshots are the live deployment rendered at an iPhone 14 Pro viewport.)*
+
+**Native Android app.** The same built front end is also wrapped as a real Android app with Capacitor (`apps/web/capacitor.config.ts` + `apps/web/android/`), so it can be sideloaded as a `.apk`. The shell adds no new capability over the PWA (WebGPU, the service worker, and `aria-live` all come from the system WebView); it is purely a native distribution of the identical web app. The `.apk` is built in a clean-room CI workflow (`.github/workflows/android.yml`, `gradlew assembleDebug`) and uploaded as a downloadable artifact. iOS is served by the PWA above rather than a separate native build.
+
 ## How VARSITY maps to the judging criteria
 
 The challenge scores four criteria. Each maps to evidence you can run against the **live deployment** ([web-chi-wine-13.vercel.app](https://web-chi-wine-13.vercel.app)) from the in-page "prove it" panel, which calls the live backend ([varsity-api.onrender.com](https://varsity-api.onrender.com)) and shows the real result inline.
