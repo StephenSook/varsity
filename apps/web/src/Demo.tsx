@@ -248,7 +248,7 @@ function describe(s: Stage): string {
         ? ' · deterministic floor (watsonx degraded)'
         : ` · ${String(s.model)}`
     case 'guardian':
-      return ` · Granite Guardian: risk=${String(s.answer) || 'n/a'} -> ${s.safe ? 'SAFE' : 'flagged'}, cites Law: ${String(s.cites_law)}`
+      return ` · Granite Guardian: risk=${String(s.answer) || 'n/a'} -> ${s.safe ? 'SAFE' : s.cites_law ? 'advisory recheck' : 'flagged'}, cites Law: ${String(s.cites_law)}`
     case 'decision':
       return ` · ${String(s.outcome)}`
     case 'signal':
