@@ -10,7 +10,7 @@ VARSITY is a real-time, screen-reader-native, IFAB-grounded AI explainer of VAR 
 
 Built for the IBM SkillsBuild AI Builders Challenge (June 2026, Soccer / AI / World Cup).
 
-**[Watch the 3-minute demo](https://youtu.be/VPrvKEsq0Ho)** · **[Try the live demo](https://web-chi-wine-13.vercel.app)**
+**[Watch the 3-minute demo](https://youtu.be/7e88hmX8Puw)** · **[Try the live demo](https://web-chi-wine-13.vercel.app)**
 
 ## The problem
 
