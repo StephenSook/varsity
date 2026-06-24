@@ -279,7 +279,7 @@ function streamSummary(url: string): Promise<string> {
       resolve(
         `Law ${String(law.law ?? '?')} retrieved · margin ${String(g.margin_meters ?? '?')}m ` +
           `${g.is_offside ? 'offside' : 'onside'} · ${explainedBy} · ` +
-          `Guardian ${guard.safe ? 'SAFE' : 'flagged'} (grounded: ${String(guard.grounded ?? '?')})`,
+          `Guardian ${guard.safe ? 'SAFE' : guard.grounded === false ? 'advisory recheck' : 'flagged'} (grounded: ${String(guard.grounded ?? '?')})`,
       )
     }
     for (const ev of ['geometry', 'law', 'granite', 'guardian']) {
