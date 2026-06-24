@@ -5,7 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'node_modules', 'coverage'] },
+  // 'android' = the Capacitor native shell (its own vendored JS + gradle build output); not our source.
+  { ignores: ['dist', 'dev-dist', 'node_modules', 'coverage', 'android'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
